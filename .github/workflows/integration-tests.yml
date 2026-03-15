@@ -1,0 +1,44 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: [ '8.2', '8.3', '8.4' ]
+
+    name: PHP ${{ matrix.php-version }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: openssl, sockets
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Start OPC UA test servers
+        id: opcua
+        uses: GianfriAur/opcua-test-server-suite@v1.1.2
+
+      - name: Run integration tests
+        env:
+          OPCUA_CERTS_DIR: ${{ steps.opcua.outputs.certs-dir }}
+        run: vendor/bin/pest
+
+      - name: Server logs (on failure)
+        if: failure()
+        working-directory: .opcua-test-server-suite
+        run: docker compose logs --tail=100

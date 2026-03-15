@@ -1,0 +1,34 @@
+{
+  "name": "gianfriaur/opcua-php-client",
+  "description": "OPC UA client library for PHP",
+  "type": "library",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Gianfriaur\\OpcuaPhpClient\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "GianfriAur",
+      "email": "gianfri.aur@gmail.com"
+    }
+  ],
+  "autoload-dev": {
+    "psr-4": {
+      "Gianfriaur\\OpcuaPhpClient\\Tests\\": "tests/"
+    }
+  },
+  "require": {
+    "php": "^8.2",
+    "ext-openssl": "*"
+  },
+  "require-dev": {
+    "pestphp/pest": "^3.0"
+  },
+  "config": {
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
+  }
+}
