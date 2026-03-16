@@ -39,7 +39,7 @@ use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\ReferenceDescription;
 use Gianfriaur\OpcuaPhpClient\Types\Variant;
 
-class Client
+class Client implements OpcUaClientInterface
 {
     private TcpTransport $transport;
     private ?SessionService $session = null;
