@@ -25,7 +25,7 @@ final class TestHelper
     // ── Certificate paths (overridable via OPCUA_CERTS_DIR env var) ────
     public static function getCertsDir(): string
     {
-        return getenv('OPCUA_CERTS_DIR') ?: __DIR__ . '/../../../../server/certs';
+        return getenv('OPCUA_CERTS_DIR') ?: __DIR__ . '/../../../../opcua-test-server-suite/certs';
     }
 
     public static function getClientCertPath(): string

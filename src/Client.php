@@ -916,6 +916,10 @@ class Client implements OpcUaClientInterface
             }
 
             $clientPrivateKey = $certManager->loadPrivateKeyPem($this->clientKeyPath);
+        } else {
+            $generated = $certManager->generateSelfSignedCertificate();
+            $clientCertDer = $generated['certDer'];
+            $clientPrivateKey = $generated['privateKey'];
         }
 
         $clientCertChainDer = $clientCertDer;

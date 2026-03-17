@@ -151,6 +151,84 @@ class CertificateManager
     }
 
     /**
+     * @return array{certDer: string, privateKey: OpenSSLAsymmetricKey}
+     */
+    public function generateSelfSignedCertificate(string $applicationUri = 'urn:opcua-php-client'): array
+    {
+        $hostname = gethostname() ?: 'localhost';
+
+        $configContent = "[req]\n"
+            . "distinguished_name = req_dn\n"
+            . "x509_extensions = v3_req\n"
+            . "prompt = no\n"
+            . "[req_dn]\n"
+            . "CN = OPC UA PHP Client\n"
+            . "O = OPC UA PHP Client\n"
+            . "[v3_req]\n"
+            . "basicConstraints = CA:FALSE\n"
+            . "keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment\n"
+            . "extendedKeyUsage = clientAuth\n"
+            . "subjectAltName = URI:{$applicationUri}, DNS:{$hostname}\n";
+
+        $tmpHandle = tmpfile();
+        if ($tmpHandle === false) {
+            throw new SecurityException("Failed to create temporary OpenSSL config");
+        }
+
+        try {
+            fwrite($tmpHandle, $configContent);
+            fflush($tmpHandle);
+            $meta = stream_get_meta_data($tmpHandle);
+            $configPath = $meta['uri'];
+
+            $keyConfig = [
+                'private_key_bits' => 2048,
+                'private_key_type' => OPENSSL_KEYTYPE_RSA,
+                'config' => $configPath,
+            ];
+
+            $privateKey = openssl_pkey_new($keyConfig);
+            if ($privateKey === false) {
+                throw new SecurityException("Failed to generate private key: " . openssl_error_string());
+            }
+
+            $dn = [
+                'CN' => 'OPC UA PHP Client',
+                'O' => 'OPC UA PHP Client',
+            ];
+
+            $csr = openssl_csr_new($dn, $privateKey, [
+                'digest_alg' => 'sha256',
+                'config' => $configPath,
+            ]);
+            if ($csr === false) {
+                throw new SecurityException("Failed to generate CSR: " . openssl_error_string());
+            }
+
+            $cert = openssl_csr_sign($csr, null, $privateKey, 365, [
+                'digest_alg' => 'sha256',
+                'config' => $configPath,
+                'x509_extensions' => 'v3_req',
+            ]);
+            if ($cert === false) {
+                throw new SecurityException("Failed to generate self-signed certificate: " . openssl_error_string());
+            }
+
+            $certPem = '';
+            if (!openssl_x509_export($cert, $certPem)) {
+                throw new SecurityException("Failed to export certificate: " . openssl_error_string());
+            }
+
+            return [
+                'certDer' => $this->pemToDer($certPem),
+                'privateKey' => $privateKey,
+            ];
+        } finally {
+            fclose($tmpHandle);
+        }
+    }
+
+    /**
      * @param string $der
      */
     private function derToPem(string $der): string

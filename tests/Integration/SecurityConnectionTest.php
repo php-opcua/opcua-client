@@ -131,6 +131,68 @@ describe('Security Connection', function () {
 
     });
 
+    describe('Auto-generated certificate on auto-accept server (4845)', function () {
+
+        it('connects with auto-generated certificate when none specified', function () {
+            $client = null;
+            try {
+                $client = new Client();
+                $client->setSecurityPolicy(SecurityPolicy::Basic256Sha256);
+                $client->setSecurityMode(SecurityMode::SignAndEncrypt);
+                // No setClientCertificate call - should auto-generate
+                $client->connect(TestHelper::ENDPOINT_AUTO_ACCEPT);
+                expect($client)->toBeInstanceOf(Client::class);
+
+                $refs = $client->browse(NodeId::numeric(0, 85));
+                expect($refs)->toBeArray()->not->toBeEmpty();
+
+                $names = array_map(fn($r) => $r->getBrowseName()->getName(), $refs);
+                expect($names)->toContain('Server');
+            } finally {
+                TestHelper::safeDisconnect($client);
+            }
+        })->group('integration');
+
+        it('connects with auto-generated certificate and username/password auth', function () {
+            $client = null;
+            try {
+                $client = new Client();
+                $client->setSecurityPolicy(SecurityPolicy::Basic256Sha256);
+                $client->setSecurityMode(SecurityMode::SignAndEncrypt);
+                // No setClientCertificate call - should auto-generate
+                $client->setUserCredentials(
+                    TestHelper::USER_ADMIN['username'],
+                    TestHelper::USER_ADMIN['password'],
+                );
+                $client->connect(TestHelper::ENDPOINT_AUTO_ACCEPT);
+                expect($client)->toBeInstanceOf(Client::class);
+
+                $dv = $client->read(NodeId::numeric(0, 2259));
+                expect($dv->getStatusCode())->toBe(StatusCode::Good);
+            } finally {
+                TestHelper::safeDisconnect($client);
+            }
+        })->group('integration');
+
+        it('connects with auto-generated certificate in Sign mode', function () {
+            $client = null;
+            try {
+                $client = new Client();
+                $client->setSecurityPolicy(SecurityPolicy::Basic256Sha256);
+                $client->setSecurityMode(SecurityMode::Sign);
+                // No setClientCertificate call - should auto-generate
+                $client->connect(TestHelper::ENDPOINT_SIGN_ONLY);
+                expect($client)->toBeInstanceOf(Client::class);
+
+                $refs = $client->browse(NodeId::numeric(0, 85));
+                expect($refs)->toBeArray()->not->toBeEmpty();
+            } finally {
+                TestHelper::safeDisconnect($client);
+            }
+        })->group('integration');
+
+    });
+
     describe('Sign-only mode on sign-only server (4846)', function () {
 
         it('connects anonymously with Basic256Sha256/Sign', function () {

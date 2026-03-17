@@ -161,6 +161,81 @@ describe('CertificateManager', function () {
         }
     });
 
+    describe('generateSelfSignedCertificate', function () {
+
+        it('returns a valid DER certificate and private key', function () {
+            $cm = new CertificateManager();
+            $result = $cm->generateSelfSignedCertificate();
+
+            expect($result)->toHaveKeys(['certDer', 'privateKey']);
+            expect($result['privateKey'])->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+            // DER should start with SEQUENCE tag (0x30)
+            expect(ord($result['certDer'][0]))->toBe(0x30);
+            expect(strlen($result['certDer']))->toBeGreaterThan(100);
+        });
+
+        it('generates a 2048-bit RSA key', function () {
+            $cm = new CertificateManager();
+            $result = $cm->generateSelfSignedCertificate();
+
+            $keyLength = $cm->getPublicKeyLength($result['certDer']);
+            expect($keyLength)->toBe(256); // 2048 bits / 8
+        });
+
+        it('includes the application URI in the SAN extension', function () {
+            $cm = new CertificateManager();
+            $customUri = 'urn:my-custom-app';
+            $result = $cm->generateSelfSignedCertificate($customUri);
+
+            $applicationUri = $cm->getApplicationUri($result['certDer']);
+            expect($applicationUri)->toBe($customUri);
+        });
+
+        it('uses default application URI when none specified', function () {
+            $cm = new CertificateManager();
+            $result = $cm->generateSelfSignedCertificate();
+
+            $applicationUri = $cm->getApplicationUri($result['certDer']);
+            expect($applicationUri)->toBe('urn:opcua-php-client');
+        });
+
+        it('generates a valid thumbprint from the certificate', function () {
+            $cm = new CertificateManager();
+            $result = $cm->generateSelfSignedCertificate();
+
+            $thumbprint = $cm->getThumbprint($result['certDer']);
+            expect(strlen($thumbprint))->toBe(20);
+        });
+
+        it('can extract public key from the generated certificate', function () {
+            $cm = new CertificateManager();
+            $result = $cm->generateSelfSignedCertificate();
+
+            $pubKey = $cm->getPublicKeyFromCert($result['certDer']);
+            expect($pubKey)->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+        });
+
+        it('generates unique certificates on each call', function () {
+            $cm = new CertificateManager();
+            $result1 = $cm->generateSelfSignedCertificate();
+            $result2 = $cm->generateSelfSignedCertificate();
+
+            expect($result1['certDer'])->not->toBe($result2['certDer']);
+        });
+
+        it('does not write permanent files to disk', function () {
+            $tmpDir = sys_get_temp_dir();
+            $beforeFiles = glob($tmpDir . '/opcua_ssl_*');
+
+            $cm = new CertificateManager();
+            $cm->generateSelfSignedCertificate();
+
+            $afterFiles = glob($tmpDir . '/opcua_ssl_*');
+            expect($afterFiles)->toBe($beforeFiles ?: []);
+        });
+
+    });
+
     it('throws SecurityException for bad PEM in pemToDer', function () {
         $tmpFile = tempnam(sys_get_temp_dir(), 'opcua_test_badpem_');
         // Write invalid base64 content between PEM headers
