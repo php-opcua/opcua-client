@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Gianfriaur\OpcuaPhpClient\Types;
 
+use Gianfriaur\OpcuaPhpClient\Exception\InvalidNodeIdException;
+
 class NodeId
 {
     public const TYPE_NUMERIC = 'numeric';
@@ -92,6 +94,56 @@ class NodeId
     public function isOpaque(): bool
     {
         return $this->type === self::TYPE_OPAQUE;
+    }
+
+    public static function parse(string $nodeIdString): self
+    {
+        $namespace = 0;
+        $remaining = $nodeIdString;
+
+        if (str_starts_with($remaining, 'ns=')) {
+            $semiPos = strpos($remaining, ';');
+            if ($semiPos === false) {
+                throw new InvalidNodeIdException("Invalid NodeId format: {$nodeIdString}");
+            }
+            $namespace = (int) substr($remaining, 3, $semiPos - 3);
+            $remaining = substr($remaining, $semiPos + 1);
+        }
+
+        $eqPos = strpos($remaining, '=');
+        if ($eqPos === false) {
+            throw new InvalidNodeIdException("Invalid NodeId format: {$nodeIdString}");
+        }
+
+        $typeChar = substr($remaining, 0, $eqPos);
+        $value = substr($remaining, $eqPos + 1);
+
+        return match ($typeChar) {
+            'i' => self::numeric($namespace, (int) $value),
+            's' => self::string($namespace, $value),
+            'g' => self::guid($namespace, $value),
+            'b' => self::opaque($namespace, $value),
+            default => throw new InvalidNodeIdException("Unknown NodeId type identifier: {$typeChar}"),
+        };
+    }
+
+    public function toString(): string
+    {
+        $typeChar = match ($this->type) {
+            self::TYPE_NUMERIC => 'i',
+            self::TYPE_STRING => 's',
+            self::TYPE_GUID => 'g',
+            self::TYPE_OPAQUE => 'b',
+        };
+
+        $prefix = $this->namespaceIndex > 0 ? "ns={$this->namespaceIndex};" : '';
+
+        return "{$prefix}{$typeChar}={$this->identifier}";
+    }
+
+    public function __toString(): string
+    {
+        return $this->toString();
     }
 
     public function getEncodingByte(): int

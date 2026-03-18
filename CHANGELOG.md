@@ -1,6 +1,15 @@
 # Changelog
 
-## [1.0.2] - 2026-03-18
+## [1.1.1] - 2026-03-18
+
+### Added
+
+- `NodeId::parse(string $nodeIdString)` static method to parse a NodeId from its OPC UA string representation (e.g. `i=85`, `ns=2;i=1001`, `ns=2;s=MyNode`, `ns=0;g=...`, `ns=0;b=...`). Throws `InvalidNodeIdException` on invalid or unknown formats.
+- `NodeId::toString()` method to serialize a NodeId back to its canonical OPC UA string form. The namespace prefix (`ns=X;`) is omitted when the namespace index is 0.
+- `NodeId::__toString()` magic method for seamless string casting.
+- Unit tests for `NodeId::parse()` and `NodeId::toString()` covering: numeric, string, guid, and opaque types, namespace handling, special characters, error cases, and parse/toString roundtrip consistency.
+
+## [1.1.0] - 2026-03-18
 
 ### Changed
 
