@@ -27,13 +27,13 @@ jobs:
           coverage: none
 
       - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-interaction
 
       - name: Start OPC UA test servers
         id: opcua
-        uses: GianfriAur/opcua-test-server-suite@v1.1.2
+        uses: GianfriAur/opcua-test-server-suite@v1.1.3
 
-      - name: Run integration tests
+      - name: Run tests
         env:
           OPCUA_CERTS_DIR: ${{ steps.opcua.outputs.certs-dir }}
         run: vendor/bin/pest
