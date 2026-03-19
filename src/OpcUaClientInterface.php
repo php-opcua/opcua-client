@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Gianfriaur\OpcuaPhpClient;
 
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
+use Gianfriaur\OpcuaPhpClient\Types\ConnectionState;
 use Gianfriaur\OpcuaPhpClient\Types\DataValue;
 use Gianfriaur\OpcuaPhpClient\Types\EndpointDescription;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
@@ -29,7 +30,13 @@ interface OpcUaClientInterface
      */
     public function connect(string $endpointUrl): void;
 
+    public function reconnect(): void;
+
     public function disconnect(): void;
+
+    public function isConnected(): bool;
+    
+    public function getConnectionState(): ConnectionState;
 
     /**
      * @param string $endpointUrl

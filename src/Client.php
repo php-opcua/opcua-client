@@ -29,6 +29,7 @@ use Gianfriaur\OpcuaPhpClient\Security\SecureChannel;
 use Gianfriaur\OpcuaPhpClient\Security\SecurityMode;
 use Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy;
 use Gianfriaur\OpcuaPhpClient\Transport\TcpTransport;
+use Gianfriaur\OpcuaPhpClient\Types\ConnectionState;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 
 class Client implements OpcUaClientInterface
@@ -77,6 +78,8 @@ class Client implements OpcUaClientInterface
     private ?string $anonymousPolicyId = null;
 
     private float $timeout;
+    private ?string $lastEndpointUrl = null;
+    private ConnectionState $connectionState = ConnectionState::Disconnected;
 
     public function __construct()
     {

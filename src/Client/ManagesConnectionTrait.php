@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Gianfriaur\OpcuaPhpClient\Client;
 
 use Gianfriaur\OpcuaPhpClient\Exception\ConfigurationException;
+use Gianfriaur\OpcuaPhpClient\Exception\ConnectionException;
 use Gianfriaur\OpcuaPhpClient\Exception\OpcUaException;
 use Gianfriaur\OpcuaPhpClient\Security\SecurityMode;
 use Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy;
+use Gianfriaur\OpcuaPhpClient\Types\ConnectionState;
 
 trait ManagesConnectionTrait
 {
@@ -31,13 +33,34 @@ trait ManagesConnectionTrait
             $this->discoverServerCertificate($host, $port, $endpointUrl);
         }
 
-        $this->transport->connect($host, $port, $this->getTimeout());
+        try {
+            $this->transport->connect($host, $port, $this->getTimeout());
 
-        $this->doHandshake($endpointUrl);
+            $this->doHandshake($endpointUrl);
 
-        $this->openSecureChannel();
+            $this->openSecureChannel();
 
-        $this->createAndActivateSession($endpointUrl);
+            $this->createAndActivateSession($endpointUrl);
+        } catch (ConnectionException $e) {
+            $this->connectionState = ConnectionState::Broken;
+            $this->lastEndpointUrl = $endpointUrl;
+            throw $e;
+        }
+
+        $this->lastEndpointUrl = $endpointUrl;
+        $this->connectionState = ConnectionState::Connected;
+    }
+
+    public function reconnect(): void
+    {
+        if ($this->lastEndpointUrl === null) {
+            throw new ConfigurationException('Cannot reconnect: no previous connection endpoint. Call connect() first.');
+        }
+        
+        $this->transport->close();
+        $this->resetConnectionState();
+
+        $this->connect($this->lastEndpointUrl);
     }
 
     public function disconnect(): void
@@ -59,6 +82,17 @@ trait ManagesConnectionTrait
         $this->transport->close();
 
         $this->resetConnectionState();
+        $this->connectionState = ConnectionState::Disconnected;
+    }
+
+    public function isConnected(): bool
+    {
+        return $this->connectionState === ConnectionState::Connected;
+    }
+
+    public function getConnectionState(): ConnectionState
+    {
+        return $this->connectionState;
     }
 
     private function resetConnectionState(): void
