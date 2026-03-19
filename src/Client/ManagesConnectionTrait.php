@@ -31,7 +31,7 @@ trait ManagesConnectionTrait
             $this->discoverServerCertificate($host, $port, $endpointUrl);
         }
 
-        $this->transport->connect($host, $port, $this->timeout);
+        $this->transport->connect($host, $port, $this->getTimeout());
 
         $this->doHandshake($endpointUrl);
 
