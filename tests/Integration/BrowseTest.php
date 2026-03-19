@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Gianfriaur\OpcuaPhpClient\Client;
 use Gianfriaur\OpcuaPhpClient\Tests\Integration\Helpers\TestHelper;
+use Gianfriaur\OpcuaPhpClient\Types\BrowseDirection;
 use Gianfriaur\OpcuaPhpClient\Types\NodeClass;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 
@@ -128,7 +129,7 @@ describe('Browse', function () {
             // Inverse browse should find the parent (Objects folder)
             $refs = $client->browse(
                 $testServerNodeId,
-                direction: TestHelper::BROWSE_DIRECTION_INVERSE,
+                direction: BrowseDirection::Inverse,
             );
 
             expect($refs)->toBeArray()->not->toBeEmpty();
@@ -145,6 +146,35 @@ describe('Browse', function () {
         }
     })->group('integration');
 
+    it('browses with direction=Both from TestServer', function () {
+        $client = null;
+        try {
+            $client = TestHelper::connectNoSecurity();
+            $testServerNodeId = TestHelper::browseToNode($client, ['TestServer']);
+
+            $refs = $client->browse(
+                $testServerNodeId,
+                direction: BrowseDirection::Both,
+            );
+
+            expect($refs)->toBeArray()->not->toBeEmpty();
+
+            $hasForward = false;
+            $hasInverse = false;
+            foreach ($refs as $ref) {
+                if ($ref->isForward()) {
+                    $hasForward = true;
+                } else {
+                    $hasInverse = true;
+                }
+            }
+            expect($hasForward)->toBeTrue();
+            expect($hasInverse)->toBeTrue();
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
     it('browses with specific reference type (Organizes)', function () {
         $client = null;
         try {
@@ -153,7 +183,7 @@ describe('Browse', function () {
             // Browse Objects folder with Organizes reference type only
             $refs = $client->browse(
                 NodeId::numeric(0, 85),
-                direction: TestHelper::BROWSE_DIRECTION_FORWARD,
+                direction: BrowseDirection::Forward,
                 referenceTypeId: NodeId::numeric(0, 35), // Organizes
                 includeSubtypes: true,
             );

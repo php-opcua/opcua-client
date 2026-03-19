@@ -56,11 +56,6 @@ final class TestHelper
     public const NODE_SERVER_STATUS    = [0, 2256];  // Server.ServerStatus
     public const NODE_SERVER_STATE     = [0, 2259];  // Server.ServerStatus.State
 
-    // ── Browse direction constants ─────────────────────────────────────
-    public const BROWSE_DIRECTION_FORWARD = 0;
-    public const BROWSE_DIRECTION_INVERSE = 1;
-    public const BROWSE_DIRECTION_BOTH    = 2;
-
     // ── Reference type IDs ─────────────────────────────────────────────
     public const REF_HIERARCHICAL = [0, 33];  // HierarchicalReferences
     public const REF_ORGANIZES    = [0, 35];  // Organizes

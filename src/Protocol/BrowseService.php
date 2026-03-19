@@ -6,6 +6,7 @@ namespace Gianfriaur\OpcuaPhpClient\Protocol;
 
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
+use Gianfriaur\OpcuaPhpClient\Types\BrowseDirection;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\ReferenceDescription;
 
@@ -22,7 +23,7 @@ class BrowseService
      * @param int $requestId
      * @param NodeId $nodeId
      * @param NodeId $authToken
-     * @param int $direction
+     * @param BrowseDirection $direction
      * @param ?NodeId $referenceTypeId
      * @param bool $includeSubtypes
      * @param int $nodeClassMask
@@ -31,7 +32,7 @@ class BrowseService
         int $requestId,
         NodeId $nodeId,
         NodeId $authToken,
-        int $direction = 0,
+        BrowseDirection $direction = BrowseDirection::Forward,
         ?NodeId $referenceTypeId = null,
         bool $includeSubtypes = true,
         int $nodeClassMask = 0,
@@ -190,7 +191,7 @@ class BrowseService
      * @param int $requestId
      * @param NodeId $nodeId
      * @param NodeId $authToken
-     * @param int $direction
+     * @param BrowseDirection $direction
      * @param ?NodeId $referenceTypeId
      * @param bool $includeSubtypes
      * @param int $nodeClassMask
@@ -199,7 +200,7 @@ class BrowseService
         int $requestId,
         NodeId $nodeId,
         NodeId $authToken,
-        int $direction,
+        BrowseDirection $direction,
         ?NodeId $referenceTypeId,
         bool $includeSubtypes,
         int $nodeClassMask,
@@ -214,6 +215,7 @@ class BrowseService
      * @param int $requestId
      * @param string $continuationPoint
      * @param NodeId $authToken
+     * @return string
      */
     private function encodeBrowseNextRequestSecure(int $requestId, string $continuationPoint, NodeId $authToken): string
     {
@@ -243,7 +245,7 @@ class BrowseService
      * @param int $requestId
      * @param NodeId $nodeId
      * @param NodeId $authToken
-     * @param int $direction
+     * @param BrowseDirection $direction
      * @param ?NodeId $referenceTypeId
      * @param bool $includeSubtypes
      * @param int $nodeClassMask
@@ -253,7 +255,7 @@ class BrowseService
         int $requestId,
         NodeId $nodeId,
         NodeId $authToken,
-        int $direction,
+        BrowseDirection $direction,
         ?NodeId $referenceTypeId,
         bool $includeSubtypes,
         int $nodeClassMask,
@@ -278,7 +280,7 @@ class BrowseService
         $body->writeInt32(1);
 
         $body->writeNodeId($nodeId);
-        $body->writeUInt32($direction);
+        $body->writeUInt32($direction->value);
         $body->writeNodeId($referenceTypeId ?? NodeId::numeric(0, 33));
         $body->writeBoolean($includeSubtypes);
         $body->writeUInt32($nodeClassMask);
@@ -287,6 +289,7 @@ class BrowseService
 
     /**
      * @param string $bodyBytes
+     * @return string
      */
     private function wrapInMessage(string $bodyBytes): string
     {

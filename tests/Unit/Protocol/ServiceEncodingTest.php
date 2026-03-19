@@ -13,6 +13,7 @@ use Gianfriaur\OpcuaPhpClient\Protocol\SecureChannelResponse;
 use Gianfriaur\OpcuaPhpClient\Protocol\SessionService;
 use Gianfriaur\OpcuaPhpClient\Protocol\SubscriptionService;
 use Gianfriaur\OpcuaPhpClient\Protocol\WriteService;
+use Gianfriaur\OpcuaPhpClient\Types\BrowseDirection;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
 use Gianfriaur\OpcuaPhpClient\Types\DataValue;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
@@ -165,7 +166,7 @@ describe('BrowseService encoding', function () {
             1,
             NodeId::numeric(0, 85),
             NodeId::numeric(0, 0),
-            1,                         // direction: Inverse
+            BrowseDirection::Inverse,  // direction: Inverse
             NodeId::numeric(0, 35),    // Organizes
             false,                     // includeSubtypes
             0xFF,                      // nodeClassMask

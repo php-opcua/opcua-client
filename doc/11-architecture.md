@@ -51,7 +51,9 @@ src/
 │   ├── UserTokenPolicy.php              # Authentication policy
 │   ├── StatusCode.php                   # Status code constants & helpers
 │   ├── AttributeId.php                  # Attribute ID constants
-│   └── ConnectionState.php              # Connection state enum
+│   ├── ConnectionState.php              # Connection state enum
+│   ├── BrowseDirection.php              # Browse direction enum
+│   └── BrowseNode.php                   # Recursive browse tree node
 │
 └── Exception/
     ├── OpcUaException.php               # Base exception

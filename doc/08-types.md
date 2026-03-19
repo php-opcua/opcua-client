@@ -134,6 +134,20 @@ NodeClass::DataType;       // 64
 NodeClass::View;           // 128
 ```
 
+## BrowseDirection (Enum)
+
+Specifies the direction for browse operations:
+
+```php
+use Gianfriaur\OpcuaPhpClient\Types\BrowseDirection;
+
+BrowseDirection::Forward;  // 0 - Forward references (children)
+BrowseDirection::Inverse;  // 1 - Inverse references (parents)
+BrowseDirection::Both;     // 2 - Both directions
+```
+
+Used as the `direction` parameter in `browse()`, `browseAll()`, `browseRecursive()`, etc.
+
 ## QualifiedName
 
 A name qualified by a namespace index:
@@ -290,3 +304,22 @@ $ref->getDisplayName();      // LocalizedText
 $ref->getNodeClass();        // NodeClass enum
 $ref->getTypeDefinition();   // ?NodeId
 ```
+
+## BrowseNode
+
+A tree node returned by `browseRecursive()`. Wraps a `ReferenceDescription` with a list of children:
+
+```php
+use Gianfriaur\OpcuaPhpClient\Types\BrowseNode;
+
+$node->getReference();    // ReferenceDescription - the original reference
+$node->getNodeId();       // NodeId
+$node->getDisplayName();  // LocalizedText
+$node->getBrowseName();   // QualifiedName
+$node->getNodeClass();    // NodeClass enum
+$node->getChildren();     // BrowseNode[] - child nodes
+$node->hasChildren();     // bool
+$node->addChild($child);  // void - add a child node
+```
+
+See [Browsing](03-browsing.md#recursive-browse) for usage examples.

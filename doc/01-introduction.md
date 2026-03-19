@@ -18,7 +18,7 @@ composer require gianfriaur/opcua-php-client
 ## Features
 
 - **Binary Protocol**: Full OPC UA binary encoding/decoding over TCP
-- **Browse**: Navigate the server's address space
+- **Browse**: Navigate the server's address space with recursive browsing and automatic continuation
 - **Read/Write**: Read and write node attribute values (single and multi)
 - **Method Call**: Invoke OPC UA methods on the server
 - **Subscriptions**: Create subscriptions with data change and event monitoring

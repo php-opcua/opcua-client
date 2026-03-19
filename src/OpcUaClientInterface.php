@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Gianfriaur\OpcuaPhpClient;
 
+use Gianfriaur\OpcuaPhpClient\Types\BrowseDirection;
+use Gianfriaur\OpcuaPhpClient\Types\BrowseNode;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
 use Gianfriaur\OpcuaPhpClient\Types\ConnectionState;
 use Gianfriaur\OpcuaPhpClient\Types\DataValue;
@@ -78,7 +80,7 @@ interface OpcUaClientInterface
 
     /**
      * @param NodeId $nodeId
-     * @param int $direction
+     * @param BrowseDirection $direction
      * @param ?NodeId $referenceTypeId
      * @param bool $includeSubtypes
      * @param int $nodeClassMask
@@ -86,7 +88,7 @@ interface OpcUaClientInterface
      */
     public function browse(
         NodeId  $nodeId,
-        int     $direction = 0,
+        BrowseDirection $direction = BrowseDirection::Forward,
         ?NodeId $referenceTypeId = null,
         bool    $includeSubtypes = true,
         int     $nodeClassMask = 0,
@@ -94,7 +96,7 @@ interface OpcUaClientInterface
 
     /**
      * @param NodeId $nodeId
-     * @param int $direction
+     * @param BrowseDirection $direction
      * @param ?NodeId $referenceTypeId
      * @param bool $includeSubtypes
      * @param int $nodeClassMask
@@ -102,7 +104,7 @@ interface OpcUaClientInterface
      */
     public function browseWithContinuation(
         NodeId  $nodeId,
-        int     $direction = 0,
+        BrowseDirection $direction = BrowseDirection::Forward,
         ?NodeId $referenceTypeId = null,
         bool    $includeSubtypes = true,
         int     $nodeClassMask = 0,
@@ -113,6 +115,51 @@ interface OpcUaClientInterface
      * @return array{references: ReferenceDescription[], continuationPoint: ?string}
      */
     public function browseNext(string $continuationPoint): array;
+
+    /**
+     * @param NodeId $nodeId
+     * @param BrowseDirection $direction
+     * @param ?NodeId $referenceTypeId
+     * @param bool $includeSubtypes
+     * @param int $nodeClassMask
+     * @return ReferenceDescription[]
+     */
+    public function browseAll(
+        NodeId  $nodeId,
+        BrowseDirection $direction = BrowseDirection::Forward,
+        ?NodeId $referenceTypeId = null,
+        bool    $includeSubtypes = true,
+        int     $nodeClassMask = 0,
+    ): array;
+
+    /**
+     * @param int $maxDepth
+     * @return self
+     */
+    public function setDefaultBrowseMaxDepth(int $maxDepth): self;
+
+    /**
+     * @return int
+     */
+    public function getDefaultBrowseMaxDepth(): int;
+
+    /**
+     * @param NodeId $nodeId
+     * @param BrowseDirection $direction
+     * @param ?int $maxDepth
+     * @param ?NodeId $referenceTypeId
+     * @param bool $includeSubtypes
+     * @param int $nodeClassMask
+     * @return BrowseNode[]
+     */
+    public function browseRecursive(
+        NodeId  $nodeId,
+        BrowseDirection $direction = BrowseDirection::Forward,
+        ?int    $maxDepth = null,
+        ?NodeId $referenceTypeId = null,
+        bool    $includeSubtypes = true,
+        int     $nodeClassMask = 0,
+    ): array;
 
     /**
      * @param NodeId $nodeId

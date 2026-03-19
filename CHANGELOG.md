@@ -16,6 +16,11 @@
 - `Client::setBatchSize(int $batchSize)` and `Client::getBatchSize(): ?int` methods for configurable automatic batching of `readMulti`/`writeMulti`. When the number of items exceeds the batch size, requests are transparently split and results merged. `setBatchSize(0)` disables batching entirely and skips server operation limits discovery on `connect()`.
 - Automatic discovery of server operation limits (`MaxNodesPerRead`, `MaxNodesPerWrite`) after `connect()`. The limits are read from the standard OPC UA nodes (ns=0, i=11705 and i=11707). A server-reported value > 0 is used as the default batch size when `setBatchSize()` is not explicitly called.
 - `Client::getServerMaxNodesPerRead(): ?int` and `Client::getServerMaxNodesPerWrite(): ?int` methods to inspect the discovered server limits.
+- `BrowseNode` type for representing recursive browse tree nodes, wrapping `ReferenceDescription` with children.
+- `Client::browseAll()` method that browses a node and automatically follows all continuation points, returning the complete list of references.
+- `Client::browseRecursive(NodeId, direction, maxDepth, ...)` method for recursive address space traversal. Builds a tree of `BrowseNode` objects. Default `maxDepth` is configurable (default: 10), use `-1` for unlimited (hardcoded cap at 256). Includes cycle detection via visited NodeId tracking to prevent infinite loops on circular references.
+- `Client::setDefaultBrowseMaxDepth(int)` and `Client::getDefaultBrowseMaxDepth(): int` methods to configure the default `maxDepth` for `browseRecursive()`. Default: 10. Passing `maxDepth` explicitly to `browseRecursive()` overrides the configured default.
+- `BrowseDirection` enum (`Forward`, `Inverse`, `Both`) replacing the raw `int $direction` parameter in all browse methods (`browse`, `browseWithContinuation`, `browseAll`, `browseRecursive`, `getBinaryDecoder`). Default is `BrowseDirection::Forward`.
 - All new methods are also available on `OpcUaClientInterface`.
 - Unit tests for `setTimeout()` and `getTimeout()` covering: default value, setter/getter, fluent chaining, fractional seconds, multiple updates, and `OpcUaClientInterface` compliance.
 - Unit tests for `ConnectionState`: enum cases, initial state, disconnect on never-connected client, state-specific exception messages, `reconnect()` without prior connect, and `setAutoRetry` configuration.
@@ -25,6 +30,11 @@
 - Integration tests for auto-retry: default values after connect/disconnect/failed connect, override persistence, operations with retry enabled/disabled, state after retry, and no retry after explicit disconnect.
 - Unit tests for batching: default null, fluent chaining, store, disable, update, chaining with other config methods, interface compliance, and server limits null before connect.
 - Integration tests for batching: readMulti/writeMulti with and without batching, batch splitting, batchSize=1, result order preservation, server limits discovery, limits reset after disconnect, and setBatchSize override.
+- Unit tests for `BrowseNode`: wrapping ReferenceDescription, children management, and nested tree structure.
+- Integration tests for `browseAll` and `browseRecursive`: all references, comparison with browse, tree structure, maxDepth 1/2/3, subtree browsing, default maxDepth, configurable default, explicit override, unlimited depth, cycle detection with `BrowseDirection::Both`.
+- Unit tests for `setDefaultBrowseMaxDepth` and `getDefaultBrowseMaxDepth`: default value, fluent chaining, store, unlimited, multiple updates, chaining with other config, and interface compliance.
+- Unit tests for `BrowseDirection` enum: cases, values, `from()`, and `tryFrom()`.
+- Integration test for `BrowseDirection::Both` verifying both forward and inverse references are returned.
 
 ### Documentation
 
@@ -39,6 +49,11 @@
 - Added "Automatic Batching" section to `doc/04-reading-writing.md` with server limits discovery, transparent batching, manual batch size, and behavior table.
 - Added "Auto-Batching" to the features list in `doc/01-introduction.md` and `README.md`.
 - Updated `connect()` step list in `doc/02-connection.md` to include server operation limits discovery.
+- Added "Browse All", "Recursive Browse", and `BrowseNode` documentation to `doc/03-browsing.md` with configurable default depth, parameter order (direction before maxDepth), depth limits table, disclaimer for high values, cycle detection explanation, configuration methods table, and `BrowseDirection` enum usage.
+- Added `BrowseDirection` enum to `doc/08-types.md`.
+- Added `BrowseNode` type to `doc/08-types.md`.
+- Added `BrowseNode.php` to the project structure in `doc/11-architecture.md`.
+- Updated browse feature description in `doc/01-introduction.md` and `README.md` to include recursive browsing and automatic continuation.
 - Updated `README.md` disclaimer to recommend `gianfriaur/opcua-php-client-session-manager` for session persistence across PHP requests.
 
 ## [1.1.1] - 2026-03-18

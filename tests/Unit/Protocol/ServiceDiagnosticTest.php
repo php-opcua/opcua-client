@@ -9,6 +9,7 @@ use Gianfriaur\OpcuaPhpClient\Protocol\CallService;
 use Gianfriaur\OpcuaPhpClient\Protocol\ReadService;
 use Gianfriaur\OpcuaPhpClient\Protocol\SessionService;
 use Gianfriaur\OpcuaPhpClient\Protocol\SubscriptionService;
+use Gianfriaur\OpcuaPhpClient\Types\BrowseDirection;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 
@@ -292,7 +293,7 @@ describe('BrowseService encoding and decoding', function () {
             1,
             NodeId::numeric(0, 85),
             NodeId::numeric(0, 0),
-            0,
+            BrowseDirection::Forward,
             NodeId::numeric(0, 35),
             false,
             0xFF,
