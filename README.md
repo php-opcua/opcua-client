@@ -96,6 +96,10 @@ Full documentation is available in the [`doc/`](doc/) directory:
 | 10 | [Security](doc/10-security.md) | Security policies, certificates, crypto internals |
 | 11 | [Architecture](doc/11-architecture.md) | Project structure, layers, protocol flow, binary encoding |
 
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get started.
+
 ## Testing
 
 This library is fully tested. The test suite uses [opcua-test-server-suite](https://github.com/GianfriAur/opcua-test-server-suite) to spin up a complete OPC UA test environment covering all standard scenarios: browsing, reading, writing, method calls, subscriptions, history read, security policies, authentication modes, and error handling.
