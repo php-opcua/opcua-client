@@ -6,15 +6,30 @@
 
 - `Client::setTimeout(float $timeout)` method to configure the timeout (in seconds) for TCP connection and all socket I/O operations. Default remains 5 seconds. The method is fluent and also available on `OpcUaClientInterface`.
 - The configured timeout is now passed to `TcpTransport::connect()` both for the main connection and for the server certificate discovery connection.
+- `ConnectionState` enum (`Disconnected`, `Connected`, `Broken`) to track the client's connection lifecycle.
+- `Client::isConnected()` method returning `true` only when the state is `Connected`.
+- `Client::getConnectionState()` method returning the current `ConnectionState`.
+- `Client::reconnect()` method to re-establish the connection using the last endpoint URL. Performs a full cleanup + connect cycle. Throws `ConfigurationException` if `connect()` was never called.
+- `Client::setAutoRetry(int $maxRetries)` and `Client::getAutoRetry()` methods for configurable automatic reconnect+retry on `ConnectionException` during operations. Default: 0 if never connected, 1 if connected at least once.
+- All operations (read, write, browse, call, subscriptions, history, getEndpoints) are wrapped with the auto-retry mechanism.
+- `ensureConnected()` private method with state-aware exception messages: `"Not connected: call connect() first"` (Disconnected) and `"Connection lost: call reconnect() or connect() to re-establish"` (Broken).
+- All new methods are also available on `OpcUaClientInterface`.
 - Unit tests for `setTimeout()` and `getTimeout()` covering: default value, setter/getter, fluent chaining, fractional seconds, multiple updates, and `OpcUaClientInterface` compliance.
+- Unit tests for `ConnectionState`: enum cases, initial state, disconnect on never-connected client, state-specific exception messages, `reconnect()` without prior connect, and `setAutoRetry` configuration.
+- Unit tests for auto-retry: default value, fluent chaining, override, disable, multiple updates, chaining with setTimeout, interface compliance, and no retry when not connected.
 - Integration tests for timeout behavior: custom timeout with operations, short but sufficient timeout, connection failure with very short timeout on unreachable host, and timeout persistence across multiple operations.
+- Integration tests for connection state transitions: Connected after connect, Disconnected after disconnect, Broken on failed connect, state-specific messages, reconnect recovery, and operations after reconnect.
+- Integration tests for auto-retry: default values after connect/disconnect/failed connect, override persistence, operations with retry enabled/disabled, state after retry, and no retry after explicit disconnect.
 
 ### Documentation
 
+- Added "Connection State", "Reconnect", and "Auto-Retry" sections to `doc/02-connection.md` with usage examples and behavior details.
 - Added "Timeout Configuration" section to `doc/02-connection.md` with usage examples and tips.
-- Added "Configurable Timeout" to the features list in `doc/01-introduction.md` and `README.md`.
-- Updated `doc/09-error-handling.md` to reference `setTimeout()` in the `ConnectionException` read timeout description.
-- Added `OpcUaClientInterface.php` to the project structure in `doc/11-architecture.md`.
+- Added "Configurable Timeout", "Connection State Management", and "Auto-Retry" to the features list in `doc/01-introduction.md` and `README.md`.
+- Added `ConnectionState` enum to `doc/08-types.md` types reference.
+- Updated `doc/09-error-handling.md` with state-aware `ConnectionException` messages, `ConfigurationException` for reconnect, and recommended error handling pattern with `ConnectionState` check and auto-retry tip.
+- Added `ConnectionState.php` to the project structure in `doc/11-architecture.md`.
+- Updated disconnection section in `doc/02-connection.md` to document state reset and auto-retry behavior.
 - Updated "Full Secure Connection" examples in `doc/02-connection.md` and `README.md` to show `setTimeout()`.
 - Updated `README.md` disclaimer to recommend `gianfriaur/opcua-php-client-session-manager` for session persistence across PHP requests.
 

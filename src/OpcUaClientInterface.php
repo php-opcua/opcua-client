@@ -26,6 +26,17 @@ interface OpcUaClientInterface
     public function getTimeout(): float;
 
     /**
+     * @param int $maxRetries
+     * @return self
+     */
+    public function setAutoRetry(int $maxRetries): self;
+
+    /**
+     * @return int
+     */
+    public function getAutoRetry(): int;
+
+    /**
      * @param string $endpointUrl
      */
     public function connect(string $endpointUrl): void;
@@ -35,7 +46,7 @@ interface OpcUaClientInterface
     public function disconnect(): void;
 
     public function isConnected(): bool;
-    
+
     public function getConnectionState(): ConnectionState;
 
     /**

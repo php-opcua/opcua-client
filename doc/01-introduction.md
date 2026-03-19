@@ -30,6 +30,8 @@ composer require gianfriaur/opcua-php-client
 - **Authentication**: Anonymous, Username/Password, X.509 Certificate
 - **Certificate Management**: PEM/DER loading, thumbprint, public key extraction
 - **Configurable Timeout**: Customizable timeout for connection and I/O operations
+- **Connection State Management**: Track connection state (Disconnected, Connected, Broken) with `reconnect()` support
+- **Auto-Retry**: Automatic reconnect and retry on connection failures (configurable, default: 1 retry after first connect)
 
 ## Architecture
 

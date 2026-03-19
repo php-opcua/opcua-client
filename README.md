@@ -59,6 +59,8 @@ $client->disconnect();
 - **Security** - Full security stack with 6 policies (None through Aes256Sha256RsaPss)
 - **Authentication** - Anonymous, Username/Password, X.509 Certificate
 - **Configurable Timeout** - Customizable timeout for connection and I/O operations
+- **Connection State** - Track connection lifecycle (Disconnected, Connected, Broken) with `reconnect()` support
+- **Auto-Retry** - Automatic reconnect and retry on connection failures (configurable)
 
 ## Secure Connection Example
 

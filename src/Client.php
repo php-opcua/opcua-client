@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gianfriaur\OpcuaPhpClient;
 
+use Gianfriaur\OpcuaPhpClient\Client\ManagesAutoRetryTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesBrowseTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesConnectionTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesHandshakeTrait;
@@ -12,6 +13,7 @@ use Gianfriaur\OpcuaPhpClient\Client\ManagesReadWriteTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesSecureChannelTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesSessionTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesSubscriptionsTrait;
+use Gianfriaur\OpcuaPhpClient\Client\ManagesTimeoutTrait;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Exception\ServiceException;
 use Gianfriaur\OpcuaPhpClient\Protocol\BrowseService;
@@ -34,6 +36,8 @@ use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 
 class Client implements OpcUaClientInterface
 {
+    use ManagesTimeoutTrait;
+    use ManagesAutoRetryTrait;
     use ManagesConnectionTrait;
     use ManagesHandshakeTrait;
     use ManagesSecureChannelTrait;
@@ -77,31 +81,13 @@ class Client implements OpcUaClientInterface
     private ?string $certificatePolicyId = null;
     private ?string $anonymousPolicyId = null;
 
-    private float $timeout;
     private ?string $lastEndpointUrl = null;
     private ConnectionState $connectionState = ConnectionState::Disconnected;
 
     public function __construct()
     {
         $this->transport = new TcpTransport();
-        $this->timeout = TcpTransport::DAFAUT_TIMEOUT;
-    }
-
-    /**
-     * @param float $timeout
-     * @return Client
-     */
-    public function setTimeout(float $timeout): self
-    {
-        $this->timeout = $timeout;
-
-        return $this;
-    }
-
-
-    public function getTimeout(): float
-    {
-        return $this->timeout;
+        $this->initTimeout();
     }
 
     /**

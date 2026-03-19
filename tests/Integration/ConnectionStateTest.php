@@ -171,7 +171,7 @@ describe('Auto-retry', function () {
             $client = new Client();
             $client->setAutoRetry(0);
             $client->connect(TestHelper::ENDPOINT_NO_SECURITY);
-            
+
             $dataValue = $client->read(NodeId::numeric(0, 2259));
             expect($dataValue->getStatusCode())->toBe(StatusCode::Good);
         } finally {

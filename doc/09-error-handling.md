@@ -45,6 +45,7 @@ use Gianfriaur\OpcuaPhpClient\Exception\ConfigurationException;
 // - Invalid endpoint URL format
 // - Certificate file not found or unreadable
 // - Private key file not found or unreadable
+// - reconnect() called without prior connect()
 ```
 
 ### ConnectionException
@@ -59,7 +60,8 @@ use Gianfriaur\OpcuaPhpClient\Exception\ConnectionException;
 // - Connection closed by remote
 // - Read timeout (configurable via $client->setTimeout(), default: 5 seconds)
 // - Failed to send data
-// - Operation attempted while not connected
+// - "Not connected: call connect() first" (state: Disconnected)
+// - "Connection lost: call reconnect() or connect() to re-establish" (state: Broken)
 ```
 
 ### EncodingException
@@ -130,6 +132,7 @@ use Gianfriaur\OpcuaPhpClient\Exception\ConnectionException;
 use Gianfriaur\OpcuaPhpClient\Exception\SecurityException;
 use Gianfriaur\OpcuaPhpClient\Exception\ServiceException;
 use Gianfriaur\OpcuaPhpClient\Exception\OpcUaException;
+use Gianfriaur\OpcuaPhpClient\Types\ConnectionState;
 
 try {
     $client->connect('opc.tcp://localhost:4840');
@@ -137,6 +140,11 @@ try {
     $client->disconnect();
 } catch (ConnectionException $e) {
     echo "Connection failed: " . $e->getMessage() . "\n";
+
+    // Check if the connection can be recovered
+    if ($client->getConnectionState() === ConnectionState::Broken) {
+        // Could try reconnect() or connect() again
+    }
 } catch (SecurityException $e) {
     echo "Security error: " . $e->getMessage() . "\n";
 } catch (ServiceException $e) {
@@ -146,6 +154,9 @@ try {
 } finally {
     $client->disconnect();
 }
+```
+
+> **Tip:** With auto-retry enabled (default: 1 retry after first connect), the client will automatically attempt to reconnect and retry the operation before throwing a `ConnectionException`. You only need manual recovery if auto-retry is exhausted or disabled.
 ```
 
 ## Status Codes vs Exceptions

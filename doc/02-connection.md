@@ -39,6 +39,77 @@ If an operation exceeds the timeout, a `ConnectionException` is thrown with the 
 
 > **Tip:** In environments with high-latency networks or slow PLC responses, increase the timeout accordingly. For fast local connections, you can reduce it.
 
+## Connection State
+
+The client tracks its connection state via `ConnectionState` enum:
+
+```php
+use Gianfriaur\OpcuaPhpClient\Types\ConnectionState;
+
+$client = new Client();
+$client->getConnectionState(); // ConnectionState::Disconnected
+
+$client->connect('opc.tcp://localhost:4840');
+$client->getConnectionState(); // ConnectionState::Connected
+$client->isConnected();        // true
+
+$client->disconnect();
+$client->getConnectionState(); // ConnectionState::Disconnected
+```
+
+| State | Description |
+|-------|-------------|
+| `ConnectionState::Disconnected` | Never connected, or cleanly disconnected |
+| `ConnectionState::Connected` | Connected and operational |
+| `ConnectionState::Broken` | Connection was lost (timeout, remote close, etc.) |
+
+The state determines the exception message when an operation is attempted on a non-connected client:
+- `Disconnected` → `"Not connected: call connect() first"`
+- `Broken` → `"Connection lost: call reconnect() or connect() to re-establish"`
+
+## Reconnect
+
+If the connection is lost, you can re-establish it using `reconnect()`, which performs a full disconnect/connect cycle using the last endpoint URL:
+
+```php
+$client->connect('opc.tcp://localhost:4840');
+
+// ... connection drops ...
+
+$client->reconnect(); // re-establishes to opc.tcp://localhost:4840
+```
+
+`reconnect()` throws `ConfigurationException` if `connect()` was never called. After an explicit `disconnect()`, the endpoint URL is cleared and `reconnect()` is not available — use `connect()` instead.
+
+## Auto-Retry
+
+The client can automatically reconnect and retry operations when a `ConnectionException` occurs. This is controlled by `setAutoRetry()`:
+
+```php
+$client = new Client();
+$client->setAutoRetry(3); // retry up to 3 times on connection failure
+$client->connect('opc.tcp://localhost:4840');
+
+// If a read() fails due to a broken connection, the client will:
+// 1. Mark state as Broken
+// 2. Call reconnect()
+// 3. Retry the operation
+// Repeating up to 3 times before giving up
+$value = $client->read(NodeId::numeric(0, 2259));
+```
+
+**Default behavior:**
+- **0 retries** if `connect()` was never called or after `disconnect()`
+- **1 retry** if the client has connected at least once (even if the connection failed)
+
+To disable auto-retry explicitly:
+
+```php
+$client->setAutoRetry(0);
+```
+
+> **Note:** Auto-retry only applies to `ConnectionException` during operations (read, write, browse, etc.). It does not apply to the initial `connect()` call itself. After an explicit `disconnect()`, auto-retry is not triggered since there is no endpoint to reconnect to.
+
 ## Security Configuration
 
 ### Security Policy & Mode
@@ -165,8 +236,11 @@ Always call `disconnect()` when done. It:
 1. Sends CloseSession request
 2. Sends CloseSecureChannel request
 3. Closes the TCP socket
-4. Clears all internal state
+4. Clears all internal state (including the last endpoint URL)
+5. Sets connection state to `Disconnected`
 
 ```php
 $client->disconnect();
 ```
+
+After `disconnect()`, auto-retry is disabled and `reconnect()` is not available. You must call `connect()` with an endpoint URL to re-establish.

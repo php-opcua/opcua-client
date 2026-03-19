@@ -6,7 +6,6 @@ namespace Gianfriaur\OpcuaPhpClient\Client;
 
 use DateTimeImmutable;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
-use Gianfriaur\OpcuaPhpClient\Exception\ConnectionException;
 use Gianfriaur\OpcuaPhpClient\Types\DataValue;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 
@@ -27,27 +26,27 @@ trait ManagesHistoryTrait
         int                $numValuesPerNode = 0,
         bool               $returnBounds = false,
     ): array {
-        if ($this->historyReadService === null || $this->authenticationToken === null) {
-            throw new ConnectionException('Not connected');
-        }
+        return $this->executeWithRetry(function () use ($nodeId, $startTime, $endTime, $numValuesPerNode, $returnBounds) {
+            $this->ensureConnected();
 
-        $requestId = $this->nextRequestId();
-        $request = $this->historyReadService->encodeHistoryReadRawRequest(
-            $requestId,
-            $this->authenticationToken,
-            $nodeId,
-            $startTime,
-            $endTime,
-            $numValuesPerNode,
-            $returnBounds,
-        );
-        $this->transport->send($request);
+            $requestId = $this->nextRequestId();
+            $request = $this->historyReadService->encodeHistoryReadRawRequest(
+                $requestId,
+                $this->authenticationToken,
+                $nodeId,
+                $startTime,
+                $endTime,
+                $numValuesPerNode,
+                $returnBounds,
+            );
+            $this->transport->send($request);
 
-        $response = $this->transport->receive();
-        $responseBody = $this->unwrapResponse($response);
-        $decoder = new BinaryDecoder($responseBody);
+            $response = $this->transport->receive();
+            $responseBody = $this->unwrapResponse($response);
+            $decoder = new BinaryDecoder($responseBody);
 
-        return $this->historyReadService->decodeHistoryReadResponse($decoder);
+            return $this->historyReadService->decodeHistoryReadResponse($decoder);
+        });
     }
 
     /**
@@ -65,27 +64,27 @@ trait ManagesHistoryTrait
         float $processingInterval,
         NodeId $aggregateType,
     ): array {
-        if ($this->historyReadService === null || $this->authenticationToken === null) {
-            throw new ConnectionException('Not connected');
-        }
+        return $this->executeWithRetry(function () use ($nodeId, $startTime, $endTime, $processingInterval, $aggregateType) {
+            $this->ensureConnected();
 
-        $requestId = $this->nextRequestId();
-        $request = $this->historyReadService->encodeHistoryReadProcessedRequest(
-            $requestId,
-            $this->authenticationToken,
-            $nodeId,
-            $startTime,
-            $endTime,
-            $processingInterval,
-            $aggregateType,
-        );
-        $this->transport->send($request);
+            $requestId = $this->nextRequestId();
+            $request = $this->historyReadService->encodeHistoryReadProcessedRequest(
+                $requestId,
+                $this->authenticationToken,
+                $nodeId,
+                $startTime,
+                $endTime,
+                $processingInterval,
+                $aggregateType,
+            );
+            $this->transport->send($request);
 
-        $response = $this->transport->receive();
-        $responseBody = $this->unwrapResponse($response);
-        $decoder = new BinaryDecoder($responseBody);
+            $response = $this->transport->receive();
+            $responseBody = $this->unwrapResponse($response);
+            $decoder = new BinaryDecoder($responseBody);
 
-        return $this->historyReadService->decodeHistoryReadResponse($decoder);
+            return $this->historyReadService->decodeHistoryReadResponse($decoder);
+        });
     }
 
     /**
@@ -97,23 +96,23 @@ trait ManagesHistoryTrait
         NodeId $nodeId,
         array $timestamps,
     ): array {
-        if ($this->historyReadService === null || $this->authenticationToken === null) {
-            throw new ConnectionException('Not connected');
-        }
+        return $this->executeWithRetry(function () use ($nodeId, $timestamps) {
+            $this->ensureConnected();
 
-        $requestId = $this->nextRequestId();
-        $request = $this->historyReadService->encodeHistoryReadAtTimeRequest(
-            $requestId,
-            $this->authenticationToken,
-            $nodeId,
-            $timestamps,
-        );
-        $this->transport->send($request);
+            $requestId = $this->nextRequestId();
+            $request = $this->historyReadService->encodeHistoryReadAtTimeRequest(
+                $requestId,
+                $this->authenticationToken,
+                $nodeId,
+                $timestamps,
+            );
+            $this->transport->send($request);
 
-        $response = $this->transport->receive();
-        $responseBody = $this->unwrapResponse($response);
-        $decoder = new BinaryDecoder($responseBody);
+            $response = $this->transport->receive();
+            $responseBody = $this->unwrapResponse($response);
+            $decoder = new BinaryDecoder($responseBody);
 
-        return $this->historyReadService->decodeHistoryReadResponse($decoder);
+            return $this->historyReadService->decodeHistoryReadResponse($decoder);
+        });
     }
 }

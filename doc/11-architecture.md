@@ -50,7 +50,8 @@ src/
 │   ├── EndpointDescription.php          # Server endpoint info
 │   ├── UserTokenPolicy.php              # Authentication policy
 │   ├── StatusCode.php                   # Status code constants & helpers
-│   └── AttributeId.php                  # Attribute ID constants
+│   ├── AttributeId.php                  # Attribute ID constants
+│   └── ConnectionState.php              # Connection state enum
 │
 └── Exception/
     ├── OpcUaException.php               # Base exception

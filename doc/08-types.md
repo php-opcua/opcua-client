@@ -263,6 +263,20 @@ $policy->getIssuerEndpointUrl(); // ?string
 $policy->getSecurityPolicyUri(); // ?string
 ```
 
+## ConnectionState (Enum)
+
+Represents the current state of the client's connection:
+
+```php
+use Gianfriaur\OpcuaPhpClient\Types\ConnectionState;
+
+ConnectionState::Disconnected;  // Never connected or cleanly disconnected
+ConnectionState::Connected;     // Connected and operational
+ConnectionState::Broken;        // Connection was lost
+```
+
+Used by `Client::getConnectionState()` and `Client::isConnected()`. See [Connection & Configuration](02-connection.md#connection-state) for details.
+
 ## ReferenceDescription
 
 Describes a reference between nodes (returned by `browse()`):

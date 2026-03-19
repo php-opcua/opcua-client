@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Gianfriaur\OpcuaPhpClient\Client;
 
+use Closure;
+use Exception;
 use Gianfriaur\OpcuaPhpClient\Exception\ConfigurationException;
 use Gianfriaur\OpcuaPhpClient\Exception\ConnectionException;
 use Gianfriaur\OpcuaPhpClient\Exception\OpcUaException;
@@ -56,7 +58,7 @@ trait ManagesConnectionTrait
         if ($this->lastEndpointUrl === null) {
             throw new ConfigurationException('Cannot reconnect: no previous connection endpoint. Call connect() first.');
         }
-        
+
         $this->transport->close();
         $this->resetConnectionState();
 
@@ -82,6 +84,7 @@ trait ManagesConnectionTrait
         $this->transport->close();
 
         $this->resetConnectionState();
+        $this->lastEndpointUrl = null;
         $this->connectionState = ConnectionState::Disconnected;
     }
 
@@ -93,6 +96,46 @@ trait ManagesConnectionTrait
     public function getConnectionState(): ConnectionState
     {
         return $this->connectionState;
+    }
+
+    /**
+     * @throws ConnectionException|Exception
+     */
+    private function ensureConnected(): void
+    {
+        if ($this->connectionState === ConnectionState::Connected) {
+            return;
+        }
+
+        throw match ($this->connectionState) {
+            ConnectionState::Disconnected => new ConnectionException('Not connected: call connect() first'),
+            ConnectionState::Broken => new ConnectionException('Connection lost: call reconnect() or connect() to re-establish'),
+            default => throw new ConnectionException('No explicit exception for state: ' . $this->connectionState->name),
+        };
+    }
+
+    /**
+     * @template T
+     * @param Closure(): T $operation
+     * @return T
+     */
+    private function executeWithRetry(Closure $operation): mixed
+    {
+        $maxRetries = $this->getAutoRetry();
+
+        for ($attempt = 0; ; $attempt++) {
+            try {
+                return $operation();
+            } catch (ConnectionException $e) {
+                $this->connectionState = ConnectionState::Broken;
+
+                if ($attempt >= $maxRetries || $this->lastEndpointUrl === null) {
+                    throw $e;
+                }
+
+                $this->reconnect();
+            }
+        }
     }
 
     private function resetConnectionState(): void
