@@ -28,15 +28,16 @@ class SubscriptionService
      * @param int $priority
      */
     public function encodeCreateSubscriptionRequest(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        float $requestedPublishingInterval = 500.0,
-        int $requestedLifetimeCount = 2400,
-        int $requestedMaxKeepAliveCount = 10,
-        int $maxNotificationsPerPublish = 0,
-        bool $publishingEnabled = true,
-        int $priority = 0,
-    ): string {
+        float  $requestedPublishingInterval = 500.0,
+        int    $requestedLifetimeCount = 2400,
+        int    $requestedMaxKeepAliveCount = 10,
+        int    $maxNotificationsPerPublish = 0,
+        bool   $publishingEnabled = true,
+        int    $priority = 0,
+    ): string
+    {
         $secureChannel = $this->session->getSecureChannel();
         if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
             return $this->encodeCreateSubscriptionRequestSecure(
@@ -110,15 +111,16 @@ class SubscriptionService
      * @param int $priority
      */
     private function encodeCreateSubscriptionRequestSecure(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        float $requestedPublishingInterval,
-        int $requestedLifetimeCount,
-        int $requestedMaxKeepAliveCount,
-        int $maxNotificationsPerPublish,
-        bool $publishingEnabled,
-        int $priority,
-    ): string {
+        float  $requestedPublishingInterval,
+        int    $requestedLifetimeCount,
+        int    $requestedMaxKeepAliveCount,
+        int    $maxNotificationsPerPublish,
+        bool   $publishingEnabled,
+        int    $priority,
+    ): string
+    {
         $body = new BinaryEncoder();
         $this->writeCreateSubscriptionInnerBody(
             $body,
@@ -148,15 +150,16 @@ class SubscriptionService
      */
     private function writeCreateSubscriptionInnerBody(
         BinaryEncoder $body,
-        int $requestId,
-        NodeId $authToken,
-        float $requestedPublishingInterval,
-        int $requestedLifetimeCount,
-        int $requestedMaxKeepAliveCount,
-        int $maxNotificationsPerPublish,
-        bool $publishingEnabled,
-        int $priority,
-    ): void {
+        int           $requestId,
+        NodeId        $authToken,
+        float         $requestedPublishingInterval,
+        int           $requestedLifetimeCount,
+        int           $requestedMaxKeepAliveCount,
+        int           $maxNotificationsPerPublish,
+        bool          $publishingEnabled,
+        int           $priority,
+    ): void
+    {
         $body->writeNodeId(NodeId::numeric(0, 787));
 
         $this->writeRequestHeader($body, $requestId, $authToken);
@@ -180,15 +183,16 @@ class SubscriptionService
      * @param int $priority
      */
     public function encodeModifySubscriptionRequest(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        int $subscriptionId,
-        float $requestedPublishingInterval = 500.0,
-        int $requestedLifetimeCount = 2400,
-        int $requestedMaxKeepAliveCount = 10,
-        int $maxNotificationsPerPublish = 0,
-        int $priority = 0,
-    ): string {
+        int    $subscriptionId,
+        float  $requestedPublishingInterval = 500.0,
+        int    $requestedLifetimeCount = 2400,
+        int    $requestedMaxKeepAliveCount = 10,
+        int    $maxNotificationsPerPublish = 0,
+        int    $priority = 0,
+    ): string
+    {
         $secureChannel = $this->session->getSecureChannel();
         if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
             return $this->encodeModifySubscriptionRequestSecure(
@@ -260,15 +264,16 @@ class SubscriptionService
      * @param int $priority
      */
     private function encodeModifySubscriptionRequestSecure(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        int $subscriptionId,
-        float $requestedPublishingInterval,
-        int $requestedLifetimeCount,
-        int $requestedMaxKeepAliveCount,
-        int $maxNotificationsPerPublish,
-        int $priority,
-    ): string {
+        int    $subscriptionId,
+        float  $requestedPublishingInterval,
+        int    $requestedLifetimeCount,
+        int    $requestedMaxKeepAliveCount,
+        int    $maxNotificationsPerPublish,
+        int    $priority,
+    ): string
+    {
         $body = new BinaryEncoder();
         $this->writeModifySubscriptionInnerBody(
             $body,
@@ -298,15 +303,16 @@ class SubscriptionService
      */
     private function writeModifySubscriptionInnerBody(
         BinaryEncoder $body,
-        int $requestId,
-        NodeId $authToken,
-        int $subscriptionId,
-        float $requestedPublishingInterval,
-        int $requestedLifetimeCount,
-        int $requestedMaxKeepAliveCount,
-        int $maxNotificationsPerPublish,
-        int $priority,
-    ): void {
+        int           $requestId,
+        NodeId        $authToken,
+        int           $subscriptionId,
+        float         $requestedPublishingInterval,
+        int           $requestedLifetimeCount,
+        int           $requestedMaxKeepAliveCount,
+        int           $maxNotificationsPerPublish,
+        int           $priority,
+    ): void
+    {
         $body->writeNodeId(NodeId::numeric(0, 793));
 
         $this->writeRequestHeader($body, $requestId, $authToken);
@@ -325,10 +331,11 @@ class SubscriptionService
      * @param int[] $subscriptionIds
      */
     public function encodeDeleteSubscriptionsRequest(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        array $subscriptionIds,
-    ): string {
+        array  $subscriptionIds,
+    ): string
+    {
         $secureChannel = $this->session->getSecureChannel();
         if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
             return $this->encodeDeleteSubscriptionsRequestSecure($requestId, $authToken, $subscriptionIds);
@@ -379,10 +386,11 @@ class SubscriptionService
      * @param int[] $subscriptionIds
      */
     private function encodeDeleteSubscriptionsRequestSecure(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        array $subscriptionIds,
-    ): string {
+        array  $subscriptionIds,
+    ): string
+    {
         $body = new BinaryEncoder();
         $this->writeDeleteSubscriptionsInnerBody($body, $requestId, $authToken, $subscriptionIds);
 
@@ -397,10 +405,11 @@ class SubscriptionService
      */
     private function writeDeleteSubscriptionsInnerBody(
         BinaryEncoder $body,
-        int $requestId,
-        NodeId $authToken,
-        array $subscriptionIds,
-    ): void {
+        int           $requestId,
+        NodeId        $authToken,
+        array         $subscriptionIds,
+    ): void
+    {
         $body->writeNodeId(NodeId::numeric(0, 847));
 
         $this->writeRequestHeader($body, $requestId, $authToken);
@@ -418,11 +427,12 @@ class SubscriptionService
      * @param int[] $subscriptionIds
      */
     public function encodeSetPublishingModeRequest(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        bool $publishingEnabled,
-        array $subscriptionIds,
-    ): string {
+        bool   $publishingEnabled,
+        array  $subscriptionIds,
+    ): string
+    {
         $secureChannel = $this->session->getSecureChannel();
         if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
             return $this->encodeSetPublishingModeRequestSecure($requestId, $authToken, $publishingEnabled, $subscriptionIds);
@@ -474,11 +484,12 @@ class SubscriptionService
      * @param int[] $subscriptionIds
      */
     private function encodeSetPublishingModeRequestSecure(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        bool $publishingEnabled,
-        array $subscriptionIds,
-    ): string {
+        bool   $publishingEnabled,
+        array  $subscriptionIds,
+    ): string
+    {
         $body = new BinaryEncoder();
         $this->writeSetPublishingModeInnerBody($body, $requestId, $authToken, $publishingEnabled, $subscriptionIds);
 
@@ -494,11 +505,12 @@ class SubscriptionService
      */
     private function writeSetPublishingModeInnerBody(
         BinaryEncoder $body,
-        int $requestId,
-        NodeId $authToken,
-        bool $publishingEnabled,
-        array $subscriptionIds,
-    ): void {
+        int           $requestId,
+        NodeId        $authToken,
+        bool          $publishingEnabled,
+        array         $subscriptionIds,
+    ): void
+    {
         $body->writeNodeId(NodeId::numeric(0, 799));
 
         $this->writeRequestHeader($body, $requestId, $authToken);

@@ -16,14 +16,15 @@ class EndpointDescription
      * @param int $securityLevel
      */
     public function __construct(
-        private readonly string $endpointUrl,
+        private readonly string  $endpointUrl,
         private readonly ?string $serverCertificate,
-        private readonly int $securityMode,
-        private readonly string $securityPolicyUri,
-        private readonly array $userIdentityTokens,
-        private readonly string $transportProfileUri,
-        private readonly int $securityLevel,
-    ) {
+        private readonly int     $securityMode,
+        private readonly string  $securityPolicyUri,
+        private readonly array   $userIdentityTokens,
+        private readonly string  $transportProfileUri,
+        private readonly int     $securityLevel,
+    )
+    {
     }
 
     public function getEndpointUrl(): string

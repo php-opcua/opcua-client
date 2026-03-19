@@ -7,7 +7,6 @@ namespace Gianfriaur\OpcuaPhpClient\Protocol;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
-use Gianfriaur\OpcuaPhpClient\Types\QualifiedName;
 
 class MonitoredItemService
 {
@@ -26,12 +25,13 @@ class MonitoredItemService
      * @param int $timestampsToReturn
      */
     public function encodeCreateMonitoredItemsRequest(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        int $subscriptionId,
-        array $items,
-        int $timestampsToReturn = 2,
-    ): string {
+        int    $subscriptionId,
+        array  $items,
+        int    $timestampsToReturn = 2,
+    ): string
+    {
         $secureChannel = $this->session->getSecureChannel();
         if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
             return $this->encodeCreateMonitoredItemsRequestSecure(
@@ -101,12 +101,13 @@ class MonitoredItemService
      * @param int $timestampsToReturn
      */
     private function encodeCreateMonitoredItemsRequestSecure(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        int $subscriptionId,
-        array $items,
-        int $timestampsToReturn,
-    ): string {
+        int    $subscriptionId,
+        array  $items,
+        int    $timestampsToReturn,
+    ): string
+    {
         $body = new BinaryEncoder();
         $this->writeCreateMonitoredItemsInnerBody($body, $requestId, $authToken, $subscriptionId, $items, $timestampsToReturn);
 
@@ -123,12 +124,13 @@ class MonitoredItemService
      */
     private function writeCreateMonitoredItemsInnerBody(
         BinaryEncoder $body,
-        int $requestId,
-        NodeId $authToken,
-        int $subscriptionId,
-        array $items,
-        int $timestampsToReturn,
-    ): void {
+        int           $requestId,
+        NodeId        $authToken,
+        int           $subscriptionId,
+        array         $items,
+        int           $timestampsToReturn,
+    ): void
+    {
         $body->writeNodeId(NodeId::numeric(0, 751));
 
         $this->writeRequestHeader($body, $requestId, $authToken);
@@ -166,13 +168,14 @@ class MonitoredItemService
      * @param int $clientHandle
      */
     public function encodeCreateEventMonitoredItemRequest(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        int $subscriptionId,
+        int    $subscriptionId,
         NodeId $nodeId,
-        array $selectFields,
-        int $clientHandle = 1,
-    ): string {
+        array  $selectFields,
+        int    $clientHandle = 1,
+    ): string
+    {
         $secureChannel = $this->session->getSecureChannel();
         if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
             return $this->encodeCreateEventMonitoredItemRequestSecure(
@@ -205,13 +208,14 @@ class MonitoredItemService
      * @param int $clientHandle
      */
     private function encodeCreateEventMonitoredItemRequestSecure(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        int $subscriptionId,
+        int    $subscriptionId,
         NodeId $nodeId,
-        array $selectFields,
-        int $clientHandle,
-    ): string {
+        array  $selectFields,
+        int    $clientHandle,
+    ): string
+    {
         $body = new BinaryEncoder();
         $this->writeCreateEventMonitoredItemInnerBody($body, $requestId, $authToken, $subscriptionId, $nodeId, $selectFields, $clientHandle);
 
@@ -229,13 +233,14 @@ class MonitoredItemService
      */
     private function writeCreateEventMonitoredItemInnerBody(
         BinaryEncoder $body,
-        int $requestId,
-        NodeId $authToken,
-        int $subscriptionId,
-        NodeId $nodeId,
-        array $selectFields,
-        int $clientHandle,
-    ): void {
+        int           $requestId,
+        NodeId        $authToken,
+        int           $subscriptionId,
+        NodeId        $nodeId,
+        array         $selectFields,
+        int           $clientHandle,
+    ): void
+    {
         $body->writeNodeId(NodeId::numeric(0, 751));
 
         $this->writeRequestHeader($body, $requestId, $authToken);
@@ -300,11 +305,12 @@ class MonitoredItemService
      * @param int[] $monitoredItemIds
      */
     public function encodeDeleteMonitoredItemsRequest(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        int $subscriptionId,
-        array $monitoredItemIds,
-    ): string {
+        int    $subscriptionId,
+        array  $monitoredItemIds,
+    ): string
+    {
         $secureChannel = $this->session->getSecureChannel();
         if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
             return $this->encodeDeleteMonitoredItemsRequestSecure($requestId, $authToken, $subscriptionId, $monitoredItemIds);
@@ -356,11 +362,12 @@ class MonitoredItemService
      * @param int[] $monitoredItemIds
      */
     private function encodeDeleteMonitoredItemsRequestSecure(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        int $subscriptionId,
-        array $monitoredItemIds,
-    ): string {
+        int    $subscriptionId,
+        array  $monitoredItemIds,
+    ): string
+    {
         $body = new BinaryEncoder();
         $this->writeDeleteMonitoredItemsInnerBody($body, $requestId, $authToken, $subscriptionId, $monitoredItemIds);
 
@@ -376,11 +383,12 @@ class MonitoredItemService
      */
     private function writeDeleteMonitoredItemsInnerBody(
         BinaryEncoder $body,
-        int $requestId,
-        NodeId $authToken,
-        int $subscriptionId,
-        array $monitoredItemIds,
-    ): void {
+        int           $requestId,
+        NodeId        $authToken,
+        int           $subscriptionId,
+        array         $monitoredItemIds,
+    ): void
+    {
         $body->writeNodeId(NodeId::numeric(0, 781));
 
         $this->writeRequestHeader($body, $requestId, $authToken);

@@ -83,7 +83,7 @@ class CertificateManager
             throw new SecurityException("Failed to get key details: " . openssl_error_string());
         }
 
-        return (int) ($details['bits'] / 8);
+        return (int)($details['bits'] / 8);
     }
 
     /**

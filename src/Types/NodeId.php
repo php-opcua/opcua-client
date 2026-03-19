@@ -19,10 +19,11 @@ class NodeId
      * @param string $type
      */
     public function __construct(
-        private readonly int $namespaceIndex,
+        private readonly int        $namespaceIndex,
         private readonly int|string $identifier,
-        private readonly string $type = self::TYPE_NUMERIC,
-    ) {
+        private readonly string     $type = self::TYPE_NUMERIC,
+    )
+    {
     }
 
     /**
@@ -106,7 +107,7 @@ class NodeId
             if ($semiPos === false) {
                 throw new InvalidNodeIdException("Invalid NodeId format: {$nodeIdString}");
             }
-            $namespace = (int) substr($remaining, 3, $semiPos - 3);
+            $namespace = (int)substr($remaining, 3, $semiPos - 3);
             $remaining = substr($remaining, $semiPos + 1);
         }
 
@@ -119,7 +120,7 @@ class NodeId
         $value = substr($remaining, $eqPos + 1);
 
         return match ($typeChar) {
-            'i' => self::numeric($namespace, (int) $value),
+            'i' => self::numeric($namespace, (int)$value),
             's' => self::string($namespace, $value),
             'g' => self::guid($namespace, $value),
             'b' => self::opaque($namespace, $value),

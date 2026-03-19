@@ -99,12 +99,13 @@ trait ManagesBrowseTrait
      * @return ReferenceDescription[]
      */
     public function browseAll(
-        NodeId $nodeId,
+        NodeId          $nodeId,
         BrowseDirection $direction = BrowseDirection::Forward,
-        ?NodeId $referenceTypeId = null,
-        bool $includeSubtypes = true,
-        int $nodeClassMask = 0,
-    ): array {
+        ?NodeId         $referenceTypeId = null,
+        bool            $includeSubtypes = true,
+        int             $nodeClassMask = 0,
+    ): array
+    {
         $result = $this->browseWithContinuation($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask);
         $allRefs = $result['references'];
 
@@ -128,13 +129,14 @@ trait ManagesBrowseTrait
      * @return BrowseNode[]
      */
     public function browseRecursive(
-        NodeId $nodeId,
+        NodeId          $nodeId,
         BrowseDirection $direction = BrowseDirection::Forward,
-        ?int $maxDepth = null,
-        ?NodeId $referenceTypeId = null,
-        bool $includeSubtypes = true,
-        int $nodeClassMask = 0,
-    ): array {
+        ?int            $maxDepth = null,
+        ?NodeId         $referenceTypeId = null,
+        bool            $includeSubtypes = true,
+        int             $nodeClassMask = 0,
+    ): array
+    {
         $resolvedDepth = $maxDepth ?? $this->getDefaultBrowseMaxDepth();
         $effectiveMaxDepth = $resolvedDepth === -1
             ? self::MAX_BROWSE_RECURSIVE_DEPTH
@@ -157,15 +159,16 @@ trait ManagesBrowseTrait
      * @return BrowseNode[]
      */
     private function browseRecursiveInternal(
-        NodeId $nodeId,
-        int $maxDepth,
-        int $currentDepth,
+        NodeId          $nodeId,
+        int             $maxDepth,
+        int             $currentDepth,
         BrowseDirection $direction,
-        ?NodeId $referenceTypeId,
-        bool $includeSubtypes,
-        int $nodeClassMask,
-        array &$visited,
-    ): array {
+        ?NodeId         $referenceTypeId,
+        bool            $includeSubtypes,
+        int             $nodeClassMask,
+        array           &$visited,
+    ): array
+    {
         $references = $this->browseAll($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask);
         $nodes = [];
 

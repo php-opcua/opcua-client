@@ -29,14 +29,15 @@ class BrowseService
      * @param int $nodeClassMask
      */
     public function encodeBrowseRequest(
-        int $requestId,
-        NodeId $nodeId,
-        NodeId $authToken,
+        int             $requestId,
+        NodeId          $nodeId,
+        NodeId          $authToken,
         BrowseDirection $direction = BrowseDirection::Forward,
-        ?NodeId $referenceTypeId = null,
-        bool $includeSubtypes = true,
-        int $nodeClassMask = 0,
-    ): string {
+        ?NodeId         $referenceTypeId = null,
+        bool            $includeSubtypes = true,
+        int             $nodeClassMask = 0,
+    ): string
+    {
         $secureChannel = $this->session->getSecureChannel();
         if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
             return $this->encodeBrowseRequestSecure(
@@ -197,14 +198,15 @@ class BrowseService
      * @param int $nodeClassMask
      */
     private function encodeBrowseRequestSecure(
-        int $requestId,
-        NodeId $nodeId,
-        NodeId $authToken,
+        int             $requestId,
+        NodeId          $nodeId,
+        NodeId          $authToken,
         BrowseDirection $direction,
-        ?NodeId $referenceTypeId,
-        bool $includeSubtypes,
-        int $nodeClassMask,
-    ): string {
+        ?NodeId         $referenceTypeId,
+        bool            $includeSubtypes,
+        int             $nodeClassMask,
+    ): string
+    {
         $body = new BinaryEncoder();
         $this->writeBrowseInnerBody($body, $requestId, $nodeId, $authToken, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask);
 
@@ -251,15 +253,16 @@ class BrowseService
      * @param int $nodeClassMask
      */
     private function writeBrowseInnerBody(
-        BinaryEncoder $body,
-        int $requestId,
-        NodeId $nodeId,
-        NodeId $authToken,
+        BinaryEncoder   $body,
+        int             $requestId,
+        NodeId          $nodeId,
+        NodeId          $authToken,
         BrowseDirection $direction,
-        ?NodeId $referenceTypeId,
-        bool $includeSubtypes,
-        int $nodeClassMask,
-    ): void {
+        ?NodeId         $referenceTypeId,
+        bool            $includeSubtypes,
+        int             $nodeClassMask,
+    ): void
+    {
         $body->writeNodeId(NodeId::numeric(0, 527));
 
         $body->writeNodeId($authToken);

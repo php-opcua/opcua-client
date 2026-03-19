@@ -8,9 +8,10 @@ use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Exception\ServiceException;
 use Gianfriaur\OpcuaPhpClient\Security\SecureChannel;
-use Gianfriaur\OpcuaPhpClient\Security\SecurityMode;
 use Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy;
+use Gianfriaur\OpcuaPhpClient\Types\LocalizedText;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
+use OpenSSLAsymmetricKey;
 
 class SessionService
 {
@@ -26,10 +27,11 @@ class SessionService
      * @param ?SecureChannel $secureChannel
      */
     public function __construct(
-        private readonly int $secureChannelId,
-        private readonly int $tokenId,
+        private readonly int            $secureChannelId,
+        private readonly int            $tokenId,
         private readonly ?SecureChannel $secureChannel = null,
-    ) {
+    )
+    {
     }
 
     /**
@@ -41,7 +43,8 @@ class SessionService
         ?string $usernamePolicyId = null,
         ?string $certificatePolicyId = null,
         ?string $anonymousPolicyId = null,
-    ): void {
+    ): void
+    {
         if ($usernamePolicyId !== null) {
             $this->usernamePolicyId = $usernamePolicyId;
         }
@@ -156,18 +159,19 @@ class SessionService
      * @param ?string $username
      * @param ?string $password
      * @param ?string $userCertDer
-     * @param ?\OpenSSLAsymmetricKey $userPrivateKey
+     * @param ?OpenSSLAsymmetricKey $userPrivateKey
      * @param ?string $serverNonce
      */
     public function encodeActivateSessionRequest(
-        int $requestId,
-        NodeId $authenticationToken,
-        ?string $username = null,
-        ?string $password = null,
-        ?string $userCertDer = null,
-        ?\OpenSSLAsymmetricKey $userPrivateKey = null,
-        ?string $serverNonce = null,
-    ): string {
+        int                   $requestId,
+        NodeId                $authenticationToken,
+        ?string               $username = null,
+        ?string               $password = null,
+        ?string               $userCertDer = null,
+        ?OpenSSLAsymmetricKey $userPrivateKey = null,
+        ?string               $serverNonce = null,
+    ): string
+    {
         if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
             return $this->encodeActivateSessionRequestSecure(
                 $requestId,
@@ -408,7 +412,7 @@ class SessionService
         ) ?? 'urn:opcua-php-client:client';
         $innerBody->writeString($applicationUri);
         $innerBody->writeString(null);
-        $innerBody->writeLocalizedText(new \Gianfriaur\OpcuaPhpClient\Types\LocalizedText(null, 'opcua-php-client'));
+        $innerBody->writeLocalizedText(new LocalizedText(null, 'opcua-php-client'));
         $innerBody->writeUInt32(1);
         $innerBody->writeString(null);
         $innerBody->writeString(null);
@@ -436,18 +440,19 @@ class SessionService
      * @param ?string $username
      * @param ?string $password
      * @param ?string $userCertDer
-     * @param ?\OpenSSLAsymmetricKey $userPrivateKey
+     * @param ?OpenSSLAsymmetricKey $userPrivateKey
      * @param ?string $serverNonce
      */
     private function encodeActivateSessionRequestSecure(
-        int $requestId,
-        NodeId $authenticationToken,
-        ?string $username,
-        ?string $password,
-        ?string $userCertDer,
-        ?\OpenSSLAsymmetricKey $userPrivateKey,
-        ?string $serverNonce,
-    ): string {
+        int                   $requestId,
+        NodeId                $authenticationToken,
+        ?string               $username,
+        ?string               $password,
+        ?string               $userCertDer,
+        ?OpenSSLAsymmetricKey $userPrivateKey,
+        ?string               $serverNonce,
+    ): string
+    {
         $innerBody = new BinaryEncoder();
 
         $innerBody->writeNodeId(NodeId::numeric(0, 467));
@@ -520,17 +525,18 @@ class SessionService
      * @param ?string $username
      * @param ?string $password
      * @param ?string $userCertDer
-     * @param ?\OpenSSLAsymmetricKey $userPrivateKey
+     * @param ?OpenSSLAsymmetricKey $userPrivateKey
      * @param ?string $serverNonce
      */
     private function writeIdentityToken(
-        BinaryEncoder $encoder,
-        ?string $username,
-        ?string $password,
-        ?string $userCertDer,
-        ?\OpenSSLAsymmetricKey $userPrivateKey,
-        ?string $serverNonce,
-    ): void {
+        BinaryEncoder         $encoder,
+        ?string               $username,
+        ?string               $password,
+        ?string               $userCertDer,
+        ?OpenSSLAsymmetricKey $userPrivateKey,
+        ?string               $serverNonce,
+    ): void
+    {
         if ($username !== null && $password !== null) {
             $this->writeUsernameIdentityToken($encoder, $username, $password, $serverNonce);
         } elseif ($userCertDer !== null) {
@@ -563,10 +569,11 @@ class SessionService
      */
     private function writeUsernameIdentityToken(
         BinaryEncoder $encoder,
-        string $username,
-        string $password,
-        ?string $serverNonce,
-    ): void {
+        string        $username,
+        string        $password,
+        ?string       $serverNonce,
+    ): void
+    {
         $encoder->writeNodeId(NodeId::numeric(0, 324));
         $encoder->writeByte(0x01);
 
@@ -622,14 +629,15 @@ class SessionService
 
     /**
      * @param BinaryEncoder $encoder
-     * @param \OpenSSLAsymmetricKey $userPrivateKey
+     * @param OpenSSLAsymmetricKey $userPrivateKey
      * @param string $serverNonce
      */
     private function writeUserTokenSignature(
-        BinaryEncoder $encoder,
-        \OpenSSLAsymmetricKey $userPrivateKey,
-        string $serverNonce,
-    ): void {
+        BinaryEncoder         $encoder,
+        OpenSSLAsymmetricKey $userPrivateKey,
+        string                $serverNonce,
+    ): void
+    {
         $policy = $this->secureChannel?->getPolicy() ?? SecurityPolicy::None;
         $serverCertDer = $this->secureChannel?->getServerCertDer();
 
@@ -656,7 +664,7 @@ class SessionService
     {
         $body->writeString('urn:opcua-php-client:client');
         $body->writeString(null);
-        $body->writeLocalizedText(new \Gianfriaur\OpcuaPhpClient\Types\LocalizedText(null, 'opcua-php-client'));
+        $body->writeLocalizedText(new LocalizedText(null, 'opcua-php-client'));
         $body->writeUInt32(1);
         $body->writeString(null);
         $body->writeString(null);

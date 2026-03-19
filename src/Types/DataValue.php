@@ -15,11 +15,12 @@ class DataValue
      * @param ?DateTimeImmutable $serverTimestamp
      */
     public function __construct(
-        private readonly ?Variant $value = null,
-        private readonly int $statusCode = 0,
+        private readonly ?Variant           $value = null,
+        private readonly int                $statusCode = 0,
         private readonly ?DateTimeImmutable $sourceTimestamp = null,
         private readonly ?DateTimeImmutable $serverTimestamp = null,
-    ) {
+    )
+    {
     }
 
     public function getValue(): mixed

@@ -48,11 +48,12 @@ class MessageSecurity
      * @param SecurityPolicy $policy
      */
     public function asymmetricVerify(
-        string $data,
-        string $signature,
-        string $derCert,
+        string         $data,
+        string         $signature,
+        string         $derCert,
         SecurityPolicy $policy,
-    ): bool {
+    ): bool
+    {
         if ($policy === SecurityPolicy::None) {
             return true;
         }
@@ -112,10 +113,11 @@ class MessageSecurity
      * @param SecurityPolicy $policy
      */
     public function asymmetricDecrypt(
-        string $data,
+        string               $data,
         OpenSSLAsymmetricKey $privateKey,
-        SecurityPolicy $policy,
-    ): string {
+        SecurityPolicy       $policy,
+    ): string
+    {
         if ($policy === SecurityPolicy::None) {
             return $data;
         }
@@ -124,7 +126,7 @@ class MessageSecurity
         if ($details === false) {
             throw new SecurityException("Failed to get private key details: " . openssl_error_string());
         }
-        $keyLengthBytes = (int) ($details['bits'] / 8);
+        $keyLengthBytes = (int)($details['bits'] / 8);
         $padding = $policy->getAsymmetricEncryptionPadding();
 
         $decrypted = '';
@@ -170,11 +172,12 @@ class MessageSecurity
      * @param SecurityPolicy $policy
      */
     public function symmetricVerify(
-        string $data,
-        string $signature,
-        string $signingKey,
+        string         $data,
+        string         $signature,
+        string         $signingKey,
         SecurityPolicy $policy,
-    ): bool {
+    ): bool
+    {
         if ($policy === SecurityPolicy::None) {
             return true;
         }
@@ -191,11 +194,12 @@ class MessageSecurity
      * @param SecurityPolicy $policy
      */
     public function symmetricEncrypt(
-        string $data,
-        string $encryptingKey,
-        string $iv,
+        string         $data,
+        string         $encryptingKey,
+        string         $iv,
         SecurityPolicy $policy,
-    ): string {
+    ): string
+    {
         if ($policy === SecurityPolicy::None) {
             return $data;
         }
@@ -224,11 +228,12 @@ class MessageSecurity
      * @param SecurityPolicy $policy
      */
     public function symmetricDecrypt(
-        string $data,
-        string $encryptingKey,
-        string $iv,
+        string         $data,
+        string         $encryptingKey,
+        string         $iv,
         SecurityPolicy $policy,
-    ): string {
+    ): string
+    {
         if ($policy === SecurityPolicy::None) {
             return $data;
         }

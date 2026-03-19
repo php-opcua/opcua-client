@@ -15,11 +15,12 @@ class UserTokenPolicy
      */
     public function __construct(
         private readonly ?string $policyId,
-        private readonly int $tokenType,
+        private readonly int     $tokenType,
         private readonly ?string $issuedTokenType,
         private readonly ?string $issuerEndpointUrl,
         private readonly ?string $securityPolicyUri,
-    ) {
+    )
+    {
     }
 
     public function getPolicyId(): ?string

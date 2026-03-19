@@ -11,9 +11,10 @@ class QualifiedName
      * @param string $name
      */
     public function __construct(
-        private readonly int $namespaceIndex,
+        private readonly int    $namespaceIndex,
         private readonly string $name,
-    ) {
+    )
+    {
     }
 
     public function getNamespaceIndex(): int

@@ -18,13 +18,14 @@ class HelloMessage
      * @param string $endpointUrl
      */
     public function __construct(
-        private readonly int $protocolVersion = 0,
-        private readonly int $receiveBufferSize = 65535,
-        private readonly int $sendBufferSize = 65535,
-        private readonly int $maxMessageSize = 0,
-        private readonly int $maxChunkCount = 0,
+        private readonly int    $protocolVersion = 0,
+        private readonly int    $receiveBufferSize = 65535,
+        private readonly int    $sendBufferSize = 65535,
+        private readonly int    $maxMessageSize = 0,
+        private readonly int    $maxChunkCount = 0,
         private readonly string $endpointUrl = '',
-    ) {
+    )
+    {
     }
 
     public function encode(): string

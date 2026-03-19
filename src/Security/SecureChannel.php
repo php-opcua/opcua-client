@@ -46,13 +46,14 @@ class SecureChannel
      * @param ?string $clientCertChainDer
      */
     public function __construct(
-        SecurityPolicy $policy,
-        SecurityMode $mode,
-        ?string $clientCertDer = null,
+        SecurityPolicy        $policy,
+        SecurityMode          $mode,
+        ?string               $clientCertDer = null,
         ?OpenSSLAsymmetricKey $clientPrivateKey = null,
-        ?string $serverCertDer = null,
-        ?string $clientCertChainDer = null,
-    ) {
+        ?string               $serverCertDer = null,
+        ?string               $clientCertChainDer = null,
+    )
+    {
         $this->policy = $policy;
         $this->mode = $mode;
         $this->clientCertDer = $clientCertDer;
@@ -197,7 +198,7 @@ class SecureChannel
             );
 
             $dataToEncryptLen = strlen($bodyWithPadding) + $signatureSize;
-            $numBlocks = (int) ceil($dataToEncryptLen / $plainTextBlockSize);
+            $numBlocks = (int)ceil($dataToEncryptLen / $plainTextBlockSize);
             $encryptedSize = $numBlocks * $keyLengthBytes;
 
             $totalSize = 12 + strlen($securityHeaderBytes) + $encryptedSize;
@@ -319,7 +320,7 @@ class SecureChannel
         return [
             'secureChannelId' => $this->secureChannelId,
             'tokenId' => $this->tokenId,
-            'revisedLifetime' => (int) $revisedLifetime,
+            'revisedLifetime' => (int)$revisedLifetime,
             'serverNonce' => $this->serverNonce,
         ];
     }
@@ -532,10 +533,11 @@ class SecureChannel
      */
     private function addAsymmetricPadding(
         string $plainBody,
-        int $signatureSize,
-        int $plainTextBlockSize,
-        int $keyLengthBytes,
-    ): string {
+        int    $signatureSize,
+        int    $plainTextBlockSize,
+        int    $keyLengthBytes,
+    ): string
+    {
         $bodyLen = strlen($plainBody);
         $extraPaddingByte = ($keyLengthBytes > 256) ? 1 : 0;
 
@@ -629,7 +631,7 @@ class SecureChannel
             throw new SecurityException("Failed to get client private key details");
         }
 
-        return (int) ($details['bits'] / 8);
+        return (int)($details['bits'] / 8);
     }
 
     /**

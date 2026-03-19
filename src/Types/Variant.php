@@ -15,7 +15,8 @@ readonly class Variant
         private BuiltinType $type,
         private mixed       $value,
         private ?array      $dimensions = null,
-    ) {
+    )
+    {
     }
 
     public function getType(): BuiltinType

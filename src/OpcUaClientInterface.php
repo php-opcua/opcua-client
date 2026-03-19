@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gianfriaur\OpcuaPhpClient;
 
+use DateTimeImmutable;
 use Gianfriaur\OpcuaPhpClient\Types\BrowseDirection;
 use Gianfriaur\OpcuaPhpClient\Types\BrowseNode;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
@@ -88,11 +89,11 @@ interface OpcUaClientInterface
      * @return ReferenceDescription[]
      */
     public function browse(
-        NodeId  $nodeId,
+        NodeId          $nodeId,
         BrowseDirection $direction = BrowseDirection::Forward,
-        ?NodeId $referenceTypeId = null,
-        bool    $includeSubtypes = true,
-        int     $nodeClassMask = 0,
+        ?NodeId         $referenceTypeId = null,
+        bool            $includeSubtypes = true,
+        int             $nodeClassMask = 0,
     ): array;
 
     /**
@@ -104,11 +105,11 @@ interface OpcUaClientInterface
      * @return array{references: ReferenceDescription[], continuationPoint: ?string}
      */
     public function browseWithContinuation(
-        NodeId  $nodeId,
+        NodeId          $nodeId,
         BrowseDirection $direction = BrowseDirection::Forward,
-        ?NodeId $referenceTypeId = null,
-        bool    $includeSubtypes = true,
-        int     $nodeClassMask = 0,
+        ?NodeId         $referenceTypeId = null,
+        bool            $includeSubtypes = true,
+        int             $nodeClassMask = 0,
     ): array;
 
     /**
@@ -126,11 +127,11 @@ interface OpcUaClientInterface
      * @return ReferenceDescription[]
      */
     public function browseAll(
-        NodeId  $nodeId,
+        NodeId          $nodeId,
         BrowseDirection $direction = BrowseDirection::Forward,
-        ?NodeId $referenceTypeId = null,
-        bool    $includeSubtypes = true,
-        int     $nodeClassMask = 0,
+        ?NodeId         $referenceTypeId = null,
+        bool            $includeSubtypes = true,
+        int             $nodeClassMask = 0,
     ): array;
 
     /**
@@ -154,12 +155,12 @@ interface OpcUaClientInterface
      * @return BrowseNode[]
      */
     public function browseRecursive(
-        NodeId  $nodeId,
+        NodeId          $nodeId,
         BrowseDirection $direction = BrowseDirection::Forward,
-        ?int    $maxDepth = null,
-        ?NodeId $referenceTypeId = null,
-        bool    $includeSubtypes = true,
-        int     $nodeClassMask = 0,
+        ?int            $maxDepth = null,
+        ?NodeId         $referenceTypeId = null,
+        bool            $includeSubtypes = true,
+        int             $nodeClassMask = 0,
     ): array;
 
     /**
@@ -270,39 +271,39 @@ interface OpcUaClientInterface
 
     /**
      * @param NodeId $nodeId
-     * @param ?\DateTimeImmutable $startTime
-     * @param ?\DateTimeImmutable $endTime
+     * @param ?DateTimeImmutable $startTime
+     * @param ?DateTimeImmutable $endTime
      * @param int $numValuesPerNode
      * @param bool $returnBounds
      * @return DataValue[]
      */
     public function historyReadRaw(
-        NodeId              $nodeId,
-        ?\DateTimeImmutable $startTime = null,
-        ?\DateTimeImmutable $endTime = null,
-        int                 $numValuesPerNode = 0,
-        bool                $returnBounds = false,
+        NodeId             $nodeId,
+        ?DateTimeImmutable $startTime = null,
+        ?DateTimeImmutable $endTime = null,
+        int                $numValuesPerNode = 0,
+        bool               $returnBounds = false,
     ): array;
 
     /**
      * @param NodeId $nodeId
-     * @param \DateTimeImmutable $startTime
-     * @param \DateTimeImmutable $endTime
+     * @param DateTimeImmutable $startTime
+     * @param DateTimeImmutable $endTime
      * @param float $processingInterval
      * @param NodeId $aggregateType
      * @return DataValue[]
      */
     public function historyReadProcessed(
         NodeId             $nodeId,
-        \DateTimeImmutable $startTime,
-        \DateTimeImmutable $endTime,
+        DateTimeImmutable $startTime,
+        DateTimeImmutable $endTime,
         float              $processingInterval,
         NodeId             $aggregateType,
     ): array;
 
     /**
      * @param NodeId $nodeId
-     * @param \DateTimeImmutable[] $timestamps
+     * @param DateTimeImmutable[] $timestamps
      * @return DataValue[]
      */
     public function historyReadAtTime(

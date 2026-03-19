@@ -25,7 +25,8 @@ trait ManagesHistoryTrait
         ?DateTimeImmutable $endTime = null,
         int                $numValuesPerNode = 0,
         bool               $returnBounds = false,
-    ): array {
+    ): array
+    {
         return $this->executeWithRetry(function () use ($nodeId, $startTime, $endTime, $numValuesPerNode, $returnBounds) {
             $this->ensureConnected();
 
@@ -58,12 +59,13 @@ trait ManagesHistoryTrait
      * @return DataValue[]
      */
     public function historyReadProcessed(
-        NodeId $nodeId,
+        NodeId            $nodeId,
         DateTimeImmutable $startTime,
         DateTimeImmutable $endTime,
-        float $processingInterval,
-        NodeId $aggregateType,
-    ): array {
+        float             $processingInterval,
+        NodeId            $aggregateType,
+    ): array
+    {
         return $this->executeWithRetry(function () use ($nodeId, $startTime, $endTime, $processingInterval, $aggregateType) {
             $this->ensureConnected();
 
@@ -94,8 +96,9 @@ trait ManagesHistoryTrait
      */
     public function historyReadAtTime(
         NodeId $nodeId,
-        array $timestamps,
-    ): array {
+        array  $timestamps,
+    ): array
+    {
         return $this->executeWithRetry(function () use ($nodeId, $timestamps) {
             $this->ensureConnected();
 

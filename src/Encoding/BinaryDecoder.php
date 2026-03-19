@@ -169,7 +169,7 @@ class BinaryDecoder
         }
 
         $epochOffset = 11644473600;
-        $unixMicroseconds = (int) ($ticks / 10) - ($epochOffset * 1_000_000);
+        $unixMicroseconds = (int)($ticks / 10) - ($epochOffset * 1_000_000);
         $seconds = intdiv($unixMicroseconds, 1_000_000);
         $microseconds = $unixMicroseconds % 1_000_000;
         if ($microseconds < 0) {

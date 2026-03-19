@@ -13,7 +13,8 @@ class LocalizedText
     public function __construct(
         private readonly ?string $locale,
         private readonly ?string $text,
-    ) {
+    )
+    {
     }
 
     public function getLocale(): ?string

@@ -11,7 +11,8 @@ class BrowseNode
 
     public function __construct(
         private readonly ReferenceDescription $reference,
-    ) {
+    )
+    {
     }
 
     public function getReference(): ReferenceDescription

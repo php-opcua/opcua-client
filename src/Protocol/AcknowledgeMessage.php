@@ -21,7 +21,8 @@ class AcknowledgeMessage
         private readonly int $sendBufferSize,
         private readonly int $maxMessageSize,
         private readonly int $maxChunkCount,
-    ) {
+    )
+    {
     }
 
     /**

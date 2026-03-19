@@ -29,14 +29,15 @@ class HistoryReadService
      * @param bool $returnBounds
      */
     public function encodeHistoryReadRawRequest(
-        int $requestId,
-        NodeId $authToken,
-        NodeId $nodeId,
+        int                $requestId,
+        NodeId             $authToken,
+        NodeId             $nodeId,
         ?DateTimeImmutable $startTime = null,
         ?DateTimeImmutable $endTime = null,
-        int $numValuesPerNode = 0,
-        bool $returnBounds = false,
-    ): string {
+        int                $numValuesPerNode = 0,
+        bool               $returnBounds = false,
+    ): string
+    {
         $detailsBody = $this->buildReadRawModifiedDetailsBody($startTime, $endTime, $numValuesPerNode, $returnBounds);
 
         return $this->encodeHistoryReadRequest($requestId, $authToken, [$nodeId], 649, $detailsBody);
@@ -52,14 +53,15 @@ class HistoryReadService
      * @param NodeId $aggregateType
      */
     public function encodeHistoryReadProcessedRequest(
-        int $requestId,
-        NodeId $authToken,
-        NodeId $nodeId,
+        int               $requestId,
+        NodeId            $authToken,
+        NodeId            $nodeId,
         DateTimeImmutable $startTime,
         DateTimeImmutable $endTime,
-        float $processingInterval,
-        NodeId $aggregateType,
-    ): string {
+        float             $processingInterval,
+        NodeId            $aggregateType,
+    ): string
+    {
         $detailsBody = $this->buildReadProcessedDetailsBody($startTime, $endTime, $processingInterval, $aggregateType);
 
         return $this->encodeHistoryReadRequest($requestId, $authToken, [$nodeId], 652, $detailsBody);
@@ -72,11 +74,12 @@ class HistoryReadService
      * @param DateTimeImmutable[] $timestamps
      */
     public function encodeHistoryReadAtTimeRequest(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
         NodeId $nodeId,
-        array $timestamps,
-    ): string {
+        array  $timestamps,
+    ): string
+    {
         $detailsBody = $this->buildReadAtTimeDetailsBody($timestamps);
 
         return $this->encodeHistoryReadRequest($requestId, $authToken, [$nodeId], 655, $detailsBody);
@@ -90,12 +93,13 @@ class HistoryReadService
      * @param string $detailsBody
      */
     private function encodeHistoryReadRequest(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        array $nodeIds,
-        int $detailsTypeId,
+        array  $nodeIds,
+        int    $detailsTypeId,
         string $detailsBody,
-    ): string {
+    ): string
+    {
         $secureChannel = $this->session->getSecureChannel();
         if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
             return $this->encodeHistoryReadRequestSecure($requestId, $authToken, $nodeIds, $detailsTypeId, $detailsBody);
@@ -178,12 +182,13 @@ class HistoryReadService
      * @param string $detailsBody
      */
     private function encodeHistoryReadRequestSecure(
-        int $requestId,
+        int    $requestId,
         NodeId $authToken,
-        array $nodeIds,
-        int $detailsTypeId,
+        array  $nodeIds,
+        int    $detailsTypeId,
         string $detailsBody,
-    ): string {
+    ): string
+    {
         $body = new BinaryEncoder();
         $this->writeHistoryReadInnerBody($body, $requestId, $authToken, $nodeIds, $detailsTypeId, $detailsBody);
 
@@ -200,12 +205,13 @@ class HistoryReadService
      */
     private function writeHistoryReadInnerBody(
         BinaryEncoder $body,
-        int $requestId,
-        NodeId $authToken,
-        array $nodeIds,
-        int $detailsTypeId,
-        string $detailsBody,
-    ): void {
+        int           $requestId,
+        NodeId        $authToken,
+        array         $nodeIds,
+        int           $detailsTypeId,
+        string        $detailsBody,
+    ): void
+    {
         $body->writeNodeId(NodeId::numeric(0, 664));
 
         $this->writeRequestHeader($body, $requestId, $authToken);
@@ -238,9 +244,10 @@ class HistoryReadService
     private function buildReadRawModifiedDetailsBody(
         ?DateTimeImmutable $startTime,
         ?DateTimeImmutable $endTime,
-        int $numValuesPerNode,
-        bool $returnBounds,
-    ): string {
+        int                $numValuesPerNode,
+        bool               $returnBounds,
+    ): string
+    {
         $encoder = new BinaryEncoder();
 
         $encoder->writeBoolean(false);
@@ -265,9 +272,10 @@ class HistoryReadService
     private function buildReadProcessedDetailsBody(
         DateTimeImmutable $startTime,
         DateTimeImmutable $endTime,
-        float $processingInterval,
-        NodeId $aggregateType,
-    ): string {
+        float             $processingInterval,
+        NodeId            $aggregateType,
+    ): string
+    {
         $encoder = new BinaryEncoder();
 
         $encoder->writeDateTime($startTime);

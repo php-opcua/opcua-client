@@ -151,9 +151,9 @@ class BinaryEncoder
             return;
         }
 
-        $unixTimestamp = (float) $value->format('U.u');
+        $unixTimestamp = (float)$value->format('U.u');
         $epochOffset = 11644473600;
-        $opcuaTimestamp = (int) (($unixTimestamp + $epochOffset) * 10_000_000);
+        $opcuaTimestamp = (int)(($unixTimestamp + $epochOffset) * 10_000_000);
         $this->writeInt64($opcuaTimestamp);
     }
 
@@ -167,9 +167,9 @@ class BinaryEncoder
             throw new EncodingException("Invalid GUID format: {$guid}");
         }
 
-        $this->writeUInt32((int) hexdec($parts[0]));
-        $this->writeUInt16((int) hexdec($parts[1]));
-        $this->writeUInt16((int) hexdec($parts[2]));
+        $this->writeUInt32((int)hexdec($parts[0]));
+        $this->writeUInt16((int)hexdec($parts[1]));
+        $this->writeUInt16((int)hexdec($parts[2]));
         $this->writeRawBytes(hex2bin($parts[3] . $parts[4]));
     }
 
@@ -184,32 +184,32 @@ class BinaryEncoder
         switch ($encodingByte) {
             case 0x00:
                 $this->writeByte(0x00);
-                $this->writeByte((int) $identifier);
+                $this->writeByte((int)$identifier);
                 break;
             case 0x01:
                 $this->writeByte(0x01);
                 $this->writeByte($nodeId->getNamespaceIndex());
-                $this->writeUInt16((int) $identifier);
+                $this->writeUInt16((int)$identifier);
                 break;
             case 0x02:
                 $this->writeByte(0x02);
                 $this->writeUInt16($nodeId->getNamespaceIndex());
-                $this->writeUInt32((int) $identifier);
+                $this->writeUInt32((int)$identifier);
                 break;
             case 0x03:
                 $this->writeByte(0x03);
                 $this->writeUInt16($nodeId->getNamespaceIndex());
-                $this->writeString((string) $identifier);
+                $this->writeString((string)$identifier);
                 break;
             case 0x04:
                 $this->writeByte(0x04);
                 $this->writeUInt16($nodeId->getNamespaceIndex());
-                $this->writeGuid((string) $identifier);
+                $this->writeGuid((string)$identifier);
                 break;
             case 0x05:
                 $this->writeByte(0x05);
                 $this->writeUInt16($nodeId->getNamespaceIndex());
-                $this->writeByteString(hex2bin((string) $identifier));
+                $this->writeByteString(hex2bin((string)$identifier));
                 break;
         }
     }
@@ -284,25 +284,25 @@ class BinaryEncoder
     public function writeVariantValue(BuiltinType $type, mixed $value): void
     {
         match ($type) {
-            BuiltinType::Boolean => $this->writeBoolean((bool) $value),
-            BuiltinType::SByte => $this->writeSByte((int) $value),
-            BuiltinType::Byte => $this->writeByte((int) $value),
-            BuiltinType::Int16 => $this->writeInt16((int) $value),
-            BuiltinType::UInt16 => $this->writeUInt16((int) $value),
-            BuiltinType::Int32 => $this->writeInt32((int) $value),
-            BuiltinType::UInt32 => $this->writeUInt32((int) $value),
-            BuiltinType::Int64 => $this->writeInt64((int) $value),
-            BuiltinType::UInt64 => $this->writeUInt64((int) $value),
-            BuiltinType::Float => $this->writeFloat((float) $value),
-            BuiltinType::Double => $this->writeDouble((float) $value),
+            BuiltinType::Boolean => $this->writeBoolean((bool)$value),
+            BuiltinType::SByte => $this->writeSByte((int)$value),
+            BuiltinType::Byte => $this->writeByte((int)$value),
+            BuiltinType::Int16 => $this->writeInt16((int)$value),
+            BuiltinType::UInt16 => $this->writeUInt16((int)$value),
+            BuiltinType::Int32 => $this->writeInt32((int)$value),
+            BuiltinType::UInt32 => $this->writeUInt32((int)$value),
+            BuiltinType::Int64 => $this->writeInt64((int)$value),
+            BuiltinType::UInt64 => $this->writeUInt64((int)$value),
+            BuiltinType::Float => $this->writeFloat((float)$value),
+            BuiltinType::Double => $this->writeDouble((float)$value),
             BuiltinType::String => $this->writeString($value),
             BuiltinType::DateTime => $this->writeDateTime($value),
-            BuiltinType::Guid => $this->writeGuid((string) $value),
+            BuiltinType::Guid => $this->writeGuid((string)$value),
             BuiltinType::ByteString => $this->writeByteString($value),
             BuiltinType::XmlElement => $this->writeString($value),
             BuiltinType::NodeId => $this->writeNodeId($value),
             BuiltinType::ExpandedNodeId => $this->writeExpandedNodeId($value),
-            BuiltinType::StatusCode => $this->writeUInt32((int) $value),
+            BuiltinType::StatusCode => $this->writeUInt32((int)$value),
             BuiltinType::QualifiedName => $this->writeQualifiedName($value),
             BuiltinType::LocalizedText => $this->writeLocalizedText($value),
             BuiltinType::ExtensionObject => $this->writeExtensionObject($value),

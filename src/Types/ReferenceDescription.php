@@ -16,14 +16,15 @@ class ReferenceDescription
      * @param ?NodeId $typeDefinition
      */
     public function __construct(
-        private readonly NodeId $referenceTypeId,
-        private readonly bool $isForward,
-        private readonly NodeId $nodeId,
+        private readonly NodeId        $referenceTypeId,
+        private readonly bool          $isForward,
+        private readonly NodeId        $nodeId,
         private readonly QualifiedName $browseName,
         private readonly LocalizedText $displayName,
-        private readonly NodeClass $nodeClass,
-        private readonly ?NodeId $typeDefinition = null,
-    ) {
+        private readonly NodeClass     $nodeClass,
+        private readonly ?NodeId       $typeDefinition = null,
+    )
+    {
     }
 
     public function getReferenceTypeId(): NodeId

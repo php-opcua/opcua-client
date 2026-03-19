@@ -7,6 +7,7 @@ namespace Gianfriaur\OpcuaPhpClient\Client;
 use Gianfriaur\OpcuaPhpClient\Client;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\StatusCode;
+use Throwable;
 
 trait ManagesBatchingTrait
 {
@@ -94,7 +95,7 @@ trait ManagesBatchingTrait
                     $this->serverMaxNodesPerWrite = $value;
                 }
             }
-        } catch (\Throwable) {
+        } catch (Throwable) {
             // Server doesn't support operation limits — not critical
         }
     }

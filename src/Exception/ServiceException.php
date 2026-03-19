@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Gianfriaur\OpcuaPhpClient\Exception;
 
+use Throwable;
+
 class ServiceException extends OpcUaException
 {
     private int $statusCode;
@@ -11,9 +13,9 @@ class ServiceException extends OpcUaException
     /**
      * @param string $message
      * @param int $statusCode
-     * @param ?\Throwable $previous
+     * @param ?Throwable $previous
      */
-    public function __construct(string $message, int $statusCode = 0, ?\Throwable $previous = null)
+    public function __construct(string $message, int $statusCode = 0, ?Throwable $previous = null)
     {
         $this->statusCode = $statusCode;
         parent::__construct($message, 0, $previous);
