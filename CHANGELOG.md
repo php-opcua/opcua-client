@@ -24,7 +24,11 @@
 - `TranslateBrowsePathService` protocol service implementing the OPC UA `TranslateBrowsePathsToNodeIds` service (request NodeId 554).
 - `Client::translateBrowsePaths(array $browsePaths)` method for translating browse paths to NodeIds. Supports multiple paths in a single request with full control over reference types and direction.
 - `Client::resolveNodeId(string $path, ?NodeId $startingNodeId)` helper method for resolving human-readable paths like `"/Objects/Server/ServerStatus"` to NodeIds. Supports namespaced segments (`"2:Temperature"`) and custom starting nodes.
+- `ExtensionObjectCodec` interface for implementing custom ExtensionObject decoders/encoders with `decode(BinaryDecoder)` and `encode(BinaryEncoder, mixed)` methods.
+- `ExtensionObjectRepository` static registry for registering codecs by type NodeId. Supports registration by class name or instance, unregister, has, get, and clear. When a codec is registered, `BinaryDecoder::readExtensionObject()` automatically uses it instead of returning a raw binary blob.
 - All new methods are also available on `OpcUaClientInterface`.
+- Unit tests for `ExtensionObjectRepository`: default empty, register by class/instance, unregister, clear, independent typeIds, string NodeIds.
+- Unit tests for ExtensionObject decoding: codec-based decoding, raw fallback without codec, XML encoding fallback, no-body encoding, codec round-trip.
 - Unit tests for `setTimeout()` and `getTimeout()` covering: default value, setter/getter, fluent chaining, fractional seconds, multiple updates, and `OpcUaClientInterface` compliance.
 - Unit tests for `ConnectionState`: enum cases, initial state, disconnect on never-connected client, state-specific exception messages, `reconnect()` without prior connect, and `setAutoRetry` configuration.
 - Unit tests for auto-retry: default value, fluent chaining, override, disable, multiple updates, chaining with setTimeout, interface compliance, and no retry when not connected.
@@ -62,6 +66,9 @@
 - Added "Path Resolution" section to `doc/03-browsing.md` with `resolveNodeId()` and `translateBrowsePaths()` documentation, path format, namespaced segments, and advanced usage.
 - Added "Path Resolution" to the features list in `doc/01-introduction.md` and `README.md`.
 - Added `TranslateBrowsePathService.php` to the project structure in `doc/11-architecture.md`.
+- Added "ExtensionObject Codecs" section to `doc/08-types.md` with interface, registry API, usage example, and notes.
+- Added "ExtensionObject Codecs" to the features list in `doc/01-introduction.md` and `README.md`.
+- Added `ExtensionObjectCodec.php` and `ExtensionObjectRepository.php` to the project structure in `doc/11-architecture.md`.
 - Updated `README.md` disclaimer to recommend `gianfriaur/opcua-php-client-session-manager` for session persistence across PHP requests.
 
 ## [1.1.1] - 2026-03-18

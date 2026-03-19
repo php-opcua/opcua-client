@@ -6,6 +6,7 @@ namespace Gianfriaur\OpcuaPhpClient\Encoding;
 
 use DateTimeImmutable;
 use Gianfriaur\OpcuaPhpClient\Exception\EncodingException;
+use Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
 use Gianfriaur\OpcuaPhpClient\Types\DataValue;
 use Gianfriaur\OpcuaPhpClient\Types\LocalizedText;
@@ -226,6 +227,7 @@ class BinaryDecoder
 
     /**
      * @param int $encoding
+     * @return NodeId
      */
     private function readNodeIdByEncoding(int $encoding): NodeId
     {
@@ -326,16 +328,29 @@ class BinaryDecoder
         };
     }
 
-    public function readExtensionObject(): array
+    public function readExtensionObject(): array|object
     {
         $typeId = $this->readNodeId();
         $encoding = $this->readByte();
 
-        $body = null;
         if ($encoding === 0x01) {
+            $codec = ExtensionObjectRepository::get($typeId);
+            if ($codec !== null) {
+                $bodyLength = $this->readInt32();
+                $bodyStart = $this->offset;
+                $decoded = $codec->decode($this);
+                $consumed = $this->offset - $bodyStart;
+                if ($consumed < $bodyLength) {
+                    $this->skip($bodyLength - $consumed);
+                }
+                return $decoded;
+            }
+
             $body = $this->readByteString();
         } elseif ($encoding === 0x02) {
             $body = $this->readString();
+        } else {
+            $body = null;
         }
 
         return [
@@ -413,6 +428,7 @@ class BinaryDecoder
 
     /**
      * @param int $length
+     * @return string
      */
     public function readRawBytes(int $length): string
     {

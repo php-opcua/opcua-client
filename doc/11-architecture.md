@@ -12,7 +12,8 @@ src/
 │
 ├── Encoding/
 │   ├── BinaryEncoder.php                # Serialization (write)
-│   └── BinaryDecoder.php                # Deserialization (read)
+│   ├── BinaryDecoder.php                # Deserialization (read)
+│   └── ExtensionObjectCodec.php         # Interface for custom type codecs
 │
 ├── Protocol/
 │   ├── MessageHeader.php                # OPC UA message framing
@@ -55,6 +56,9 @@ src/
 │   ├── ConnectionState.php              # Connection state enum
 │   ├── BrowseDirection.php              # Browse direction enum
 │   └── BrowseNode.php                   # Recursive browse tree node
+│
+├── Repository/
+│   └── ExtensionObjectRepository.php    # Global repository for type codecs
 │
 └── Exception/
     ├── OpcUaException.php               # Base exception

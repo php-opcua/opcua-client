@@ -118,6 +118,23 @@ BuiltinType::Variant;        // 24
 BuiltinType::DiagnosticInfo; // 25
 ```
 
+## ExtensionObject Codecs
+
+OPC UA `ExtensionObject` is a container for custom data structures. By default, the library returns them as raw arrays with an opaque binary body. You can register custom codecs to decode them automatically into PHP arrays or objects.
+
+Quick example:
+
+```php
+use Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository;
+
+ExtensionObjectRepository::register(NodeId::numeric(2, 5001), MyPointCodec::class);
+
+$result = $client->read($pointNodeId);
+// $result->getValue() => ['x' => 1.0, 'y' => 2.0, 'z' => 3.0]
+```
+
+For the full guide on implementing codecs, the repository API, finding type IDs, and design decisions, see [ExtensionObject Codecs](12-extension-object-codecs.md).
+
 ## NodeClass (Enum)
 
 ```php

@@ -63,6 +63,7 @@ $client->disconnect();
 - **Connection State** - Track connection lifecycle (Disconnected, Connected, Broken) with `reconnect()` support
 - **Auto-Retry** - Automatic reconnect and retry on connection failures (configurable)
 - **Auto-Batching** - Transparent batching for `readMulti`/`writeMulti` with automatic server limits discovery
+- **ExtensionObject Codecs** - Pluggable codec system for decoding custom OPC UA structures
 
 ## Secure Connection Example
 
@@ -96,6 +97,7 @@ Full documentation is available in the [`doc/`](doc/) directory:
 | 09 | [Error Handling](doc/09-error-handling.md) | Exception hierarchy, error patterns |
 | 10 | [Security](doc/10-security.md) | Security policies, certificates, crypto internals |
 | 11 | [Architecture](doc/11-architecture.md) | Project structure, layers, protocol flow, binary encoding |
+| 12 | [ExtensionObject Codecs](doc/12-extension-object-codecs.md) | Custom type decoding, codec interface, repository API |
 
 ## Contributing
 
