@@ -11,6 +11,7 @@ use Gianfriaur\OpcuaPhpClient\Types\ConnectionState;
 use Gianfriaur\OpcuaPhpClient\Types\DataValue;
 use Gianfriaur\OpcuaPhpClient\Types\EndpointDescription;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
+use Gianfriaur\OpcuaPhpClient\Types\QualifiedName;
 use Gianfriaur\OpcuaPhpClient\Types\ReferenceDescription;
 use Gianfriaur\OpcuaPhpClient\Types\Variant;
 
@@ -160,6 +161,19 @@ interface OpcUaClientInterface
         bool    $includeSubtypes = true,
         int     $nodeClassMask = 0,
     ): array;
+
+    /**
+     * @param array<array{startingNodeId: NodeId, relativePath: array<array{referenceTypeId?: NodeId, isInverse?: bool, includeSubtypes?: bool, targetName: QualifiedName}>}> $browsePaths
+     * @return array<array{statusCode: int, targets: array<array{targetId: NodeId, remainingPathIndex: int}>}>
+     */
+    public function translateBrowsePaths(array $browsePaths): array;
+
+    /**
+     * @param string $path
+     * @param ?NodeId $startingNodeId
+     * @return NodeId
+     */
+    public function resolveNodeId(string $path, ?NodeId $startingNodeId = null): NodeId;
 
     /**
      * @param NodeId $nodeId

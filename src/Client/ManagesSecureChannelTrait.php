@@ -20,6 +20,7 @@ use Gianfriaur\OpcuaPhpClient\Protocol\SecureChannelRequest;
 use Gianfriaur\OpcuaPhpClient\Protocol\SecureChannelResponse;
 use Gianfriaur\OpcuaPhpClient\Protocol\SessionService;
 use Gianfriaur\OpcuaPhpClient\Protocol\SubscriptionService;
+use Gianfriaur\OpcuaPhpClient\Protocol\TranslateBrowsePathService;
 use Gianfriaur\OpcuaPhpClient\Protocol\WriteService;
 use Gianfriaur\OpcuaPhpClient\Security\CertificateManager;
 use Gianfriaur\OpcuaPhpClient\Security\SecureChannel;
@@ -198,5 +199,6 @@ trait ManagesSecureChannelTrait
         $this->monitoredItemService = new MonitoredItemService($session);
         $this->publishService = new PublishService($session);
         $this->historyReadService = new HistoryReadService($session);
+        $this->translateBrowsePathService = new TranslateBrowsePathService($session);
     }
 }

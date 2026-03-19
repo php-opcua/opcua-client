@@ -16,6 +16,7 @@ use Gianfriaur\OpcuaPhpClient\Client\ManagesSecureChannelTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesSessionTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesSubscriptionsTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesTimeoutTrait;
+use Gianfriaur\OpcuaPhpClient\Client\ManagesTranslateBrowsePathTrait;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Exception\ServiceException;
 use Gianfriaur\OpcuaPhpClient\Protocol\BrowseService;
@@ -28,6 +29,7 @@ use Gianfriaur\OpcuaPhpClient\Protocol\PublishService;
 use Gianfriaur\OpcuaPhpClient\Protocol\ReadService;
 use Gianfriaur\OpcuaPhpClient\Protocol\SessionService;
 use Gianfriaur\OpcuaPhpClient\Protocol\SubscriptionService;
+use Gianfriaur\OpcuaPhpClient\Protocol\TranslateBrowsePathService;
 use Gianfriaur\OpcuaPhpClient\Protocol\WriteService;
 use Gianfriaur\OpcuaPhpClient\Security\SecureChannel;
 use Gianfriaur\OpcuaPhpClient\Security\SecurityMode;
@@ -50,6 +52,7 @@ class Client implements OpcUaClientInterface
     use ManagesReadWriteTrait;
     use ManagesSubscriptionsTrait;
     use ManagesHistoryTrait;
+    use ManagesTranslateBrowsePathTrait;
 
     private TcpTransport $transport;
     private ?SessionService $session = null;
@@ -62,6 +65,7 @@ class Client implements OpcUaClientInterface
     private ?MonitoredItemService $monitoredItemService = null;
     private ?PublishService $publishService = null;
     private ?HistoryReadService $historyReadService = null;
+    private ?TranslateBrowsePathService $translateBrowsePathService = null;
     private ?NodeId $authenticationToken = null;
     private int $secureChannelId = 0;
     private int $requestId = 10;

@@ -51,6 +51,7 @@ $client->disconnect();
 ## Features
 
 - **Browse** - Navigate the server address space with recursive browsing, automatic continuation, and tree building
+- **Path Resolution** - Resolve human-readable paths like `/Objects/MyPLC/Temperature` to NodeIds
 - **Read / Write** - Single and multi read/write with all OPC UA data types
 - **Method Call** - Invoke OPC UA methods with typed arguments and outputs
 - **Subscriptions** - Data change and event monitoring with publish/acknowledge

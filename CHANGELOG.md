@@ -21,6 +21,9 @@
 - `Client::browseRecursive(NodeId, direction, maxDepth, ...)` method for recursive address space traversal. Builds a tree of `BrowseNode` objects. Default `maxDepth` is configurable (default: 10), use `-1` for unlimited (hardcoded cap at 256). Includes cycle detection via visited NodeId tracking to prevent infinite loops on circular references.
 - `Client::setDefaultBrowseMaxDepth(int)` and `Client::getDefaultBrowseMaxDepth(): int` methods to configure the default `maxDepth` for `browseRecursive()`. Default: 10. Passing `maxDepth` explicitly to `browseRecursive()` overrides the configured default.
 - `BrowseDirection` enum (`Forward`, `Inverse`, `Both`) replacing the raw `int $direction` parameter in all browse methods (`browse`, `browseWithContinuation`, `browseAll`, `browseRecursive`, `getBinaryDecoder`). Default is `BrowseDirection::Forward`.
+- `TranslateBrowsePathService` protocol service implementing the OPC UA `TranslateBrowsePathsToNodeIds` service (request NodeId 554).
+- `Client::translateBrowsePaths(array $browsePaths)` method for translating browse paths to NodeIds. Supports multiple paths in a single request with full control over reference types and direction.
+- `Client::resolveNodeId(string $path, ?NodeId $startingNodeId)` helper method for resolving human-readable paths like `"/Objects/Server/ServerStatus"` to NodeIds. Supports namespaced segments (`"2:Temperature"`) and custom starting nodes.
 - All new methods are also available on `OpcUaClientInterface`.
 - Unit tests for `setTimeout()` and `getTimeout()` covering: default value, setter/getter, fluent chaining, fractional seconds, multiple updates, and `OpcUaClientInterface` compliance.
 - Unit tests for `ConnectionState`: enum cases, initial state, disconnect on never-connected client, state-specific exception messages, `reconnect()` without prior connect, and `setAutoRetry` configuration.
@@ -35,6 +38,8 @@
 - Unit tests for `setDefaultBrowseMaxDepth` and `getDefaultBrowseMaxDepth`: default value, fluent chaining, store, unlimited, multiple updates, chaining with other config, and interface compliance.
 - Unit tests for `BrowseDirection` enum: cases, values, `from()`, and `tryFrom()`.
 - Integration test for `BrowseDirection::Both` verifying both forward and inverse references are returned.
+- Integration tests for `translateBrowsePaths`: single path, multi-segment path, multiple paths, non-existent path.
+- Integration tests for `resolveNodeId`: simple path, without leading slash, deep path, custom starting node, resolve-then-read, non-existent path exception.
 
 ### Documentation
 
@@ -54,6 +59,9 @@
 - Added `BrowseNode` type to `doc/08-types.md`.
 - Added `BrowseNode.php` to the project structure in `doc/11-architecture.md`.
 - Updated browse feature description in `doc/01-introduction.md` and `README.md` to include recursive browsing and automatic continuation.
+- Added "Path Resolution" section to `doc/03-browsing.md` with `resolveNodeId()` and `translateBrowsePaths()` documentation, path format, namespaced segments, and advanced usage.
+- Added "Path Resolution" to the features list in `doc/01-introduction.md` and `README.md`.
+- Added `TranslateBrowsePathService.php` to the project structure in `doc/11-architecture.md`.
 - Updated `README.md` disclaimer to recommend `gianfriaur/opcua-php-client-session-manager` for session persistence across PHP requests.
 
 ## [1.1.1] - 2026-03-18

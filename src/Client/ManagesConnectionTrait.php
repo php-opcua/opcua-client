@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Gianfriaur\OpcuaPhpClient\Client;
 
 use Closure;
-use Exception;
 use Gianfriaur\OpcuaPhpClient\Exception\ConfigurationException;
 use Gianfriaur\OpcuaPhpClient\Exception\ConnectionException;
 use Gianfriaur\OpcuaPhpClient\Exception\OpcUaException;
@@ -152,6 +151,7 @@ trait ManagesConnectionTrait
         $this->monitoredItemService = null;
         $this->publishService = null;
         $this->historyReadService = null;
+        $this->translateBrowsePathService = null;
         $this->authenticationToken = null;
         $this->secureChannelId = 0;
         $this->secureChannel = null;

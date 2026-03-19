@@ -29,7 +29,8 @@ src/
 │   ├── SubscriptionService.php          # Create/Modify/Delete Subscription
 │   ├── MonitoredItemService.php         # Create/Delete MonitoredItems
 │   ├── PublishService.php               # Publish (notifications)
-│   └── HistoryReadService.php           # HistoryRead (raw/processed/attime)
+│   ├── HistoryReadService.php           # HistoryRead (raw/processed/attime)
+│   └── TranslateBrowsePathService.php   # TranslateBrowsePathsToNodeIds
 │
 ├── Security/
 │   ├── SecurityPolicy.php               # Security policy enum + algorithm config

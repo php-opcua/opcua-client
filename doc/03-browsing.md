@@ -227,4 +227,69 @@ printTree($tree);
 |--------|-------------|
 | `setDefaultBrowseMaxDepth(int)` | Set the default maxDepth for all `browseRecursive()` calls. Default: 10. Use -1 for unlimited. |
 | `getDefaultBrowseMaxDepth(): int` | Get the current default maxDepth. |
+
+## Path Resolution
+
+Instead of navigating the address space manually, you can resolve a human-readable path to a NodeId using `resolveNodeId()`:
+
+```php
+// Resolve a path to a NodeId
+$nodeId = $client->resolveNodeId('/Objects/Server/ServerStatus/State');
+
+// Then use it for read/write/subscribe
+$dataValue = $client->read($nodeId);
 ```
+
+This uses the OPC UA `TranslateBrowsePathsToNodeIds` service internally — a single request, much faster than browsing node by node.
+
+### Path Format
+
+- Segments are separated by `/`
+- Leading `/` is optional (`/Objects/Server` and `Objects/Server` are equivalent)
+- Default starting node is Root (`ns=0;i=84`)
+- For non-zero namespaces, use `ns:Name` format: `"Objects/2:MyPLC/2:Temperature"`
+
+```php
+// Simple path
+$nodeId = $client->resolveNodeId('/Objects/Server');
+
+// Path with namespaced segments
+$nodeId = $client->resolveNodeId('/Objects/2:MyPLC/2:Temperature');
+
+// Custom starting node (start from Objects instead of Root)
+$nodeId = $client->resolveNodeId('Server', NodeId::numeric(0, 85));
+```
+
+### translateBrowsePaths (Advanced)
+
+For full control over the OPC UA `TranslateBrowsePathsToNodeIds` service, use `translateBrowsePaths()`:
+
+```php
+use Gianfriaur\OpcuaPhpClient\Types\QualifiedName;
+use Gianfriaur\OpcuaPhpClient\Types\StatusCode;
+
+$results = $client->translateBrowsePaths([
+    [
+        'startingNodeId' => NodeId::numeric(0, 85), // Objects
+        'relativePath' => [
+            ['targetName' => new QualifiedName(0, 'Server')],
+            ['targetName' => new QualifiedName(0, 'ServerStatus')],
+        ],
+    ],
+]);
+
+if (StatusCode::isGood($results[0]['statusCode'])) {
+    $targetNodeId = $results[0]['targets'][0]['targetId'];
+}
+```
+
+Each element in the relative path supports:
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `targetName` | (required) | `QualifiedName` of the target node |
+| `referenceTypeId` | HierarchicalReferences | Reference type to follow |
+| `isInverse` | `false` | Follow inverse references |
+| `includeSubtypes` | `true` | Include subtypes of the reference type |
+
+Multiple paths can be resolved in a single request for efficiency.
