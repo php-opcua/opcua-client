@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
+use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Protocol\AcknowledgeMessage;
 use Gianfriaur\OpcuaPhpClient\Protocol\HelloMessage;
 use Gianfriaur\OpcuaPhpClient\Protocol\MessageHeader;
@@ -34,7 +35,7 @@ describe('Message serialization', function () {
     });
 
     it('serializes MessageHeader correctly', function () {
-        $encoder = new \Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder();
+        $encoder = new BinaryEncoder();
         $header = new MessageHeader('MSG', 'F', 100);
         $header->encode($encoder);
 
@@ -51,7 +52,7 @@ describe('Message serialization', function () {
     });
 
     it('decodes AcknowledgeMessage', function () {
-        $encoder = new \Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder();
+        $encoder = new BinaryEncoder();
         $encoder->writeUInt32(0);     // ProtocolVersion
         $encoder->writeUInt32(65535); // ReceiveBufferSize
         $encoder->writeUInt32(65535); // SendBufferSize

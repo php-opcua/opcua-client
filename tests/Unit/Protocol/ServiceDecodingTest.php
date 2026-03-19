@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
+use Gianfriaur\OpcuaPhpClient\Exception\ServiceException;
 use Gianfriaur\OpcuaPhpClient\Protocol\BrowseService;
 use Gianfriaur\OpcuaPhpClient\Protocol\CallService;
 use Gianfriaur\OpcuaPhpClient\Protocol\GetEndpointsService;
@@ -481,6 +482,6 @@ describe('SessionService decoding', function () {
 
         $decoder = new BinaryDecoder($encoder->getBuffer());
         expect(fn() => $session->decodeActivateSessionResponse($decoder))
-            ->toThrow(\Gianfriaur\OpcuaPhpClient\Exception\ServiceException::class);
+            ->toThrow(ServiceException::class);
     });
 });

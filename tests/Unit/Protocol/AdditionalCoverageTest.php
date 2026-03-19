@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Protocol\HistoryReadService;
+use Gianfriaur\OpcuaPhpClient\Protocol\MessageHeader;
 use Gianfriaur\OpcuaPhpClient\Protocol\MonitoredItemService;
 use Gianfriaur\OpcuaPhpClient\Protocol\PublishService;
 use Gianfriaur\OpcuaPhpClient\Protocol\SessionService;
@@ -288,7 +289,7 @@ describe('SessionService activate with identity tokens', function () {
         );
 
         $decoder = new BinaryDecoder($bytes);
-        $header = \Gianfriaur\OpcuaPhpClient\Protocol\MessageHeader::decode($decoder);
+        $header = MessageHeader::decode($decoder);
         expect($header->getMessageType())->toBe('MSG');
         expect(strlen($bytes))->toBeGreaterThan(60);
     });
@@ -401,7 +402,8 @@ describe('SessionService decode additional paths', function () {
         // ApplicationDescription
         $encoder->writeString('urn:server'); // ApplicationUri
         $encoder->writeString(null); // ProductUri
-        $encoder->writeByte(0x02); $encoder->writeString('Server'); // ApplicationName (LocalizedText)
+        $encoder->writeByte(0x02);
+        $encoder->writeString('Server'); // ApplicationName (LocalizedText)
         $encoder->writeUInt32(0); // ApplicationType
         $encoder->writeString(null); // GatewayServerUri
         $encoder->writeString(null); // DiscoveryProfileUri
@@ -556,7 +558,7 @@ describe('SecureChannel processMessage SignAndEncrypt', function () {
         // Verify the message structure
         expect(substr($message, 0, 3))->toBe('MSG');
         $decoder = new BinaryDecoder($message);
-        $header = \Gianfriaur\OpcuaPhpClient\Protocol\MessageHeader::decode($decoder);
+        $header = MessageHeader::decode($decoder);
         expect($header->getMessageSize())->toBe(strlen($message));
 
         // The body should be encrypted (different from plaintext)

@@ -83,7 +83,7 @@ describe('NodeId::toString', function () {
         $nodeId = NodeId::numeric(0, 85);
 
         expect($nodeId->toString())->toBe('i=85');
-        expect((string) $nodeId)->toBe('i=85');
+        expect((string)$nodeId)->toBe('i=85');
     });
 
     it('serializes numeric NodeId with namespace prefix when ns>0', function () {

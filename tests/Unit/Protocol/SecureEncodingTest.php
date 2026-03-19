@@ -2,13 +2,10 @@
 
 declare(strict_types=1);
 
-use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
-use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Protocol\BrowseService;
 use Gianfriaur\OpcuaPhpClient\Protocol\CallService;
 use Gianfriaur\OpcuaPhpClient\Protocol\GetEndpointsService;
 use Gianfriaur\OpcuaPhpClient\Protocol\HistoryReadService;
-use Gianfriaur\OpcuaPhpClient\Protocol\MessageHeader;
 use Gianfriaur\OpcuaPhpClient\Protocol\MonitoredItemService;
 use Gianfriaur\OpcuaPhpClient\Protocol\PublishService;
 use Gianfriaur\OpcuaPhpClient\Protocol\ReadService;
@@ -20,6 +17,7 @@ use Gianfriaur\OpcuaPhpClient\Security\SecureChannel;
 use Gianfriaur\OpcuaPhpClient\Security\SecurityMode;
 use Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
+use Gianfriaur\OpcuaPhpClient\Types\DataValue;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\Variant;
 
@@ -262,7 +260,7 @@ describe('Secure encoding: WriteService', function () {
         $bytes = $service->encodeWriteRequest(
             1,
             NodeId::numeric(1, 100),
-            new \Gianfriaur\OpcuaPhpClient\Types\DataValue(new Variant(BuiltinType::Int32, 42)),
+            new DataValue(new Variant(BuiltinType::Int32, 42)),
             NodeId::numeric(0, 0),
         );
         expect(substr($bytes, 0, 3))->toBe('MSG');

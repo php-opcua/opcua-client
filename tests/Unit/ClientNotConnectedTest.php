@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use Gianfriaur\OpcuaPhpClient\Client;
 use Gianfriaur\OpcuaPhpClient\Exception\ConnectionException;
+use Gianfriaur\OpcuaPhpClient\Security\SecurityMode;
+use Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
-use Gianfriaur\OpcuaPhpClient\Types\DataValue;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
-use Gianfriaur\OpcuaPhpClient\Types\Variant;
 
 describe('Client throws ConnectionException when not connected', function () {
 
@@ -123,13 +123,13 @@ describe('Client configuration methods', function () {
 
     it('setSecurityPolicy returns self for chaining', function () {
         $client = new Client();
-        $result = $client->setSecurityPolicy(\Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy::None);
+        $result = $client->setSecurityPolicy(SecurityPolicy::None);
         expect($result)->toBe($client);
     });
 
     it('setSecurityMode returns self for chaining', function () {
         $client = new Client();
-        $result = $client->setSecurityMode(\Gianfriaur\OpcuaPhpClient\Security\SecurityMode::None);
+        $result = $client->setSecurityMode(SecurityMode::None);
         expect($result)->toBe($client);
     });
 

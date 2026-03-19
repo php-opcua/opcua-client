@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Gianfriaur\OpcuaPhpClient\Tests\Integration\Helpers\TestHelper;
-use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
 use Gianfriaur\OpcuaPhpClient\Types\StatusCode;
 
 describe('DataType Read', function () {
@@ -294,10 +293,10 @@ describe('DataType Read', function () {
     describe('ReadOnly Scalars', function () {
 
         $readOnlyTypes = [
-            'Boolean_RO'  => 'toBeBool',
-            'Int32_RO'    => 'toBeInt',
-            'Double_RO'   => 'toBeFloat',
-            'String_RO'   => 'toBeString',
+            'Boolean_RO' => 'toBeBool',
+            'Int32_RO' => 'toBeInt',
+            'Double_RO' => 'toBeFloat',
+            'String_RO' => 'toBeString',
         ];
 
         foreach ($readOnlyTypes as $nodeName => $assertion) {

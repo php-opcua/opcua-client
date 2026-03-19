@@ -29,7 +29,7 @@ describe('BrowseNode', function () {
 
         expect($node->getReference())->toBe($ref);
         expect($node->getNodeId()->getIdentifier())->toBe(85);
-        expect((string) $node->getDisplayName())->toBe('Objects');
+        expect((string)$node->getDisplayName())->toBe('Objects');
         expect($node->getBrowseName()->getName())->toBe('Objects');
         expect($node->getNodeClass())->toBe(NodeClass::Object);
     });

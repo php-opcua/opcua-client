@@ -99,6 +99,10 @@ Full documentation is available in the [`doc/`](doc/) directory:
 | 11 | [Architecture](doc/11-architecture.md) | Project structure, layers, protocol flow, binary encoding |
 | 12 | [ExtensionObject Codecs](doc/12-extension-object-codecs.md) | Custom type decoding, codec interface, repository API |
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features and improvements.
+
 ## Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get started.

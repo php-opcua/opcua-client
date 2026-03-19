@@ -6,12 +6,17 @@ use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Protocol\BrowseService;
 use Gianfriaur\OpcuaPhpClient\Protocol\CallService;
+use Gianfriaur\OpcuaPhpClient\Protocol\MessageHeader;
 use Gianfriaur\OpcuaPhpClient\Protocol\ReadService;
 use Gianfriaur\OpcuaPhpClient\Protocol\SessionService;
 use Gianfriaur\OpcuaPhpClient\Protocol\SubscriptionService;
+use Gianfriaur\OpcuaPhpClient\Security\SecureChannel;
+use Gianfriaur\OpcuaPhpClient\Security\SecurityMode;
+use Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy;
 use Gianfriaur\OpcuaPhpClient\Types\BrowseDirection;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
+use Gianfriaur\OpcuaPhpClient\Types\Variant;
 
 function writeDiagResponseHeader(BinaryEncoder $encoder, int $statusCode = 0): void
 {
@@ -218,7 +223,7 @@ describe('BrowseService encoding and decoding', function () {
         $bytes = $service->encodeBrowseNextRequest(1, 'continuation-point', NodeId::numeric(0, 0));
 
         $decoder = new BinaryDecoder($bytes);
-        $header = \Gianfriaur\OpcuaPhpClient\Protocol\MessageHeader::decode($decoder);
+        $header = MessageHeader::decode($decoder);
         expect($header->getMessageType())->toBe('MSG');
     });
 
@@ -300,7 +305,7 @@ describe('BrowseService encoding and decoding', function () {
         );
 
         $decoder = new BinaryDecoder($bytes);
-        $header = \Gianfriaur\OpcuaPhpClient\Protocol\MessageHeader::decode($decoder);
+        $header = MessageHeader::decode($decoder);
         expect($header->getMessageType())->toBe('MSG');
         expect(strlen($bytes))->toBeGreaterThan(50);
     });
@@ -317,14 +322,14 @@ describe('CallService encoding', function () {
             NodeId::numeric(0, 2253),
             NodeId::numeric(0, 11492),
             [
-                new \Gianfriaur\OpcuaPhpClient\Types\Variant(BuiltinType::String, 'arg1'),
-                new \Gianfriaur\OpcuaPhpClient\Types\Variant(BuiltinType::Int32, 42),
+                new Variant(BuiltinType::String, 'arg1'),
+                new Variant(BuiltinType::Int32, 42),
             ],
             NodeId::numeric(0, 0),
         );
 
         $decoder = new BinaryDecoder($bytes);
-        $header = \Gianfriaur\OpcuaPhpClient\Protocol\MessageHeader::decode($decoder);
+        $header = MessageHeader::decode($decoder);
         expect($header->getMessageType())->toBe('MSG');
         expect(strlen($bytes))->toBeGreaterThan(50);
     });
@@ -339,7 +344,7 @@ describe('ReadService encoding', function () {
         $bytes = $service->encodeReadRequest(1, NodeId::numeric(1, 100), NodeId::numeric(0, 0));
 
         $decoder = new BinaryDecoder($bytes);
-        $header = \Gianfriaur\OpcuaPhpClient\Protocol\MessageHeader::decode($decoder);
+        $header = MessageHeader::decode($decoder);
         expect($header->getMessageType())->toBe('MSG');
     });
 
@@ -355,9 +360,9 @@ describe('ReadService encoding', function () {
 describe('SessionService additional coverage', function () {
 
     it('getSecureChannelId delegates to SecureChannel when present', function () {
-        $sc = new \Gianfriaur\OpcuaPhpClient\Security\SecureChannel(
-            \Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy::None,
-            \Gianfriaur\OpcuaPhpClient\Security\SecurityMode::None,
+        $sc = new SecureChannel(
+            SecurityPolicy::None,
+            SecurityMode::None,
         );
         $session = new SessionService(0, 0, $sc);
         // SecureChannel starts with channelId=0
@@ -365,18 +370,18 @@ describe('SessionService additional coverage', function () {
     });
 
     it('getTokenId delegates to SecureChannel when present', function () {
-        $sc = new \Gianfriaur\OpcuaPhpClient\Security\SecureChannel(
-            \Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy::None,
-            \Gianfriaur\OpcuaPhpClient\Security\SecurityMode::None,
+        $sc = new SecureChannel(
+            SecurityPolicy::None,
+            SecurityMode::None,
         );
         $session = new SessionService(0, 0, $sc);
         expect($session->getTokenId())->toBe(0);
     });
 
     it('getNextSequenceNumber delegates to SecureChannel when present', function () {
-        $sc = new \Gianfriaur\OpcuaPhpClient\Security\SecureChannel(
-            \Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy::None,
-            \Gianfriaur\OpcuaPhpClient\Security\SecurityMode::None,
+        $sc = new SecureChannel(
+            SecurityPolicy::None,
+            SecurityMode::None,
         );
         $session = new SessionService(0, 0, $sc);
         expect($session->getNextSequenceNumber())->toBe(1);

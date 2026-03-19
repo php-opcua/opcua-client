@@ -63,12 +63,12 @@ describe('QualifiedName', function () {
 
     it('toString returns name only for namespace 0', function () {
         $qn = new QualifiedName(0, 'Server');
-        expect((string) $qn)->toBe('Server');
+        expect((string)$qn)->toBe('Server');
     });
 
     it('toString returns ns:name for non-zero namespace', function () {
         $qn = new QualifiedName(3, 'Variable');
-        expect((string) $qn)->toBe('3:Variable');
+        expect((string)$qn)->toBe('3:Variable');
     });
 });
 
@@ -275,7 +275,7 @@ describe('LocalizedText', function () {
 
     it('toString returns empty string when text is null', function () {
         $lt = new LocalizedText('en', null);
-        expect((string) $lt)->toBe('');
+        expect((string)$lt)->toBe('');
     });
 
     it('encoding mask with only locale', function () {

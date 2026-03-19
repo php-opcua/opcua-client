@@ -5,7 +5,6 @@ declare(strict_types=1);
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Exception\ProtocolException;
-use Gianfriaur\OpcuaPhpClient\Exception\SecurityException;
 use Gianfriaur\OpcuaPhpClient\Protocol\MessageHeader;
 use Gianfriaur\OpcuaPhpClient\Security\CertificateManager;
 use Gianfriaur\OpcuaPhpClient\Security\MessageSecurity;
@@ -58,7 +57,7 @@ describe('SecureChannel getters and basic state', function () {
 
     it('isSecurityActive returns true for Basic256Sha256 with Sign mode', function () {
         [$clientDer, $clientKey] = generateSecureChannelTestCert();
-        [$serverDer, ] = generateSecureChannelTestCert();
+        [$serverDer,] = generateSecureChannelTestCert();
         $sc = new SecureChannel(SecurityPolicy::Basic256Sha256, SecurityMode::Sign, $clientDer, $clientKey, $serverDer);
         expect($sc->isSecurityActive())->toBeTrue();
     });
@@ -94,14 +93,14 @@ describe('SecureChannel getters and basic state', function () {
     });
 
     it('stores and returns server cert', function () {
-        [$serverDer, ] = generateSecureChannelTestCert();
+        [$serverDer,] = generateSecureChannelTestCert();
         $sc = new SecureChannel(SecurityPolicy::None, SecurityMode::None, null, null, $serverDer);
         expect($sc->getServerCertDer())->toBe($serverDer);
     });
 
     it('setServerCertDer updates server cert', function () {
         $sc = new SecureChannel(SecurityPolicy::None, SecurityMode::None);
-        [$serverDer, ] = generateSecureChannelTestCert();
+        [$serverDer,] = generateSecureChannelTestCert();
         $sc->setServerCertDer($serverDer);
         expect($sc->getServerCertDer())->toBe($serverDer);
     });
@@ -262,7 +261,7 @@ describe('SecureChannel MSG (no security)', function () {
 
     it('processMessage handles ERR messages in secure mode', function () {
         [$clientDer, $clientKey] = generateSecureChannelTestCert();
-        [$serverDer, ] = generateSecureChannelTestCert();
+        [$serverDer,] = generateSecureChannelTestCert();
         $sc = new SecureChannel(SecurityPolicy::Basic256Sha256, SecurityMode::SignAndEncrypt, $clientDer, $clientKey, $serverDer);
 
         // Build an ERR message (never encrypted)
@@ -285,7 +284,7 @@ describe('SecureChannel OPN with security', function () {
 
     it('creates an OPN message with Basic256Sha256', function () {
         [$clientDer, $clientKey] = generateSecureChannelTestCert();
-        [$serverDer, ] = generateSecureChannelTestCert();
+        [$serverDer,] = generateSecureChannelTestCert();
 
         $sc = new SecureChannel(SecurityPolicy::Basic256Sha256, SecurityMode::SignAndEncrypt, $clientDer, $clientKey, $serverDer);
         $message = $sc->createOpenSecureChannelMessage();
@@ -357,16 +356,17 @@ describe('SecureChannel MSG with Sign mode (symmetric)', function () {
  * Builds a mock encrypted OPN response that a SecureChannel can process.
  */
 function buildEncryptedOPNResponse(
-    string $serverDer,
+    string               $serverDer,
     OpenSSLAsymmetricKey $serverKey,
-    string $clientDer,
+    string               $clientDer,
     OpenSSLAsymmetricKey $clientKey,
-    string $clientNonce,
-    string $serverNonce,
-    int $channelId,
-    int $tokenId,
-    SecurityPolicy $policy,
-): string {
+    string               $clientNonce,
+    string               $serverNonce,
+    int                  $channelId,
+    int                  $tokenId,
+    SecurityPolicy       $policy,
+): string
+{
     $ms = new MessageSecurity();
 
     // Build the inner plaintext (sequence header + typeId + response header + OPN fields)
@@ -423,7 +423,7 @@ function buildEncryptedOPNResponse(
 
     // Calculate encrypted size
     $dataToEncryptLen = strlen($bodyWithPadding) + $signatureSize;
-    $numBlocks = (int) ceil($dataToEncryptLen / $plainTextBlockSize);
+    $numBlocks = (int)ceil($dataToEncryptLen / $plainTextBlockSize);
     $encryptedSize = $numBlocks * $keyLengthBytes;
 
     $totalSize = 12 + strlen($secHeaderBytes) + $encryptedSize;

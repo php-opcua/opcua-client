@@ -97,7 +97,7 @@ tests/
 ### Commits
 
 - Use descriptive commit messages
-- Prefix with `[ADD]`, `[UPD]`, `[FIX]`, `[REF]`, `[DOC]`, `[TEST]` as appropriate
+- Prefix with `[ADD]`, `[UPD]`, `[PATCH]`, `[REF]`, `[DOC]`, `[TEST]` as appropriate
 
 ### Documentation
 

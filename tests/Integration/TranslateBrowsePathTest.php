@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use Gianfriaur\OpcuaPhpClient\Client;
 use Gianfriaur\OpcuaPhpClient\Exception\ServiceException;
 use Gianfriaur\OpcuaPhpClient\Tests\Integration\Helpers\TestHelper;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
@@ -168,6 +167,49 @@ describe('resolveNodeId', function () {
 
             expect(StatusCode::isGood($dataValue->getStatusCode()))->toBeTrue();
             expect($dataValue->getValue())->toBe(0);
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
+    it('resolves a namespaced path (ns=1)', function () {
+        $client = null;
+        try {
+            $client = TestHelper::connectNoSecurity();
+
+            $nodeId = $client->resolveNodeId('/Objects/1:TestServer');
+            expect($nodeId->getNamespaceIndex())->toBe(1);
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
+    it('resolves a deep namespaced path', function () {
+        $client = null;
+        try {
+            $client = TestHelper::connectNoSecurity();
+
+            $nodeId = $client->resolveNodeId('/Objects/1:TestServer/1:DataTypes/1:Scalar/1:Int32Value');
+            expect($nodeId)->toBeInstanceOf(NodeId::class);
+
+            $dv = $client->read($nodeId);
+            expect(StatusCode::isGood($dv->getStatusCode()))->toBeTrue();
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
+    it('resolves a mixed namespace path', function () {
+        $client = null;
+        try {
+            $client = TestHelper::connectNoSecurity();
+
+            $nodeId = $client->resolveNodeId('/Objects/1:TestServer/1:Dynamic/1:Counter');
+            expect($nodeId)->toBeInstanceOf(NodeId::class);
+
+            $dv = $client->read($nodeId);
+            expect(StatusCode::isGood($dv->getStatusCode()))->toBeTrue();
+            expect($dv->getValue())->toBeInt();
         } finally {
             TestHelper::safeDisconnect($client);
         }

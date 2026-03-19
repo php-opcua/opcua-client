@@ -224,6 +224,42 @@ describe('browseRecursive', function () {
         }
     })->group('integration');
 
+    it('browses all 10 levels of DeepNesting', function () {
+        $client = null;
+        try {
+            $client = TestHelper::connectNoSecurity();
+
+            $deepNestingId = TestHelper::browseToNode($client, ['TestServer', 'Structures', 'DeepNesting']);
+            $tree = $client->browseRecursive($deepNestingId, maxDepth: -1);
+
+            // Count depth by traversing the tree
+            $maxDepthFound = 0;
+            $countDepth = function (array $nodes, int $depth) use (&$countDepth, &$maxDepthFound): void {
+                foreach ($nodes as $node) {
+                    if ($depth > $maxDepthFound) {
+                        $maxDepthFound = $depth;
+                    }
+                    $countDepth($node->getChildren(), $depth + 1);
+                }
+            };
+            $countDepth($tree, 1);
+
+            expect($maxDepthFound)->toBeGreaterThanOrEqual(10);
+
+            $level1 = null;
+            foreach ($tree as $node) {
+                if ($node->getBrowseName()->getName() === 'Level_1') {
+                    $level1 = $node;
+                    break;
+                }
+            }
+            expect($level1)->not->toBeNull();
+            expect($level1->hasChildren())->toBeTrue();
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
     it('cycle detection skips already visited nodes', function () {
         $client = null;
         try {

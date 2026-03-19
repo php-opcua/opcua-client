@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
+use Gianfriaur\OpcuaPhpClient\Exception\EncodingException;
 use Gianfriaur\OpcuaPhpClient\Types\LocalizedText;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\QualifiedName;
@@ -255,5 +256,5 @@ describe('BinaryEncoder/Decoder round-trip', function () {
     it('throws on buffer underflow', function () {
         $decoder = new BinaryDecoder('');
         $decoder->readByte();
-    })->throws(\Gianfriaur\OpcuaPhpClient\Exception\EncodingException::class);
+    })->throws(EncodingException::class);
 });

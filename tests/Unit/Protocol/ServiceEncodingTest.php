@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
+use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Protocol\BrowseService;
 use Gianfriaur\OpcuaPhpClient\Protocol\CallService;
 use Gianfriaur\OpcuaPhpClient\Protocol\GetEndpointsService;
@@ -345,7 +346,7 @@ describe('SubscriptionService encoding', function () {
 // Helper to build a mock OPN response
 function buildMockOPNResponse(int $channelId, int $tokenId, int $lifetime): string
 {
-    $encoder = new \Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder();
+    $encoder = new BinaryEncoder();
 
     // Security header
     $encoder->writeString('http://opcfoundation.org/UA/SecurityPolicy#None');
@@ -379,7 +380,7 @@ function buildMockOPNResponse(int $channelId, int $tokenId, int $lifetime): stri
     $body = $encoder->getBuffer();
     $totalSize = 12 + strlen($body);
 
-    $headerEncoder = new \Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder();
+    $headerEncoder = new BinaryEncoder();
     $header = new MessageHeader('OPN', 'F', $totalSize);
     $header->encode($headerEncoder);
     $headerEncoder->writeUInt32(0); // ChannelId in header
