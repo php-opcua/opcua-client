@@ -6,7 +6,8 @@ OPC UA is a platform-independent, service-oriented architecture for industrial a
 
 The library handles the full OPC UA communication stack: TCP transport, binary message encoding/decoding, secure channel establishment with asymmetric/symmetric encryption, session management, and all major OPC UA services. It supports six security policies (from None to Aes256Sha256RsaPss) and three authentication modes (Anonymous, Username/Password, X.509 Certificate).
 
-> **Disclaimer:** OPC UA is a protocol based on persistent sessions and long-lived connections. PHP, by its nature, is designed for a short-lived request/response model (e.g., web requests). This makes using this library **conceptually unsuitable** for scenarios like subscription polling or continuous monitoring, which require a long-running process. Languages like C#, Java, Python, or Node.js are far more appropriate choices for a production OPC UA client. This library is an experimental and educational project: use it for one-shot operations (read, write, browse, method call) or CLI scripts, but not as a replacement for a proper OPC UA client in an industrial setting.
+> **Disclaimer:** OPC UA is a protocol based on persistent sessions and long-lived connections. PHP, by its nature, is designed for a short-lived request/response model (e.g., web requests). This makes using this library **conceptually unsuitable** for scenarios like subscription polling or continuous monitoring, which require a long-running process.\
+> To mitigate this limitation, it is recommended to use this library together with [`gianfriaur/opcua-php-client-session-manager`](https://github.com/gianfriaur/opcua-php-client-session-manager), which provides session persistence and management across PHP requests.
 
 ## Requirements
 
