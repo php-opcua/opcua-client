@@ -20,6 +20,18 @@ OPC UA is the industry standard for accessing data from PLCs, SCADA systems, sen
 
 > **Note:** OPC UA relies on persistent sessions and long-lived connections, while PHP is inherently short-lived (request/response). For use cases like subscription polling or continuous monitoring, pair this with [`gianfriaur/opcua-php-client-session-manager`](https://github.com/gianfriaur/opcua-php-client-session-manager) to persist sessions across PHP requests.
 
+## Why this library?
+
+- **Zero dependencies** — only `ext-openssl`, nothing from Composer in production. No phpseclib, no symfony/cache, no monolog.
+- **PHP 8.2+** — runs on any modern PHP, no need for bleeding-edge 8.4.
+- **Native binary protocol** — speaks OPC UA directly over TCP. No HTTP gateway, no REST bridge, no sidecar in another language.
+- **Full security stack** — 6 security policies up to Aes256Sha256RsaPss, 3 authentication modes, auto-generated certificates for quick testing.
+- **Batteries included** — browse, read, write, method call, subscriptions, events, history read, path resolution, auto-batching, auto-retry. Everything in one package.
+- **Cross-platform** — works on Linux, macOS, and Windows. No FFI, no COM, no platform-specific extensions.
+- **Laravel-ready** — drop-in integration via [`opcua-laravel-client`](https://github.com/GianfriAur/opcua-laravel-client) with service provider, facade, and config.
+
+If your stack is PHP and you need to talk to PLCs, SCADA, or any OPC UA server, this is the shortest path from `composer require` to reading your first variable.
+
 ## Requirements
 
 - PHP >= 8.2
