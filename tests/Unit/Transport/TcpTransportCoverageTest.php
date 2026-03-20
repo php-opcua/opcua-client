@@ -90,6 +90,32 @@ describe('TcpTransport additional coverage', function () {
         }
     });
 
+    it('receive throws ConnectionException on read timeout', function () {
+        $server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+        if ($server === false) {
+            $this->markTestSkipped('Cannot create local TCP server');
+        }
+
+        $addr = stream_socket_get_name($server, false);
+        [$host, $port] = explode(':', $addr);
+
+        $transport = new TcpTransport();
+        $transport->connect($host, (int)$port, 1.0);
+
+        $client = stream_socket_accept($server, 2);
+
+        fwrite($client, "MSG\x46" . pack('V', 108));
+
+        try {
+            expect(fn() => $transport->receive())
+                ->toThrow(ConnectionException::class, 'Read timeout');
+        } finally {
+            $transport->close();
+            fclose($client);
+            fclose($server);
+        }
+    });
+
     it('send throws ConnectionException when write fails', function () {
         $server = @stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
         if ($server === false) {
