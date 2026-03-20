@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Gianfriaur\OpcuaPhpClient\Client;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\ExtensionObjectCodec;
@@ -42,17 +43,8 @@ class ServerStatusCodec implements ExtensionObjectCodec
 
     public function encode(BinaryEncoder $encoder, mixed $value): void
     {
-        // Not needed for this test
     }
 }
-
-beforeEach(function () {
-    ExtensionObjectRepository::clear();
-});
-
-afterEach(function () {
-    ExtensionObjectRepository::clear();
-});
 
 describe('ExtensionObject codec with real server', function () {
 
@@ -76,11 +68,13 @@ describe('ExtensionObject codec with real server', function () {
     })->group('integration');
 
     it('reads ServerStatus decoded with codec', function () {
-        ExtensionObjectRepository::register(NodeId::numeric(0, 864), ServerStatusCodec::class);
+        $repo = new ExtensionObjectRepository();
+        $repo->register(NodeId::numeric(0, 864), ServerStatusCodec::class);
 
         $client = null;
         try {
-            $client = TestHelper::connectNoSecurity();
+            $client = new Client($repo);
+            $client->connect(TestHelper::ENDPOINT_NO_SECURITY);
 
             $dv = $client->read(NodeId::numeric(0, 2256));
             expect(StatusCode::isGood($dv->getStatusCode()))->toBeTrue();
@@ -105,11 +99,13 @@ describe('ExtensionObject codec with real server', function () {
     })->group('integration');
 
     it('decoded ServerStatus has valid BuildInfo fields', function () {
-        ExtensionObjectRepository::register(NodeId::numeric(0, 864), ServerStatusCodec::class);
+        $repo = new ExtensionObjectRepository();
+        $repo->register(NodeId::numeric(0, 864), ServerStatusCodec::class);
 
         $client = null;
         try {
-            $client = TestHelper::connectNoSecurity();
+            $client = new Client($repo);
+            $client->connect(TestHelper::ENDPOINT_NO_SECURITY);
 
             $dv = $client->read(NodeId::numeric(0, 2256));
             $status = $dv->getValue();
@@ -126,12 +122,14 @@ describe('ExtensionObject codec with real server', function () {
     })->group('integration');
 
     it('unregistered codec falls back to raw blob', function () {
-        ExtensionObjectRepository::register(NodeId::numeric(0, 864), ServerStatusCodec::class);
-        ExtensionObjectRepository::unregister(NodeId::numeric(0, 864));
+        $repo = new ExtensionObjectRepository();
+        $repo->register(NodeId::numeric(0, 864), ServerStatusCodec::class);
+        $repo->unregister(NodeId::numeric(0, 864));
 
         $client = null;
         try {
-            $client = TestHelper::connectNoSecurity();
+            $client = new Client($repo);
+            $client->connect(TestHelper::ENDPOINT_NO_SECURITY);
 
             $dv = $client->read(NodeId::numeric(0, 2256));
             $value = $dv->getValue();
@@ -199,7 +197,8 @@ describe('Custom ExtensionObject nodes (TestPointXYZ)', function () {
     })->group('integration');
 
     it('reads PointValue decoded with TestPointXYZCodec', function () {
-        ExtensionObjectRepository::register(NodeId::numeric(3, 3010), new class implements ExtensionObjectCodec {
+        $repo = new ExtensionObjectRepository();
+        $repo->register(NodeId::numeric(3, 3010), new class implements ExtensionObjectCodec {
             public function decode(BinaryDecoder $decoder): array
             {
                 return [
@@ -219,7 +218,8 @@ describe('Custom ExtensionObject nodes (TestPointXYZ)', function () {
 
         $client = null;
         try {
-            $client = TestHelper::connectNoSecurity();
+            $client = new Client($repo);
+            $client->connect(TestHelper::ENDPOINT_NO_SECURITY);
 
             $nodeId = $client->resolveNodeId('/Objects/1:TestServer/1:ExtensionObjects/1:PointValue');
             $dv = $client->read($nodeId);
@@ -237,7 +237,8 @@ describe('Custom ExtensionObject nodes (TestPointXYZ)', function () {
     })->group('integration');
 
     it('reads RangeValue decoded with codec', function () {
-        ExtensionObjectRepository::register(NodeId::numeric(3, 3011), new class implements ExtensionObjectCodec {
+        $repo = new ExtensionObjectRepository();
+        $repo->register(NodeId::numeric(3, 3011), new class implements ExtensionObjectCodec {
             public function decode(BinaryDecoder $decoder): array
             {
                 return [
@@ -257,7 +258,8 @@ describe('Custom ExtensionObject nodes (TestPointXYZ)', function () {
 
         $client = null;
         try {
-            $client = TestHelper::connectNoSecurity();
+            $client = new Client($repo);
+            $client->connect(TestHelper::ENDPOINT_NO_SECURITY);
 
             $nodeId = $client->resolveNodeId('/Objects/1:TestServer/1:ExtensionObjects/1:RangeValue');
             $dv = $client->read($nodeId);

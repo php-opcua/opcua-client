@@ -4,31 +4,27 @@
 
 - [X] CodeCoverage
 - [X] Improuve Documentation
-- [ ] 1 - `ExtensionObjectRepository`: replace static registry with instance-level dependency**
+- [X] `ExtensionObjectRepository`: replace static registry with instance-level dependency
+- [ ] Strict Return Types
+- [ ] Named Parameters Everywhere
+
+## v2.2.0
+
+- [ ] Full PHPDoc / Attribute Documentation
+- [ ] ......
+
+## v3-0.0
+
+- [ ] Fluent / Builder API
 
 
-### 1 – replace static registry with instance-level dependency
-
-The current implementation uses a static registry shared across all `Client` instances in the same PHP process. This creates a global state problem: if two clients connect to different OPC UA servers that use the same TypeId for different structures, their codecs would overwrite each other. It also makes isolated testing harder, as test cases must call `clear()` to avoid polluting each other.
-
-The proposed fix is to make `ExtensionObjectRepository` an instance-level dependency injected into `Client`, either via the constructor or a setter:
-
-```php
-$repo = new ExtensionObjectRepository();
-$repo->register($typeNodeId, MyCodec::class);
-
-// then
-$client = new Client(extensionObjectRepository: $repo);
-```
-
-This gives each client its own isolated codec registry, makes the dependency explicit, and allows test cases to pass fresh instances without relying on global state cleanup.
-
+------
 
 This document outlines planned improvements and features for the OPC UA PHP Client library.
 
-## v2.\*.\* — API Redesign
+## API Redesign
 
-The v2.\*.\* release will introduce **breaking changes** to improve the developer experience across the entire API surface.
+The v3.\*.\* release will introduce **breaking changes** to improve the developer experience across the entire API surface.
 
 ### Fluent / Builder API
 Introduce a fluent builder pattern wherever configuration is involved, replacing arrays and positional parameters with expressive, chainable method calls:

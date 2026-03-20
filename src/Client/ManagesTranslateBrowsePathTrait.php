@@ -27,7 +27,7 @@ trait ManagesTranslateBrowsePathTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->translateBrowsePathService->decodeTranslateResponse($decoder);
         });

@@ -44,7 +44,7 @@ trait ManagesHistoryTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->historyReadService->decodeHistoryReadResponse($decoder);
         });
@@ -83,7 +83,7 @@ trait ManagesHistoryTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->historyReadService->decodeHistoryReadResponse($decoder);
         });
@@ -113,7 +113,7 @@ trait ManagesHistoryTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->historyReadService->decodeHistoryReadResponse($decoder);
         });

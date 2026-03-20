@@ -10,61 +10,61 @@ use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 class ExtensionObjectRepository
 {
     /** @var array<string, ExtensionObjectCodec> */
-    private static array $codecs = [];
+    private array $codecs = [];
 
     /**
      * @param NodeId $typeId
      * @param class-string<ExtensionObjectCodec>|ExtensionObjectCodec $codec
      */
-    public static function register(NodeId $typeId, string|ExtensionObjectCodec $codec): void
+    public function register(NodeId $typeId, string|ExtensionObjectCodec $codec): void
     {
         if (is_string($codec)) {
             $codec = new $codec();
         }
 
-        self::$codecs[self::key($typeId)] = $codec;
+        $this->codecs[$this->key($typeId)] = $codec;
     }
 
     /**
      * @param NodeId $typeId
      * @return void
      */
-    public static function unregister(NodeId $typeId): void
+    public function unregister(NodeId $typeId): void
     {
-        unset(self::$codecs[self::key($typeId)]);
+        unset($this->codecs[$this->key($typeId)]);
     }
 
     /**
      * @param NodeId $typeId
      * @return ExtensionObjectCodec|null
      */
-    public static function get(NodeId $typeId): ?ExtensionObjectCodec
+    public function get(NodeId $typeId): ?ExtensionObjectCodec
     {
-        return self::$codecs[self::key($typeId)] ?? null;
+        return $this->codecs[$this->key($typeId)] ?? null;
     }
 
     /**
      * @param NodeId $typeId
      * @return bool
      */
-    public static function has(NodeId $typeId): bool
+    public function has(NodeId $typeId): bool
     {
-        return isset(self::$codecs[self::key($typeId)]);
+        return isset($this->codecs[$this->key($typeId)]);
     }
 
     /**
      * @return void
      */
-    public static function clear(): void
+    public function clear(): void
     {
-        self::$codecs = [];
+        $this->codecs = [];
     }
 
     /**
      * @param NodeId $nodeId
      * @return string
      */
-    private static function key(NodeId $nodeId): string
+    private function key(NodeId $nodeId): string
     {
         return $nodeId->__toString();
     }

@@ -38,7 +38,7 @@ trait ManagesSubscriptionsTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->subscriptionService->decodeCreateSubscriptionResponse($decoder);
         });
@@ -65,7 +65,7 @@ trait ManagesSubscriptionsTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->monitoredItemService->decodeCreateMonitoredItemsResponse($decoder);
         });
@@ -101,7 +101,7 @@ trait ManagesSubscriptionsTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             $results = $this->monitoredItemService->decodeCreateMonitoredItemsResponse($decoder);
 
@@ -130,7 +130,7 @@ trait ManagesSubscriptionsTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->monitoredItemService->decodeDeleteMonitoredItemsResponse($decoder);
         });
@@ -155,7 +155,7 @@ trait ManagesSubscriptionsTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             $results = $this->subscriptionService->decodeDeleteSubscriptionsResponse($decoder);
 
@@ -182,7 +182,7 @@ trait ManagesSubscriptionsTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->publishService->decodePublishResponse($decoder);
         });

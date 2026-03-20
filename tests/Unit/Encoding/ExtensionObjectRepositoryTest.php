@@ -25,64 +25,78 @@ class TestPointCodec implements ExtensionObjectCodec
     }
 }
 
-beforeEach(function () {
-    ExtensionObjectRepository::clear();
-});
-
 describe('ExtensionObjectRepository', function () {
 
     it('has no codecs by default', function () {
-        expect(ExtensionObjectRepository::has(NodeId::numeric(0, 100)))->toBeFalse();
-        expect(ExtensionObjectRepository::get(NodeId::numeric(0, 100)))->toBeNull();
+        $repo = new ExtensionObjectRepository();
+        expect($repo->has(NodeId::numeric(0, 100)))->toBeFalse();
+        expect($repo->get(NodeId::numeric(0, 100)))->toBeNull();
     });
 
     it('registers a codec by class name', function () {
-        ExtensionObjectRepository::register(NodeId::numeric(0, 100), TestPointCodec::class);
-        expect(ExtensionObjectRepository::has(NodeId::numeric(0, 100)))->toBeTrue();
-        expect(ExtensionObjectRepository::get(NodeId::numeric(0, 100)))->toBeInstanceOf(TestPointCodec::class);
+        $repo = new ExtensionObjectRepository();
+        $repo->register(NodeId::numeric(0, 100), TestPointCodec::class);
+        expect($repo->has(NodeId::numeric(0, 100)))->toBeTrue();
+        expect($repo->get(NodeId::numeric(0, 100)))->toBeInstanceOf(TestPointCodec::class);
     });
 
     it('registers a codec by instance', function () {
+        $repo = new ExtensionObjectRepository();
         $codec = new TestPointCodec();
-        ExtensionObjectRepository::register(NodeId::numeric(0, 200), $codec);
-        expect(ExtensionObjectRepository::get(NodeId::numeric(0, 200)))->toBe($codec);
+        $repo->register(NodeId::numeric(0, 200), $codec);
+        expect($repo->get(NodeId::numeric(0, 200)))->toBe($codec);
     });
 
     it('unregisters a codec', function () {
-        ExtensionObjectRepository::register(NodeId::numeric(0, 100), TestPointCodec::class);
-        expect(ExtensionObjectRepository::has(NodeId::numeric(0, 100)))->toBeTrue();
+        $repo = new ExtensionObjectRepository();
+        $repo->register(NodeId::numeric(0, 100), TestPointCodec::class);
+        expect($repo->has(NodeId::numeric(0, 100)))->toBeTrue();
 
-        ExtensionObjectRepository::unregister(NodeId::numeric(0, 100));
-        expect(ExtensionObjectRepository::has(NodeId::numeric(0, 100)))->toBeFalse();
+        $repo->unregister(NodeId::numeric(0, 100));
+        expect($repo->has(NodeId::numeric(0, 100)))->toBeFalse();
     });
 
     it('clear removes all codecs', function () {
-        ExtensionObjectRepository::register(NodeId::numeric(0, 100), TestPointCodec::class);
-        ExtensionObjectRepository::register(NodeId::numeric(0, 200), TestPointCodec::class);
+        $repo = new ExtensionObjectRepository();
+        $repo->register(NodeId::numeric(0, 100), TestPointCodec::class);
+        $repo->register(NodeId::numeric(0, 200), TestPointCodec::class);
 
-        ExtensionObjectRepository::clear();
-        expect(ExtensionObjectRepository::has(NodeId::numeric(0, 100)))->toBeFalse();
-        expect(ExtensionObjectRepository::has(NodeId::numeric(0, 200)))->toBeFalse();
+        $repo->clear();
+        expect($repo->has(NodeId::numeric(0, 100)))->toBeFalse();
+        expect($repo->has(NodeId::numeric(0, 200)))->toBeFalse();
     });
 
     it('different typeIds are independent', function () {
-        ExtensionObjectRepository::register(NodeId::numeric(0, 100), TestPointCodec::class);
-        expect(ExtensionObjectRepository::has(NodeId::numeric(0, 100)))->toBeTrue();
-        expect(ExtensionObjectRepository::has(NodeId::numeric(0, 200)))->toBeFalse();
+        $repo = new ExtensionObjectRepository();
+        $repo->register(NodeId::numeric(0, 100), TestPointCodec::class);
+        expect($repo->has(NodeId::numeric(0, 100)))->toBeTrue();
+        expect($repo->has(NodeId::numeric(0, 200)))->toBeFalse();
     });
 
     it('supports string NodeIds', function () {
-        ExtensionObjectRepository::register(NodeId::string(2, 'MyType'), TestPointCodec::class);
-        expect(ExtensionObjectRepository::has(NodeId::string(2, 'MyType')))->toBeTrue();
-        expect(ExtensionObjectRepository::has(NodeId::string(2, 'OtherType')))->toBeFalse();
+        $repo = new ExtensionObjectRepository();
+        $repo->register(NodeId::string(2, 'MyType'), TestPointCodec::class);
+        expect($repo->has(NodeId::string(2, 'MyType')))->toBeTrue();
+        expect($repo->has(NodeId::string(2, 'OtherType')))->toBeFalse();
+    });
+
+    it('two repositories are isolated from each other', function () {
+        $repo1 = new ExtensionObjectRepository();
+        $repo2 = new ExtensionObjectRepository();
+
+        $repo1->register(NodeId::numeric(0, 100), TestPointCodec::class);
+
+        expect($repo1->has(NodeId::numeric(0, 100)))->toBeTrue();
+        expect($repo2->has(NodeId::numeric(0, 100)))->toBeFalse();
     });
 });
 
 describe('ExtensionObject decoding with codec', function () {
 
     it('decodes ExtensionObject using registered codec', function () {
+        $repo = new ExtensionObjectRepository();
         $typeId = NodeId::numeric(2, 500);
-        ExtensionObjectRepository::register($typeId, TestPointCodec::class);
+        $repo->register($typeId, TestPointCodec::class);
 
         $bodyEncoder = new BinaryEncoder();
         $bodyEncoder->writeDouble(1.5);
@@ -95,7 +109,7 @@ describe('ExtensionObject decoding with codec', function () {
         $encoder->writeInt32(strlen($bodyBytes));
         $encoder->writeRawBytes($bodyBytes);
 
-        $decoder = new BinaryDecoder($encoder->getBuffer());
+        $decoder = new BinaryDecoder($encoder->getBuffer(), $repo);
         $result = $decoder->readExtensionObject();
 
         expect($result)->toBeArray();
@@ -121,15 +135,16 @@ describe('ExtensionObject decoding with codec', function () {
     });
 
     it('returns raw array for XML encoding even with codec registered', function () {
+        $repo = new ExtensionObjectRepository();
         $typeId = NodeId::numeric(2, 500);
-        ExtensionObjectRepository::register($typeId, TestPointCodec::class);
+        $repo->register($typeId, TestPointCodec::class);
 
         $encoder = new BinaryEncoder();
         $encoder->writeNodeId($typeId);
         $encoder->writeByte(0x02);
         $encoder->writeString('<Point><X>1</X></Point>');
 
-        $decoder = new BinaryDecoder($encoder->getBuffer());
+        $decoder = new BinaryDecoder($encoder->getBuffer(), $repo);
         $result = $decoder->readExtensionObject();
 
         expect($result)->toBeArray();
@@ -162,5 +177,25 @@ describe('ExtensionObject decoding with codec', function () {
 
         expect($result['x'])->toBe(3.14);
         expect($result['y'])->toBe(2.71);
+    });
+
+    it('returns raw array when decoder has no repository', function () {
+        $typeId = NodeId::numeric(2, 500);
+
+        $bodyEncoder = new BinaryEncoder();
+        $bodyEncoder->writeDouble(1.5);
+        $bodyEncoder->writeDouble(2.5);
+        $bodyBytes = $bodyEncoder->getBuffer();
+
+        $encoder = new BinaryEncoder();
+        $encoder->writeNodeId($typeId);
+        $encoder->writeByte(0x01);
+        $encoder->writeByteString($bodyBytes);
+
+        $decoder = new BinaryDecoder($encoder->getBuffer());
+        $result = $decoder->readExtensionObject();
+
+        expect($result)->toBeArray();
+        expect($result)->toHaveKeys(['typeId', 'encoding', 'body']);
     });
 });

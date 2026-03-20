@@ -31,6 +31,7 @@ use Gianfriaur\OpcuaPhpClient\Protocol\SessionService;
 use Gianfriaur\OpcuaPhpClient\Protocol\SubscriptionService;
 use Gianfriaur\OpcuaPhpClient\Protocol\TranslateBrowsePathService;
 use Gianfriaur\OpcuaPhpClient\Protocol\WriteService;
+use Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository;
 use Gianfriaur\OpcuaPhpClient\Security\SecureChannel;
 use Gianfriaur\OpcuaPhpClient\Security\SecurityMode;
 use Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy;
@@ -91,11 +92,18 @@ class Client implements OpcUaClientInterface
 
     private ?string $lastEndpointUrl = null;
     private ConnectionState $connectionState = ConnectionState::Disconnected;
+    private ExtensionObjectRepository $extensionObjectRepository;
 
-    public function __construct()
+    public function __construct(?ExtensionObjectRepository $extensionObjectRepository = null)
     {
         $this->transport = new TcpTransport();
+        $this->extensionObjectRepository = $extensionObjectRepository ?? new ExtensionObjectRepository();
         $this->initTimeout();
+    }
+
+    public function getExtensionObjectRepository(): ExtensionObjectRepository
+    {
+        return $this->extensionObjectRepository;
     }
 
     /**
@@ -168,7 +176,7 @@ class Client implements OpcUaClientInterface
     private function unwrapResponse(string $response): string
     {
         if (str_starts_with($response, 'ERR')) {
-            $decoder = new BinaryDecoder($response);
+            $decoder = $this->createDecoder($response);
             MessageHeader::decode($decoder);
             $errorCode = $decoder->readUInt32();
             $reason = $decoder->readString() ?? 'Unknown error';
@@ -180,6 +188,11 @@ class Client implements OpcUaClientInterface
         }
 
         return substr($response, MessageHeader::HEADER_SIZE + 4);
+    }
+
+    private function createDecoder(string $data): BinaryDecoder
+    {
+        return new BinaryDecoder($data, $this->extensionObjectRepository);
     }
 
     private function nextRequestId(): int

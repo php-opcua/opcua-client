@@ -14,10 +14,13 @@ use Gianfriaur\OpcuaPhpClient\Types\EndpointDescription;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\QualifiedName;
 use Gianfriaur\OpcuaPhpClient\Types\ReferenceDescription;
+use Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository;
 use Gianfriaur\OpcuaPhpClient\Types\Variant;
 
 interface OpcUaClientInterface
 {
+    public function getExtensionObjectRepository(): ExtensionObjectRepository;
+
     /**
      * @param float $timeout
      * @return self

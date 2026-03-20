@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use Gianfriaur\OpcuaPhpClient\Exception\EncodingException;
 use Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
+
 use Gianfriaur\OpcuaPhpClient\Types\DataValue;
 use Gianfriaur\OpcuaPhpClient\Types\LocalizedText;
 use Gianfriaur\OpcuaPhpClient\Types\NodeClass;
@@ -22,8 +23,12 @@ class BinaryDecoder
 
     /**
      * @param string $buffer
+     * @param ?ExtensionObjectRepository $extensionObjectRepository
      */
-    public function __construct(private readonly string $buffer)
+    public function __construct(
+        private readonly string                     $buffer,
+        private readonly ?ExtensionObjectRepository $extensionObjectRepository = null,
+    )
     {
     }
 
@@ -335,7 +340,7 @@ class BinaryDecoder
         $encoding = $this->readByte();
 
         if ($encoding === 0x01) {
-            $codec = ExtensionObjectRepository::get($typeId);
+            $codec = $this->extensionObjectRepository?->get($typeId);
             if ($codec !== null) {
                 $bodyLength = $this->readInt32();
                 $bodyStart = $this->offset;

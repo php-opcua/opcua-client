@@ -28,7 +28,7 @@ trait ManagesReadWriteTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->readService->decodeReadResponse($decoder);
         });
@@ -63,7 +63,7 @@ trait ManagesReadWriteTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->readService->decodeReadMultiResponse($decoder);
         });
@@ -105,7 +105,7 @@ trait ManagesReadWriteTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             $results = $this->writeService->decodeWriteResponse($decoder);
 
@@ -135,7 +135,7 @@ trait ManagesReadWriteTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->writeService->decodeWriteResponse($decoder);
         });
@@ -161,7 +161,7 @@ trait ManagesReadWriteTrait
 
                 $response = $this->transport->receive();
                 $responseBody = $this->unwrapResponse($response);
-                $decoder = new BinaryDecoder($responseBody);
+                $decoder = $this->createDecoder($responseBody);
 
                 return $this->writeService->decodeWriteResponse($decoder);
             });
@@ -213,7 +213,7 @@ trait ManagesReadWriteTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->callService->decodeCallResponse($decoder);
         });

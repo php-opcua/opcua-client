@@ -24,7 +24,7 @@ trait ManagesSessionTrait
 
         $response = $this->transport->receive();
         $responseBody = $this->unwrapResponse($response);
-        $decoder = new BinaryDecoder($responseBody);
+        $decoder = $this->createDecoder($responseBody);
         $sessionResult = $this->session->decodeCreateSessionResponse($decoder);
         $this->authenticationToken = $sessionResult['authenticationToken'];
 
@@ -67,7 +67,7 @@ trait ManagesSessionTrait
 
         $response = $this->transport->receive();
         $responseBody = $this->unwrapResponse($response);
-        $decoder = new BinaryDecoder($responseBody);
+        $decoder = $this->createDecoder($responseBody);
         $this->session->decodeActivateSessionResponse($decoder);
     }
 

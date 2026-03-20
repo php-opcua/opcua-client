@@ -69,26 +69,37 @@ Everything `BinaryDecoder` offers:
 
 ## Registering a Codec
 
+Create an `ExtensionObjectRepository`, register your codecs, and pass it to the `Client`:
+
 ```php
+use Gianfriaur\OpcuaPhpClient\Client;
 use Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 
+$repo = new ExtensionObjectRepository();
+
 // By class name (instantiated automatically)
-ExtensionObjectRepository::register(NodeId::numeric(2, 5001), MyPointCodec::class);
+$repo->register(NodeId::numeric(2, 5001), MyPointCodec::class);
 
 // By instance (useful when the codec needs configuration)
-ExtensionObjectRepository::register(NodeId::numeric(2, 5001), new MyPointCodec());
+$repo->register(NodeId::numeric(2, 5001), new MyPointCodec());
+
+$client = new Client(extensionObjectRepository: $repo);
 ```
 
 The `typeId` is the **binary encoding NodeId** — the one that shows up in the `typeId` field of the raw ExtensionObject. To find it, read the node without a codec first and look at the `typeId` value.
+
+Each `Client` has its own isolated repository — codecs registered on one client don't affect another. If you don't pass a repository, the client creates an empty one.
 
 ## Using It
 
 Once registered, the codec kicks in automatically whenever the library encounters an ExtensionObject with that `typeId`:
 
 ```php
-ExtensionObjectRepository::register(NodeId::numeric(2, 5001), MyPointCodec::class);
+$repo = new ExtensionObjectRepository();
+$repo->register(NodeId::numeric(2, 5001), MyPointCodec::class);
 
+$client = new Client(extensionObjectRepository: $repo);
 $client->connect('opc.tcp://localhost:4840');
 
 $result = $client->read($pointNodeId);
@@ -96,25 +107,32 @@ $point = $result->getValue();
 // ['x' => 1.0, 'y' => 2.0, 'z' => 3.0] — decoded by MyPointCodec
 ```
 
-No changes to `read()`, `readMulti()`, or anything else needed.
+You can also register codecs after creating the client via `getExtensionObjectRepository()`:
+
+```php
+$client = new Client();
+$client->getExtensionObjectRepository()->register(NodeId::numeric(2, 5001), MyPointCodec::class);
+```
 
 ## Repository API
 
 ```php
+$repo = new ExtensionObjectRepository();
+
 // Register
-ExtensionObjectRepository::register($typeId, MyCodec::class);
+$repo->register($typeId, MyCodec::class);
 
 // Check
-ExtensionObjectRepository::has($typeId);   // bool
+$repo->has($typeId);   // bool
 
 // Get the instance
-ExtensionObjectRepository::get($typeId);   // ?ExtensionObjectCodec
+$repo->get($typeId);   // ?ExtensionObjectCodec
 
 // Remove one
-ExtensionObjectRepository::unregister($typeId);
+$repo->unregister($typeId);
 
 // Remove all
-ExtensionObjectRepository::clear();
+$repo->clear();
 ```
 
 ## Finding the TypeId
@@ -130,12 +148,11 @@ echo $raw['encoding'];   // 1 = binary, 2 = XML
 echo strlen($raw['body']); // body size in bytes
 ```
 
-Use that `typeId` when calling `ExtensionObjectRepository::register()`.
+Use that `typeId` when registering with `$repo->register()`.
 
 ## Limitations
 
 - **Binary only** — codecs work for binary-encoded ExtensionObjects (`0x01`). XML-encoded ones (`0x02`) come back as raw XML strings.
-- **Global registry** — the repository is static, so codecs registered anywhere are visible everywhere. By design, for simplicity, but it means codecs are shared across all client instances in the same process.
 - **No built-in codecs** — the library doesn't ship decoders for standard OPC UA ExtensionObject types (like `ServerStatusDataType` or `EUInformation`). You write the codecs you need.
 
 ## Why BuiltinTypes aren't codecs

@@ -29,7 +29,7 @@ trait ManagesBrowseTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->getEndpointsService->decodeGetEndpointsResponse($decoder);
         });
@@ -84,7 +84,7 @@ trait ManagesBrowseTrait
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
-            $decoder = new BinaryDecoder($responseBody);
+            $decoder = $this->createDecoder($responseBody);
 
             return $this->browseService->decodeBrowseNextResponse($decoder);
         });
@@ -232,6 +232,6 @@ trait ManagesBrowseTrait
 
         $response = $this->transport->receive();
         $responseBody = $this->unwrapResponse($response);
-        return new BinaryDecoder($responseBody);
+        return $this->createDecoder($responseBody);
     }
 }

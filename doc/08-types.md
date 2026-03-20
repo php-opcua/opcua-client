@@ -138,9 +138,14 @@ BuiltinType::DiagnosticInfo; // 25
 OPC UA `ExtensionObject` is a container for custom structures. Without a codec, the library gives you back a raw array with an opaque binary body. Register a codec and it gets decoded automatically:
 
 ```php
+use Gianfriaur\OpcuaPhpClient\Client;
 use Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository;
 
-ExtensionObjectRepository::register(NodeId::numeric(2, 5001), MyPointCodec::class);
+$repo = new ExtensionObjectRepository();
+$repo->register(NodeId::numeric(2, 5001), MyPointCodec::class);
+
+$client = new Client(extensionObjectRepository: $repo);
+$client->connect('opc.tcp://localhost:4840');
 
 $result = $client->read($pointNodeId);
 // $result->getValue() => ['x' => 1.0, 'y' => 2.0, 'z' => 3.0]

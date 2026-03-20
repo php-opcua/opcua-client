@@ -740,14 +740,16 @@ class MyPointCodec implements ExtensionObjectCodec
 
 Register:
 ```php
-ExtensionObjectRepository::register(NodeId::numeric(2, 5001), MyPointCodec::class);
+$repo = new ExtensionObjectRepository();
+$repo->register(NodeId::numeric(2, 5001), MyPointCodec::class);
+$client = new Client(extensionObjectRepository: $repo);
 ```
 
 Once registered, decoding happens automatically in read/readMulti.
 
 Repository API: register(), has(), get(), unregister(), clear()
 
-Limitations: binary encoding only (not XML), global static registry, no built-in codecs shipped.
+Limitations: binary encoding only (not XML), no built-in codecs shipped. Each Client has its own isolated repository.
 
 ---
 
@@ -764,7 +766,7 @@ Limitations: binary encoding only (not XML), global static registry, no built-in
 - Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy — enum of 6 security policies
 - Gianfriaur\OpcuaPhpClient\Security\SecurityMode — enum (None, Sign, SignAndEncrypt)
 - Gianfriaur\OpcuaPhpClient\Encoding\ExtensionObjectCodec — codec interface
-- Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository — codec registry
+- Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository — per-client codec registry (instance-level, not static)
 
 ## Related Packages
 
