@@ -26,6 +26,12 @@
 - `Client` constructor now accepts an optional `?ExtensionObjectRepository $extensionObjectRepository` parameter.
 - `BinaryDecoder` constructor now accepts an optional `?ExtensionObjectRepository` parameter for codec resolution.
 - 750+ unit and integration tests with 99%+ code coverage.
+- **Automatic DataType discovery.** `$client->discoverDataTypes()` browses the server's DataType hierarchy, reads `DataTypeDefinition` attributes (OPC UA 1.04+), and automatically creates `DynamicCodec` instances for all server-defined structured types. Eliminates the need to manually implement codecs for custom types. Supports Structure, StructureWithOptionalFields, and Union types.
+- `StructureField`, `StructureDefinition` DTOs in `Types/` for representing discovered type definitions.
+- `DynamicCodec` — a generic `ExtensionObjectCodec` that decodes/encodes based on a `StructureDefinition`.
+- `DataTypeMapping` — maps OPC UA DataType NodeIds to `BuiltinType` enum values.
+- `StructureDefinitionParser` — parses the binary body of `StructureDefinition` ExtensionObjects.
+- `BinaryDecoder::readVariantValue()` is now public (was private).
 
 ### Deprecated
 

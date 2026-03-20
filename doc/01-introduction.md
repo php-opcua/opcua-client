@@ -63,6 +63,7 @@ $client->disconnect();
 - History reads (raw, processed, at-time)
 - Endpoint discovery
 - Pluggable ExtensionObject codecs for custom structures
+- Automatic DataType discovery — auto-detect and decode custom structures without writing codecs
 
 **Security**
 - 6 security policies (None through Aes256Sha256RsaPss)

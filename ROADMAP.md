@@ -13,8 +13,9 @@
 - [ ] Fluent / Builder API
 - [ ] `TBD` integration by default: wirh opcua-php-client-session-manager
 - [X] Browse Filters (`nodeClassMask` → `NodeClass[]`),
-- [ ] Browse Filters ResultMask
+- [X] Browse Filters ResultMask → Won't Do (see below)
 - [ ] Uman readable & interactable functions
+- [X] Full ExtensionObject Type System `OPC UA Part 6 5.2.7`
 - [ ] .....
 ------
 
@@ -99,9 +100,7 @@ should become
 ```php 
 $status = $client->read(NodeId::numeric(0, 2259)); // or
 $status = $client->read('ns=0;i=2253'); // or
-$status = $client->read('0;2253'); // or
 $status = $client->read('i=2253'); // or  ns 0 is assumed
-$status = $client->read('2253'); // or ns 0 is assumed
 ```
 all this variant is allowed
 
@@ -123,16 +122,20 @@ Ship codecs for common OPC UA standard types so users don't have to implement th
 - `Argument` (method input/output argument descriptions)
 
 ### Browse Filters
-- **NodeClassMask enum** — replace the raw bitmask integer with a proper enum or builder (similar to the existing `BrowseDirection` enum)
-- **ResultMask** — control which fields are returned in browse results to reduce bandwidth
+- **NodeClassMask enum** — Done in v3.0.0. Replaced `int $nodeClassMask` with `NodeClass[] $nodeClasses`.
 
 ### Full ExtensionObject Type System
+https://reference.opcfoundation.org/Core/Part6/v104/docs/5.2.7
+
 Automatic discovery and deserialization of all server-defined structured types by reading the server's DataType dictionary (`OPC UA Part 6 §5.2.7`). This would eliminate the need for manually implementing codecs.
 
 ## Won't Do (by design)
 
 ### BuiltinTypes as Codecs
 The `ExtensionObjectCodec` system is intentionally limited to `ExtensionObject`. OPC UA `BuiltinType` values (Int32, String, Double, etc.) are protocol-level primitives with a fixed binary encoding — making them pluggable would add complexity without benefit. See the [design rationale](doc/12-extension-object-codecs.md#design-note-why-builtintypes-are-not-codecs).
+
+### Browse ResultMask
+The OPC UA `ResultMask` controls which fields of `ReferenceDescription` are returned in browse results (ReferenceType, IsForward, NodeClass, BrowseName, DisplayName, TypeDefinition). Exposing this would require making most `ReferenceDescription` properties nullable, forcing null-checks on every consumer for a marginal bandwidth saving. The default (all fields) is what 99% of use cases need, and the few bytes saved per reference are irrelevant in typical PHP deployment scenarios (local/LAN connections). No mainstream OPC UA client library (node-opcua, opcua-asyncio) exposes this as a public parameter either.
 
 ### Full OPC UA Server Implementation (here)
 This library is a client-only implementation. Building a server requires a fundamentally different architecture (address space management, session handling, subscription engine, etc.).

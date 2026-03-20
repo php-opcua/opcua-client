@@ -485,6 +485,47 @@ Each entry in `notifications` is an associative array. For data changes: `type`,
 
 ---
 
+## Type Discovery
+
+### StructureField
+
+Describes a single field within a structure definition. Returned as part of `StructureDefinition`.
+
+```php
+use Gianfriaur\OpcuaPhpClient\Types\StructureField;
+```
+
+**Properties** (`public readonly`):
+
+| Property | Type | Description |
+|---|---|---|
+| `$field->name` | `string` | Field name |
+| `$field->dataType` | `NodeId` | OPC UA data type of the field |
+| `$field->valueRank` | `int` | `-1` = scalar, `1` = array |
+| `$field->builtinType` | `BuiltinType` | Resolved built-in type for encoding |
+| `$field->isOptional` | `bool` | Whether the field is optional |
+
+---
+
+### StructureDefinition
+
+Describes the layout of a custom structure type. Used by `discoverDataTypes()` to build dynamic codecs.
+
+```php
+use Gianfriaur\OpcuaPhpClient\Types\StructureDefinition;
+```
+
+**Properties** (`public readonly`):
+
+| Property | Type | Description |
+|---|---|---|
+| `$def->defaultEncodingId` | `NodeId` | Binary encoding NodeId |
+| `$def->baseDataType` | `NodeId` | Base data type NodeId |
+| `$def->structureType` | `int` | `0` = Structure, `1` = StructureWithOptionalFields, `2` = Union |
+| `$def->fields` | `StructureField[]` | Ordered list of fields |
+
+---
+
 ## ExtensionObject Codecs
 
 OPC UA `ExtensionObject` is a container for custom structures. Without a codec, the library returns raw arrays. Register a codec to get automatic decoding:

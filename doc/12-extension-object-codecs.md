@@ -149,6 +149,67 @@ Use that `typeId` when calling `$repo->register()`.
 
 > **Tip:** The `typeId` is the **binary encoding NodeId**, not the data type's own NodeId. These are different. The binary encoding NodeId is the one that appears in the wire format.
 
+## Automatic Discovery
+
+Instead of writing codecs by hand, call `$client->discoverDataTypes()` after connecting. The client browses the server's DataType hierarchy, reads the `DataTypeDefinition` attribute (available on OPC UA 1.04+ servers), and registers a `DynamicCodec` for every custom structure it finds.
+
+**Before — manual codec:**
+
+```php
+class MyPointCodec implements ExtensionObjectCodec
+{
+    public function decode(BinaryDecoder $decoder): array
+    {
+        return [
+            'x' => $decoder->readDouble(),
+            'y' => $decoder->readDouble(),
+            'z' => $decoder->readDouble(),
+        ];
+    }
+
+    public function encode(BinaryEncoder $encoder, mixed $value): void
+    {
+        $encoder->writeDouble($value['x']);
+        $encoder->writeDouble($value['y']);
+        $encoder->writeDouble($value['z']);
+    }
+}
+
+$repo = new ExtensionObjectRepository();
+$repo->register(NodeId::numeric(2, 5001), MyPointCodec::class);
+$client = new Client(extensionObjectRepository: $repo);
+$client->connect('opc.tcp://localhost:4840');
+```
+
+**After — automatic discovery:**
+
+```php
+$client = new Client();
+$client->connect('opc.tcp://localhost:4840');
+$client->discoverDataTypes();
+
+$point = $client->read($pointNodeId)->getValue();
+// ['x' => 1.5, 'y' => 2.5, 'z' => 3.5] — decoded automatically
+```
+
+No codec class, no registration. The library reads the structure definition from the server and builds a decoder at runtime.
+
+### Namespace Filtering
+
+Pass a `namespaceIndex` to limit discovery to a specific namespace. This avoids scanning the entire type hierarchy when you only care about your application's types:
+
+```php
+$client->discoverDataTypes(namespaceIndex: 2);
+```
+
+### Manual Codecs Take Priority
+
+If you registered a codec manually before calling `discoverDataTypes()`, the manual codec is preserved. Auto-discovery never overwrites existing registrations.
+
+> **Note:** Auto-discovery requires the server to expose `DataTypeDefinition` attributes (OPC UA 1.04+). Older servers that lack these attributes need manual codecs.
+
+> **Tip:** Call `discoverDataTypes()` once after `connect()`. It adds a round-trip to the server but saves you from writing and maintaining codec classes for every custom type.
+
 ## Limitations
 
 - **Binary only.** Codecs work for binary-encoded ExtensionObjects (encoding `0x01`). XML-encoded ones (encoding `0x02`) come back as raw XML strings.

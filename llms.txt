@@ -29,6 +29,7 @@ A PHP library for connecting to OPC UA servers (industrial automation protocol).
 - Auto-Retry: automatic reconnect on connection failures
 - Auto-Batching: transparent batching for readMulti/writeMulti with server limits discovery
 - ExtensionObject Codecs: per-client instance-level codec registry (not static/global)
+- Automatic DataType Discovery: discoverDataTypes() auto-detects and decodes custom structures without manual codecs (OPC UA 1.04+)
 - Connection State: lifecycle tracking (Disconnected, Connected, Broken) with reconnect()
 - Typed everywhere: all service responses return public readonly DTOs, not arrays
 - Thoroughly tested: 750+ tests, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5

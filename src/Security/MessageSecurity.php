@@ -7,6 +7,9 @@ namespace Gianfriaur\OpcuaPhpClient\Security;
 use Gianfriaur\OpcuaPhpClient\Exception\SecurityException;
 use OpenSSLAsymmetricKey;
 
+/**
+ * Low-level cryptographic operations for OPC UA message security.
+ */
 class MessageSecurity
 {
     private CertificateManager $certManager;
@@ -23,6 +26,8 @@ class MessageSecurity
      * @param string $data
      * @param OpenSSLAsymmetricKey $privateKey
      * @param SecurityPolicy $policy
+     * @return string
+     * @throws SecurityException
      */
     public function asymmetricSign(string $data, OpenSSLAsymmetricKey $privateKey, SecurityPolicy $policy): string
     {
@@ -33,10 +38,10 @@ class MessageSecurity
         $algorithm = $policy->getAsymmetricSignatureAlgorithm();
         $signature = '';
 
-        $result = openssl_sign($data, $signature, $privateKey, $algorithm);
-        if ($result === false) {
-            throw new SecurityException("Asymmetric signing failed: " . openssl_error_string());
-        }
+        self::ensureNotFalse(
+            openssl_sign($data, $signature, $privateKey, $algorithm),
+            "Asymmetric signing failed",
+        );
 
         return $signature;
     }
@@ -46,13 +51,10 @@ class MessageSecurity
      * @param string $signature
      * @param string $derCert
      * @param SecurityPolicy $policy
+     * @return bool
+     * @throws SecurityException
      */
-    public function asymmetricVerify(
-        string         $data,
-        string         $signature,
-        string         $derCert,
-        SecurityPolicy $policy,
-    ): bool
+    public function asymmetricVerify(string $data, string $signature, string $derCert, SecurityPolicy $policy): bool
     {
         if ($policy === SecurityPolicy::None) {
             return true;
@@ -62,9 +64,7 @@ class MessageSecurity
         $algorithm = $policy->getAsymmetricSignatureAlgorithm();
 
         $result = openssl_verify($data, $signature, $pubKey, $algorithm);
-        if ($result === -1) {
-            throw new SecurityException("Asymmetric verification failed: " . openssl_error_string());
-        }
+        self::ensureNotFalse($result !== -1 ? $result : false, "Asymmetric verification failed");
 
         return $result === 1;
     }
@@ -73,6 +73,8 @@ class MessageSecurity
      * @param string $data
      * @param string $derCert
      * @param SecurityPolicy $policy
+     * @return string
+     * @throws SecurityException
      */
     public function asymmetricEncrypt(string $data, string $derCert, SecurityPolicy $policy): string
     {
@@ -95,10 +97,10 @@ class MessageSecurity
             $block = substr($data, $offset, $blockSize);
             $encryptedBlock = '';
 
-            $result = openssl_public_encrypt($block, $encryptedBlock, $pubKey, $padding);
-            if ($result === false) {
-                throw new SecurityException("Asymmetric encryption failed: " . openssl_error_string());
-            }
+            self::ensureNotFalse(
+                openssl_public_encrypt($block, $encryptedBlock, $pubKey, $padding),
+                "Asymmetric encryption failed",
+            );
 
             $encrypted .= $encryptedBlock;
             $offset += $blockSize;
@@ -111,21 +113,16 @@ class MessageSecurity
      * @param string $data
      * @param OpenSSLAsymmetricKey $privateKey
      * @param SecurityPolicy $policy
+     * @return string
+     * @throws SecurityException
      */
-    public function asymmetricDecrypt(
-        string               $data,
-        OpenSSLAsymmetricKey $privateKey,
-        SecurityPolicy       $policy,
-    ): string
+    public function asymmetricDecrypt(string $data, OpenSSLAsymmetricKey $privateKey, SecurityPolicy $policy): string
     {
         if ($policy === SecurityPolicy::None) {
             return $data;
         }
 
-        $details = openssl_pkey_get_details($privateKey);
-        if ($details === false) {
-            throw new SecurityException("Failed to get private key details: " . openssl_error_string());
-        }
+        $details = self::ensureNotFalse(openssl_pkey_get_details($privateKey), "Failed to get private key details");
         $keyLengthBytes = (int)($details['bits'] / 8);
         $padding = $policy->getAsymmetricEncryptionPadding();
 
@@ -137,10 +134,10 @@ class MessageSecurity
             $block = substr($data, $offset, $keyLengthBytes);
             $decryptedBlock = '';
 
-            $result = openssl_private_decrypt($block, $decryptedBlock, $privateKey, $padding);
-            if ($result === false) {
-                throw new SecurityException("Asymmetric decryption failed: " . openssl_error_string());
-            }
+            self::ensureNotFalse(
+                openssl_private_decrypt($block, $decryptedBlock, $privateKey, $padding),
+                "Asymmetric decryption failed",
+            );
 
             $decrypted .= $decryptedBlock;
             $offset += $keyLengthBytes;
@@ -153,6 +150,7 @@ class MessageSecurity
      * @param string $data
      * @param string $signingKey
      * @param SecurityPolicy $policy
+     * @return string
      */
     public function symmetricSign(string $data, string $signingKey, SecurityPolicy $policy): string
     {
@@ -170,13 +168,9 @@ class MessageSecurity
      * @param string $signature
      * @param string $signingKey
      * @param SecurityPolicy $policy
+     * @return bool
      */
-    public function symmetricVerify(
-        string         $data,
-        string         $signature,
-        string         $signingKey,
-        SecurityPolicy $policy,
-    ): bool
+    public function symmetricVerify(string $data, string $signature, string $signingKey, SecurityPolicy $policy): bool
     {
         if ($policy === SecurityPolicy::None) {
             return true;
@@ -192,13 +186,10 @@ class MessageSecurity
      * @param string $encryptingKey
      * @param string $iv
      * @param SecurityPolicy $policy
+     * @return string
+     * @throws SecurityException
      */
-    public function symmetricEncrypt(
-        string         $data,
-        string         $encryptingKey,
-        string         $iv,
-        SecurityPolicy $policy,
-    ): string
+    public function symmetricEncrypt(string $data, string $encryptingKey, string $iv, SecurityPolicy $policy): string
     {
         if ($policy === SecurityPolicy::None) {
             return $data;
@@ -206,19 +197,10 @@ class MessageSecurity
 
         $cipher = $policy->getSymmetricEncryptionAlgorithm();
 
-        $encrypted = openssl_encrypt(
-            $data,
-            $cipher,
-            $encryptingKey,
-            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
-            $iv,
+        return self::ensureNotFalse(
+            openssl_encrypt($data, $cipher, $encryptingKey, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $iv),
+            "Symmetric encryption failed",
         );
-
-        if ($encrypted === false) {
-            throw new SecurityException("Symmetric encryption failed: " . openssl_error_string());
-        }
-
-        return $encrypted;
     }
 
     /**
@@ -226,13 +208,10 @@ class MessageSecurity
      * @param string $encryptingKey
      * @param string $iv
      * @param SecurityPolicy $policy
+     * @return string
+     * @throws SecurityException
      */
-    public function symmetricDecrypt(
-        string         $data,
-        string         $encryptingKey,
-        string         $iv,
-        SecurityPolicy $policy,
-    ): string
+    public function symmetricDecrypt(string $data, string $encryptingKey, string $iv, SecurityPolicy $policy): string
     {
         if ($policy === SecurityPolicy::None) {
             return $data;
@@ -240,19 +219,10 @@ class MessageSecurity
 
         $cipher = $policy->getSymmetricEncryptionAlgorithm();
 
-        $decrypted = openssl_decrypt(
-            $data,
-            $cipher,
-            $encryptingKey,
-            OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
-            $iv,
+        return self::ensureNotFalse(
+            openssl_decrypt($data, $cipher, $encryptingKey, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $iv),
+            "Symmetric decryption failed",
         );
-
-        if ($decrypted === false) {
-            throw new SecurityException("Symmetric decryption failed: " . openssl_error_string());
-        }
-
-        return $decrypted;
     }
 
     /**
@@ -287,6 +257,7 @@ class MessageSecurity
      * @param string $seed
      * @param int $length
      * @param string $algo
+     * @return string
      */
     private function prf(string $secret, string $seed, int $length, string $algo): string
     {
@@ -299,5 +270,21 @@ class MessageSecurity
         }
 
         return substr($result, 0, $length);
+    }
+
+    /**
+     * @template T
+     * @param T|false $result
+     * @param string $message
+     * @return T
+     * @throws SecurityException
+     */
+    private static function ensureNotFalse(mixed $result, string $message): mixed
+    {
+        if ($result === false) {
+            throw new SecurityException("{$message}: " . openssl_error_string());
+        }
+
+        return $result;
     }
 }

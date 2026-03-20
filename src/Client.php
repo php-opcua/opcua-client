@@ -15,6 +15,7 @@ use Gianfriaur\OpcuaPhpClient\Client\ManagesReadWriteTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesSecureChannelTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesSessionTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesSubscriptionsTrait;
+use Gianfriaur\OpcuaPhpClient\Client\ManagesTypeDiscoveryTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesTimeoutTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesTranslateBrowsePathTrait;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
@@ -60,6 +61,7 @@ class Client implements OpcUaClientInterface
     use ManagesReadWriteTrait;
     use ManagesSubscriptionsTrait;
     use ManagesHistoryTrait;
+    use ManagesTypeDiscoveryTrait;
     use ManagesTranslateBrowsePathTrait;
 
     private TcpTransport $transport;

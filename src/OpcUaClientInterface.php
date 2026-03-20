@@ -149,6 +149,19 @@ interface OpcUaClientInterface
     public function getConnectionState(): ConnectionState;
 
     /**
+     * Discover server-defined structured data types and register dynamic codecs for them.
+     *
+     * @param ?int $namespaceIndex Only discover types in this namespace. Null for all non-zero namespaces.
+     * @return int The number of types successfully discovered and registered.
+     *
+     * @throws ConnectionException If the connection is lost.
+     * @throws ServiceException If the server returns an error.
+     *
+     * @see \Gianfriaur\OpcuaPhpClient\Encoding\DynamicCodec
+     */
+    public function discoverDataTypes(?int $namespaceIndex = null): int;
+
+    /**
      * Discover endpoints available at the given server URL.
      *
      * @param string $endpointUrl The OPC UA endpoint URL to query.

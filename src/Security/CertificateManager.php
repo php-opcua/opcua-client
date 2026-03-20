@@ -8,10 +8,15 @@ use Gianfriaur\OpcuaPhpClient\Exception\ConfigurationException;
 use Gianfriaur\OpcuaPhpClient\Exception\SecurityException;
 use OpenSSLAsymmetricKey;
 
+/**
+ * Utilities for loading, parsing, and generating X.509 certificates and private keys.
+ */
 class CertificateManager
 {
     /**
      * @param string $path
+     * @return string DER-encoded certificate bytes.
+     * @throws ConfigurationException
      */
     public function loadCertificatePem(string $path): string
     {
@@ -25,6 +30,8 @@ class CertificateManager
 
     /**
      * @param string $path
+     * @return string DER-encoded certificate bytes.
+     * @throws ConfigurationException
      */
     public function loadCertificateDer(string $path): string
     {
@@ -38,6 +45,9 @@ class CertificateManager
 
     /**
      * @param string $path
+     * @return OpenSSLAsymmetricKey
+     * @throws ConfigurationException
+     * @throws SecurityException
      */
     public function loadPrivateKeyPem(string $path): OpenSSLAsymmetricKey
     {
@@ -47,15 +57,13 @@ class CertificateManager
         }
 
         $key = openssl_pkey_get_private($pem);
-        if ($key === false) {
-            throw new SecurityException("Failed to parse private key: " . openssl_error_string());
-        }
 
-        return $key;
+        return self::ensureNotFalse($key, "Failed to parse private key");
     }
 
     /**
      * @param string $derCert
+     * @return string SHA-1 thumbprint (binary, 20 bytes).
      */
     public function getThumbprint(string $derCert): string
     {
@@ -64,49 +72,35 @@ class CertificateManager
 
     /**
      * @param string $derCert
+     * @return int Key length in bytes (e.g. 256 for 2048-bit).
+     * @throws SecurityException
      */
     public function getPublicKeyLength(string $derCert): int
     {
         $pem = $this->derToPem($derCert);
-        $cert = openssl_x509_read($pem);
-        if ($cert === false) {
-            throw new SecurityException("Failed to read certificate: " . openssl_error_string());
-        }
-
-        $pubKey = openssl_pkey_get_public($cert);
-        if ($pubKey === false) {
-            throw new SecurityException("Failed to get public key from certificate: " . openssl_error_string());
-        }
-
-        $details = openssl_pkey_get_details($pubKey);
-        if ($details === false) {
-            throw new SecurityException("Failed to get key details: " . openssl_error_string());
-        }
+        $cert = self::ensureNotFalse(openssl_x509_read($pem), "Failed to read certificate");
+        $pubKey = self::ensureNotFalse(openssl_pkey_get_public($cert), "Failed to get public key from certificate");
+        $details = self::ensureNotFalse(openssl_pkey_get_details($pubKey), "Failed to get key details");
 
         return (int)($details['bits'] / 8);
     }
 
     /**
      * @param string $derCert
+     * @return OpenSSLAsymmetricKey
+     * @throws SecurityException
      */
     public function getPublicKeyFromCert(string $derCert): OpenSSLAsymmetricKey
     {
         $pem = $this->derToPem($derCert);
-        $cert = openssl_x509_read($pem);
-        if ($cert === false) {
-            throw new SecurityException("Failed to read certificate: " . openssl_error_string());
-        }
+        $cert = self::ensureNotFalse(openssl_x509_read($pem), "Failed to read certificate");
 
-        $pubKey = openssl_pkey_get_public($cert);
-        if ($pubKey === false) {
-            throw new SecurityException("Failed to get public key from certificate: " . openssl_error_string());
-        }
-
-        return $pubKey;
+        return self::ensureNotFalse(openssl_pkey_get_public($cert), "Failed to get public key from certificate");
     }
 
     /**
      * @param string $derCert
+     * @return ?string The application URI from the SAN extension, or null.
      */
     public function getApplicationUri(string $derCert): ?string
     {
@@ -135,6 +129,8 @@ class CertificateManager
 
     /**
      * @param string $pem
+     * @return string
+     * @throws SecurityException
      */
     private function pemToDer(string $pem): string
     {
@@ -152,6 +148,7 @@ class CertificateManager
 
     /**
      * @return array{certDer: string, privateKey: OpenSSLAsymmetricKey}
+     * @throws SecurityException
      */
     public function generateSelfSignedCertificate(string $applicationUri = 'urn:opcua-php-client'): array
     {
@@ -170,10 +167,7 @@ class CertificateManager
             . "extendedKeyUsage = clientAuth\n"
             . "subjectAltName = URI:{$applicationUri}, DNS:{$hostname}\n";
 
-        $tmpHandle = tmpfile();
-        if ($tmpHandle === false) {
-            throw new SecurityException("Failed to create temporary OpenSSL config");
-        }
+        $tmpHandle = self::ensureNotFalse(tmpfile(), "Failed to create temporary OpenSSL config");
 
         try {
             fwrite($tmpHandle, $configContent);
@@ -187,37 +181,25 @@ class CertificateManager
                 'config' => $configPath,
             ];
 
-            $privateKey = openssl_pkey_new($keyConfig);
-            if ($privateKey === false) {
-                throw new SecurityException("Failed to generate private key: " . openssl_error_string());
-            }
+            $privateKey = self::ensureNotFalse(openssl_pkey_new($keyConfig), "Failed to generate private key");
 
-            $dn = [
-                'CN' => 'OPC UA PHP Client',
-                'O' => 'OPC UA PHP Client',
-            ];
+            $dn = ['CN' => 'OPC UA PHP Client', 'O' => 'OPC UA PHP Client'];
 
-            $csr = openssl_csr_new($dn, $privateKey, [
-                'digest_alg' => 'sha256',
-                'config' => $configPath,
-            ]);
-            if ($csr === false) {
-                throw new SecurityException("Failed to generate CSR: " . openssl_error_string());
-            }
+            $csr = self::ensureNotFalse(
+                openssl_csr_new($dn, $privateKey, ['digest_alg' => 'sha256', 'config' => $configPath]),
+                "Failed to generate CSR",
+            );
 
-            $cert = openssl_csr_sign($csr, null, $privateKey, 365, [
-                'digest_alg' => 'sha256',
-                'config' => $configPath,
-                'x509_extensions' => 'v3_req',
-            ]);
-            if ($cert === false) {
-                throw new SecurityException("Failed to generate self-signed certificate: " . openssl_error_string());
-            }
+            $cert = self::ensureNotFalse(
+                openssl_csr_sign($csr, null, $privateKey, 365, ['digest_alg' => 'sha256', 'config' => $configPath, 'x509_extensions' => 'v3_req']),
+                "Failed to generate self-signed certificate",
+            );
 
             $certPem = '';
-            if (!openssl_x509_export($cert, $certPem)) {
-                throw new SecurityException("Failed to export certificate: " . openssl_error_string());
-            }
+            self::ensureNotFalse(
+                openssl_x509_export($cert, $certPem) ?: false,
+                "Failed to export certificate",
+            );
 
             return [
                 'certDer' => $this->pemToDer($certPem),
@@ -230,11 +212,28 @@ class CertificateManager
 
     /**
      * @param string $der
+     * @return string PEM-encoded certificate.
      */
     private function derToPem(string $der): string
     {
         return "-----BEGIN CERTIFICATE-----\n"
             . chunk_split(base64_encode($der), 64, "\n")
             . "-----END CERTIFICATE-----\n";
+    }
+
+    /**
+     * @template T
+     * @param T|false $result
+     * @param string $message
+     * @return T
+     * @throws SecurityException
+     */
+    private static function ensureNotFalse(mixed $result, string $message): mixed
+    {
+        if ($result === false) {
+            throw new SecurityException("{$message}: " . openssl_error_string());
+        }
+
+        return $result;
     }
 }

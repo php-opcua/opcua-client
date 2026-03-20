@@ -173,6 +173,17 @@ $point = $client->read($pointNodeId)->getValue();
 
 Each client gets its own isolated codec registry — no global state, no cross-contamination.
 
+### Auto-discover custom types
+
+```php
+$client = new Client();
+$client->connect('opc.tcp://localhost:4840');
+$client->discoverDataTypes();
+
+$point = $client->read($pointNodeId)->getValue();
+// ['x' => 1.5, 'y' => 2.5, 'z' => 3.5] — no codec needed
+```
+
 ## Why This Library?
 
 - **Zero dependencies** — only `ext-openssl`. No phpseclib, no symfony/cache, no monolog.
@@ -201,6 +212,7 @@ Each client gets its own isolated codec registry — no global state, no cross-c
 | **Auto-Retry** | Automatic reconnect on connection failures |
 | **Auto-Batching** | Transparent batching for `readMulti`/`writeMulti` |
 | **ExtensionObject Codecs** | Pluggable per-client codec system for custom structures |
+| **Auto-Discovery** | `discoverDataTypes()` auto-detects custom structures without manual codecs |
 
 ## Documentation
 

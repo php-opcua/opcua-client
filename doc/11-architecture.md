@@ -20,7 +20,8 @@ src/
 │   ├── ManagesSessionTrait.php          # Session create / activate
 │   ├── ManagesSubscriptionsTrait.php    # Subscriptions and monitored items
 │   ├── ManagesTimeoutTrait.php          # Timeout configuration
-│   └── ManagesTranslateBrowsePathTrait.php # Browse path translation
+│   ├── ManagesTranslateBrowsePathTrait.php # Browse path translation
+│   └── ManagesTypeDiscoveryTrait.php     # Automatic DataType discovery
 │
 ├── Transport/
 │   └── TcpTransport.php                # TCP socket I/O
@@ -28,7 +29,10 @@ src/
 ├── Encoding/
 │   ├── BinaryEncoder.php               # Serialization (write)
 │   ├── BinaryDecoder.php               # Deserialization (read)
-│   └── ExtensionObjectCodec.php        # Interface for custom type codecs
+│   ├── ExtensionObjectCodec.php        # Interface for custom type codecs
+│   ├── DynamicCodec.php               # Auto-generated codec from StructureDefinition
+│   ├── DataTypeMapping.php            # Maps DataType NodeIds to BuiltinTypes
+│   └── StructureDefinitionParser.php  # Parses DataTypeDefinition attributes
 │
 ├── Protocol/
 │   ├── MessageHeader.php               # OPC UA message framing
@@ -77,7 +81,9 @@ src/
 │   ├── CallResult.php                # Method call result DTO
 │   ├── SubscriptionResult.php        # Create subscription result DTO
 │   ├── MonitoredItemResult.php       # Create monitored item result DTO
-│   └── PublishResult.php             # Publish response result DTO
+│   ├── PublishResult.php             # Publish response result DTO
+│   ├── StructureField.php            # Field descriptor for structure definitions
+│   └── StructureDefinition.php       # Structure layout for dynamic codecs
 │
 ├── Repository/
 │   └── ExtensionObjectRepository.php  # Per-client codec registry

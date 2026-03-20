@@ -303,7 +303,13 @@ class BinaryDecoder
     /**
      * @param BuiltinType $type
      */
-    private function readVariantValue(BuiltinType $type): mixed
+    /**
+     * Read a single value of the given BuiltinType from the buffer.
+     *
+     * @param BuiltinType $type The type to read.
+     * @return mixed The decoded value.
+     */
+    public function readVariantValue(BuiltinType $type): mixed
     {
         return match ($type) {
             BuiltinType::Boolean => $this->readBoolean(),

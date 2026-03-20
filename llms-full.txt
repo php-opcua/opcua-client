@@ -35,6 +35,7 @@ composer require gianfriaur/opcua-php-client
 - Auto-Retry — automatic reconnect on failure
 - Auto-Batching — transparent batching for readMulti/writeMulti
 - ExtensionObject Codecs — per-client instance-level codec registry
+- Automatic DataType Discovery — discoverDataTypes() auto-detects custom structures from server metadata (OPC UA 1.04+)
 - Typed everywhere — all responses return public readonly DTOs, not arrays
 - 750+ tests, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
 
@@ -545,6 +546,24 @@ $client->getExtensionObjectRepository()->register(NodeId::numeric(2, 5001), MyPo
 ```
 
 Repository API: register(), has(), get(), unregister(), clear()
+
+### Automatic DataType Discovery
+
+Instead of writing codecs manually, call discoverDataTypes() after connecting:
+
+```php
+$client = new Client();
+$client->connect('opc.tcp://localhost:4840');
+$client->discoverDataTypes();
+
+$point = $client->read($pointNodeId)->getValue();
+// ['x' => 1.5, 'y' => 2.5, 'z' => 3.5] — decoded automatically
+```
+
+Filter by namespace: `$client->discoverDataTypes(namespaceIndex: 2)`
+Manually registered codecs are never overwritten by auto-discovery.
+Requires OPC UA 1.04+ servers that expose DataTypeDefinition attributes.
+
 Limitations: binary encoding only (not XML), no built-in codecs shipped. Each Client is isolated.
 
 ---
@@ -565,6 +584,11 @@ Limitations: binary encoding only (not XML), no built-in codecs shipped. Each Cl
 - Gianfriaur\OpcuaPhpClient\Types\BrowsePathResult — public readonly: statusCode, targets
 - Gianfriaur\OpcuaPhpClient\Types\BrowsePathTarget — public readonly: targetId, remainingPathIndex
 - Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository — per-client codec registry (instance-level)
+- Gianfriaur\OpcuaPhpClient\Encoding\DynamicCodec — auto-generated codec from StructureDefinition
+- Gianfriaur\OpcuaPhpClient\Encoding\DataTypeMapping — maps DataType NodeIds to BuiltinTypes
+- Gianfriaur\OpcuaPhpClient\Encoding\StructureDefinitionParser — parses DataTypeDefinition attributes
+- Gianfriaur\OpcuaPhpClient\Types\StructureField — public readonly: name, dataType, valueRank, builtinType, isOptional
+- Gianfriaur\OpcuaPhpClient\Types\StructureDefinition — public readonly: defaultEncodingId, baseDataType, structureType, fields
 
 ## Related Packages
 
