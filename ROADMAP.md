@@ -16,7 +16,8 @@
 ## v3-0.0
 
 - [ ] Fluent / Builder API
-
+- [ ] TBD: integration by default: wirh opcua-php-client-session-manager
+- [ ] ......
 
 ------
 
