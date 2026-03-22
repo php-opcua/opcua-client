@@ -278,7 +278,8 @@ $point = $client->read($pointNodeId)->getValue();
 | **ExtensionObject Codecs** | Pluggable per-client codec system for custom structures |
 | **Auto-Discovery** | `discoverDataTypes()` auto-detects custom structures without manual codecs |
 | **MockClient** | In-memory test double — register handlers, assert calls, no TCP connection needed |
-| **PSR-3 Logging** | Optional structured logging via any PSR-3 logger — connect, retry, errors, protocol details |
+| **Logging** | Optional structured logging via any PSR-3 logger — connect, retry, errors, protocol details |
+| **Cache** | Browse and resolve results cached by default (InMemoryCache, 300s TTL). Plug in any PSR-16 driver (FileCache, Laravel, Redis) |
 
 ## Documentation
 
@@ -300,7 +301,7 @@ $point = $client->read($pointNodeId)->getValue();
 
 ## Testing
 
-890+ tests with **99%+ code coverage**. Unit tests cover encoding, crypto, protocol services, and error paths. Integration tests run against [opcua-test-server-suite](https://github.com/GianfriAur/opcua-test-server-suite) — a Docker-based OPC UA environment with multiple security configs, custom types, and real-world scenarios.
+940+ tests with **99%+ code coverage**. Unit tests cover encoding, crypto, protocol services, and error paths. Integration tests run against [opcua-test-server-suite](https://github.com/GianfriAur/opcua-test-server-suite) — a Docker-based OPC UA environment with multiple security configs, custom types, and real-world scenarios.
 
 ```bash
 ./vendor/bin/pest                                          # everything

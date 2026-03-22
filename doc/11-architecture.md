@@ -19,6 +19,7 @@ src/
 │   ├── ManagesSecureChannelTrait.php    # Secure channel lifecycle
 │   ├── ManagesSessionTrait.php          # Session create / activate
 │   ├── ManagesSubscriptionsTrait.php    # Subscriptions and monitored items
+│   ├── ManagesCacheTrait.php             # PSR-16 cache management
 │   ├── ManagesTimeoutTrait.php          # Timeout configuration
 │   ├── ManagesTranslateBrowsePathTrait.php # Browse path translation
 │   └── ManagesTypeDiscoveryTrait.php     # Automatic DataType discovery
@@ -91,6 +92,10 @@ src/
 │   ├── MonitoredItemsBuilder.php      # Builder for createMonitoredItems()
 │   └── TranslateBrowsePathsBuilder.php # Builder for translateBrowsePaths()
 │
+├── Cache/
+│   ├── InMemoryCache.php              # PSR-16 in-memory cache
+│   └── FileCache.php                  # PSR-16 file-based cache
+│
 ├── Repository/
 │   └── ExtensionObjectRepository.php  # Per-client codec registry
 │
@@ -132,9 +137,10 @@ Each layer only talks to the one directly below it. The `Client` is the sole pub
 
 ## Dependencies
 
-The library has a single Composer dependency:
+The library has two Composer dependencies (both interface-only, zero runtime code):
 
 - **`psr/log`** — PSR-3 logger interface. The client accepts any `Psr\Log\LoggerInterface` implementation (Monolog, Laravel, etc.) and defaults to `NullLogger` when none is provided.
+- **`psr/simple-cache`** — PSR-16 cache interface. The client uses `CacheInterface` for browse result caching. Ships with `InMemoryCache` (default) and `FileCache`. Any PSR-16 compatible driver (Laravel Cache, Symfony Cache, etc.) can be plugged in.
 
 The only PHP extension required is `ext-openssl`.
 

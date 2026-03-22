@@ -27,22 +27,28 @@ trait ManagesBrowseTrait
      * @throws \Gianfriaur\OpcuaPhpClient\Exception\ConnectionException If the connection is lost during the request.
      * @throws \Gianfriaur\OpcuaPhpClient\Exception\ServiceException If the server returns an error response.
      */
-    public function getEndpoints(string $endpointUrl): array
+    public function getEndpoints(string $endpointUrl, bool $useCache = true): array
     {
-        return $this->executeWithRetry(function () use ($endpointUrl) {
-            $this->ensureConnected();
+        $cacheKey = $this->buildSimpleCacheKey('endpoints', md5($endpointUrl));
 
-            $requestId = $this->nextRequestId();
-            $authToken = $this->authenticationToken ?? NodeId::numeric(0, 0);
-            $request = $this->getEndpointsService->encodeGetEndpointsRequest($requestId, $endpointUrl, $authToken);
-            $this->transport->send($request);
+        return $this->cachedFetch(
+            $cacheKey,
+            fn() => $this->executeWithRetry(function () use ($endpointUrl) {
+                $this->ensureConnected();
 
-            $response = $this->transport->receive();
-            $responseBody = $this->unwrapResponse($response);
-            $decoder = $this->createDecoder($responseBody);
+                $requestId = $this->nextRequestId();
+                $authToken = $this->authenticationToken ?? NodeId::numeric(0, 0);
+                $request = $this->getEndpointsService->encodeGetEndpointsRequest($requestId, $endpointUrl, $authToken);
+                $this->transport->send($request);
 
-            return $this->getEndpointsService->decodeGetEndpointsResponse($decoder);
-        });
+                $response = $this->transport->receive();
+                $responseBody = $this->unwrapResponse($response);
+                $decoder = $this->createDecoder($responseBody);
+
+                return $this->getEndpointsService->decodeGetEndpointsResponse($decoder);
+            }),
+            $useCache,
+        );
     }
 
     /**
@@ -59,15 +65,20 @@ trait ManagesBrowseTrait
      * @throws \Gianfriaur\OpcuaPhpClient\Exception\ConnectionException If the connection is lost during the request.
      * @throws \Gianfriaur\OpcuaPhpClient\Exception\ServiceException If the server returns an error response.
      */
-    public function browse(NodeId|string $nodeId, BrowseDirection $direction = BrowseDirection::Forward, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = []): array
+    public function browse(NodeId|string $nodeId, BrowseDirection $direction = BrowseDirection::Forward, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = [], bool $useCache = true): array
     {
         $nodeId = $this->resolveNodeIdParam($nodeId);
         $nodeClassMask = self::nodeClassesToMask($nodeClasses);
-        return $this->executeWithRetry(function () use ($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask) {
-            $decoder = $this->getBinaryDecoder($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask);
+        $paramsSuffix = sprintf('%d:%d:%d', $direction->value, $includeSubtypes ? 1 : 0, $nodeClassMask);
 
-            return $this->browseService->decodeBrowseResponse($decoder);
-        });
+        return $this->cachedFetch(
+            $this->buildCacheKey('browse', $nodeId, $paramsSuffix),
+            fn() => $this->executeWithRetry(function () use ($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask) {
+                $decoder = $this->getBinaryDecoder($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask);
+                return $this->browseService->decodeBrowseResponse($decoder);
+            }),
+            $useCache,
+        );
     }
 
     /**
@@ -141,18 +152,28 @@ trait ManagesBrowseTrait
         ?NodeId         $referenceTypeId = null,
         bool            $includeSubtypes = true,
         array           $nodeClasses = [],
+        bool            $useCache = true,
     ): array
     {
         $nodeId = $this->resolveNodeIdParam($nodeId);
-        $result = $this->browseWithContinuation($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClasses);
-        $allRefs = $result->references;
+        $nodeClassMask = self::nodeClassesToMask($nodeClasses);
+        $paramsSuffix = sprintf('%d:%d:%d', $direction->value, $includeSubtypes ? 1 : 0, $nodeClassMask);
 
-        while ($result->continuationPoint !== null) {
-            $result = $this->browseNext($result->continuationPoint);
-            array_push($allRefs, ...$result->references);
-        }
+        return $this->cachedFetch(
+            $this->buildCacheKey('browseAll', $nodeId, $paramsSuffix),
+            function () use ($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClasses) {
+                $result = $this->browseWithContinuation($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClasses);
+                $allRefs = $result->references;
 
-        return $allRefs;
+                while ($result->continuationPoint !== null) {
+                    $result = $this->browseNext($result->continuationPoint);
+                    array_push($allRefs, ...$result->references);
+                }
+
+                return $allRefs;
+            },
+            $useCache,
+        );
     }
 
     private const MAX_BROWSE_RECURSIVE_DEPTH = 256;

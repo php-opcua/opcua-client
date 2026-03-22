@@ -28,6 +28,13 @@
 - 800+ unit and integration tests with 99.5%+ code coverage.
 - **PSR-3 Logging.** Inject any PSR-3 compatible logger (Monolog, Laravel, etc.) via `$client->setLogger($logger)` or the constructor. Logs connection events (INFO), retry attempts (WARNING), batch splits (INFO), failures (ERROR), and protocol details (DEBUG). Uses `NullLogger` by default.
 - `psr/log` ^3.0 added as dependency (interface-only package, zero runtime code).
+- **PSR-16 Cache for browse results.** Browse, browseAll, and resolveNodeId results are cached by default using an in-memory PSR-16 cache (300s TTL). Pass `useCache: false` to bypass the cache on any call, or plug in any PSR-16 driver (Laravel Cache, Redis, etc.) via `$client->setCache($driver)`. Ships with `InMemoryCache` and `FileCache`. Use `invalidateCache($nodeId)` or `flushCache()` to manage entries.
+- `psr/simple-cache` ^3.0 added as dependency (interface-only package, zero runtime code).
+- `InMemoryCache` — PSR-16 in-memory cache implementation with configurable TTL.
+- `FileCache` — PSR-16 file-based cache implementation that survives process restarts.
+- `ManagesCacheTrait` — trait providing `setCache()`, `getCache()`, `invalidateCache()`, `flushCache()` and internal cache key generation.
+- `getEndpoints()` results are now cached. Pass `useCache: false` to bypass.
+- `discoverDataTypes()` results are now cached. On cache hit, discovered type definitions are replayed from cache (registers codecs without server round-trips). Especially useful with `FileCache` to persist discovered types across PHP process restarts. Pass `useCache: false` to bypass.
 - **`MockClient` for testing.** A drop-in `OpcUaClientInterface` implementation with no TCP connection. Register response handlers with `onRead()`, `onWrite()`, `onBrowse()`, `onCall()`, `onResolveNodeId()`. Track calls with `getCalls()`, `callCount()`, `getCallsFor()`.
 - **`DataValue` factory methods.** `DataValue::ofInt32(42)`, `ofDouble(3.14)`, `ofString('hello')`, `ofBoolean(true)`, `of($value, BuiltinType)`, `bad(StatusCode)`.
 - **Automatic DataType discovery.** `$client->discoverDataTypes()` browses the server's DataType hierarchy, reads `DataTypeDefinition` attributes (OPC UA 1.04+), and automatically creates `DynamicCodec` instances for all server-defined structured types. Eliminates the need to manually implement codecs for custom types. Supports Structure, StructureWithOptionalFields, and Union types.

@@ -9,9 +9,11 @@ use Gianfriaur\OpcuaPhpClient\Builder\BrowsePathsBuilder;
 use Gianfriaur\OpcuaPhpClient\Builder\MonitoredItemsBuilder;
 use Gianfriaur\OpcuaPhpClient\Builder\ReadMultiBuilder;
 use Gianfriaur\OpcuaPhpClient\Builder\WriteMultiBuilder;
+use Gianfriaur\OpcuaPhpClient\Cache\InMemoryCache;
 use Gianfriaur\OpcuaPhpClient\Exception\ConnectionException;
 use Gianfriaur\OpcuaPhpClient\OpcUaClientInterface;
 use Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository;
+use Psr\SimpleCache\CacheInterface;
 use Gianfriaur\OpcuaPhpClient\Types\BrowseDirection;
 use Gianfriaur\OpcuaPhpClient\Types\BrowseNode;
 use Gianfriaur\OpcuaPhpClient\Types\BrowsePathResult;
@@ -70,6 +72,8 @@ class MockClient implements OpcUaClientInterface
     private int $autoRetry = 0;
     private ?int $batchSize = null;
     private int $browseMaxDepth = 10;
+    private ?CacheInterface $cache = null;
+    private bool $cacheInitialized = false;
     private LoggerInterface $logger;
     private ExtensionObjectRepository $repository;
 
@@ -209,6 +213,10 @@ class MockClient implements OpcUaClientInterface
     public function getServerMaxNodesPerWrite(): ?int { return null; }
     public function setDefaultBrowseMaxDepth(int $maxDepth): self { $this->browseMaxDepth = $maxDepth; return $this; }
     public function getDefaultBrowseMaxDepth(): int { return $this->browseMaxDepth; }
+    public function setCache(?CacheInterface $cache): self { $this->cache = $cache; $this->cacheInitialized = true; return $this; }
+    public function getCache(): ?CacheInterface { if (!$this->cacheInitialized) { $this->cache = new InMemoryCache(300); $this->cacheInitialized = true; } return $this->cache; }
+    public function invalidateCache(NodeId|string $nodeId): void { $this->record('invalidateCache', [$nodeId]); }
+    public function flushCache(): void { $this->record('flushCache', []); $this->getCache()?->clear(); }
     public function read(NodeId|string $nodeId, int $attributeId = 13): DataValue
     {
         $this->record('read', [$nodeId, $attributeId]);
@@ -256,7 +264,7 @@ class MockClient implements OpcUaClientInterface
         return $results;
     }
 
-    public function browse(NodeId|string $nodeId, BrowseDirection $direction = BrowseDirection::Forward, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = []): array
+    public function browse(NodeId|string $nodeId, BrowseDirection $direction = BrowseDirection::Forward, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = [], bool $useCache = true): array
     {
         $this->record('browse', [$nodeId, $direction]);
         $k = $this->key($nodeId);
@@ -278,7 +286,7 @@ class MockClient implements OpcUaClientInterface
         return new BrowseResultSet([], null);
     }
 
-    public function browseAll(NodeId|string $nodeId, BrowseDirection $direction = BrowseDirection::Forward, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = []): array
+    public function browseAll(NodeId|string $nodeId, BrowseDirection $direction = BrowseDirection::Forward, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = [], bool $useCache = true): array
     {
         $this->record('browseAll', [$nodeId]);
         return $this->browse($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClasses);
@@ -300,7 +308,7 @@ class MockClient implements OpcUaClientInterface
         return new CallResult(0, [], []);
     }
 
-    public function getEndpoints(string $endpointUrl): array
+    public function getEndpoints(string $endpointUrl, bool $useCache = true): array
     {
         $this->record('getEndpoints', [$endpointUrl]);
         return [];
@@ -315,7 +323,7 @@ class MockClient implements OpcUaClientInterface
         return [];
     }
 
-    public function resolveNodeId(string $path, NodeId|string|null $startingNodeId = null): NodeId
+    public function resolveNodeId(string $path, NodeId|string|null $startingNodeId = null, bool $useCache = true): NodeId
     {
         $this->record('resolveNodeId', [$path, $startingNodeId]);
         $normalized = trim($path, '/');
@@ -325,7 +333,7 @@ class MockClient implements OpcUaClientInterface
         return NodeId::numeric(0, 0);
     }
 
-    public function discoverDataTypes(?int $namespaceIndex = null): int
+    public function discoverDataTypes(?int $namespaceIndex = null, bool $useCache = true): int
     {
         $this->record('discoverDataTypes', [$namespaceIndex]);
         return 0;

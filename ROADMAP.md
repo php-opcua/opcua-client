@@ -18,17 +18,18 @@
 - [X] PSR-3 Logging (`setLogger()`, NullLogger default)
 - [X] MockClient for testing
 - [X] Transfer Subscriptions + Republish (for `gianfriaur/opcua-php-client-session-manager`)
-- [ ] Cache for browse results 
+- [X] Cache for browse results (PSR-16)
 ------
 
 ## v4.0.0
+- [ ] Cache for metadata `read()` (DisplayName, BrowseName, DataType, NodeClass, Description), **`not Value`**
 - [ ] CLI Tool
 - [ ] xml Code Generator
 - [ ] `TBD` Telemetry
 - [ ] Server Trust Management (also for cli)
 - [ ] NodeManagement Services
 - [ ] Triggering / ModifyMonitoredItems
-- [ ] Symfony integration like Laravel ( `gianfriaur/opcua-symfony-client` ) 
+- [ ] Symfony integration like Laravel ( `gianfriaur/opcua-symfony-client` )
 
 
 This document outlines planned improvements and features for the OPC UA PHP Client library.
@@ -68,60 +69,42 @@ OPC UA services for recovering subscriptions after a session loss:
 
 These integrate directly with the `session-manager` daemon to enable zero-data-loss reconnect scenarios.
 
-### PSR-6 / PSR-16 Cache for browse results
+### PSR-16 Cache for browse results
 
-Cache `browse`, `browseAll`, and `resolveNodeId` results with a pluggable driver system.
+Cache `browse`, `browseAll`, and `resolveNodeId` results with a pluggable PSR-16 driver.
 Useful when the address space is large but changes rarely (typical in industrial PLC environments).
 
 **Built-in drivers:**
 
 | Driver | Scope | Dependencies |
 |--------|-------|--------------|
-| `InMemoryDriver` *(default)* | Per-process | None |
-| `FileDriver` | Persistent across requests | None |
-| `RedisDriver` | Shared across processes/servers | `ext-redis` or `predis/predis` |
-| `MemcachedDriver` | Shared across processes/servers | `ext-memcached` |
+| `InMemoryCache` *(default)* | Per-process | None |
+| `FileCache` | Persistent across requests | None |
 
-**Default TTL:** 300 seconds. Configurable globally on the driver or per-call.
+Any PSR-16 `CacheInterface` implementation works, including Laravel's cache stores and Symfony Cache.
 
-#### Driver interface
-
-```php
-interface BrowseCacheDriverInterface
-{
-    public function get(string $key): mixed;
-    public function set(string $key, mixed $value, ?int $ttl = null): void;
-    public function has(string $key): bool;
-    public function delete(string $key): void;
-    public function flush(): void;
-    public function getDefaultTtl(): int;
-    public function setDefaultTtl(int $seconds): void;
-}
-```
+**Default TTL:** 300 seconds. Configurable on the driver constructor.
 
 #### Usage
 
 ```php
+use Gianfriaur\OpcuaPhpClient\Cache\InMemoryCache;
+use Gianfriaur\OpcuaPhpClient\Cache\FileCache;
+
 // In-memory (default, active out of the box — no setup required)
-$client->setBrowseCache(new InMemoryDriver(ttl: 300));
- 
+$client->setCache(new InMemoryCache(defaultTtl: 300));
+
 // File-based (survives PHP process restart)
-$client->setBrowseCache(new FileDriver('/tmp/opcua-cache', ttl: 600));
- 
-// Redis (shared across processes/servers)
-$client->setBrowseCache(new RedisDriver($redisConnection, ttl: 3600));
- 
-// Memcached
-$client->setBrowseCache(new MemcachedDriver($memcached, ttl: 3600));
- 
-// Custom driver
-$client->setBrowseCache(new MyDriver(ttl: 1800));
- 
+$client->setCache(new FileCache('/tmp/opcua-cache', defaultTtl: 600));
+
+// Laravel
+$client->setCache(app('cache')->store('redis'));
+
 // Disable cache entirely
-$client->setBrowseCache(null);
+$client->setCache(null);
 ```
 
-The cache is **active by default** using `InMemoryDriver` with a 300-second TTL.
+The cache is **active by default** using `InMemoryCache` with a 300-second TTL.
 Pass `null` to disable it entirely.
 
 #### Per-call cache bypass
@@ -134,7 +117,7 @@ and always fetch a fresh result from the server:
 $refs   = $client->browse(NodeId::numeric(0, 85));
 $refs   = $client->browseAll(NodeId::numeric(0, 85));
 $nodeId = $client->resolveNodeId('/Objects/MyPLC/Temperature');
- 
+
 // Skip cache for this call only
 $refs   = $client->browse(NodeId::numeric(0, 85), useCache: false);
 $refs   = $client->browseAll(NodeId::numeric(0, 85), useCache: false);
@@ -146,23 +129,22 @@ $nodeId = $client->resolveNodeId('/Objects/MyPLC/Temperature', useCache: false);
 When you know the address space has changed, you can invalidate selectively or flush everything:
 
 ```php
-// Invalidate browse results for a specific node
-$client->invalidateBrowseCache(NodeId::numeric(0, 85));
- 
-// Flush the entire browse cache
-$client->flushBrowseCache();
+// Invalidate results for a specific node
+$client->invalidateCache(NodeId::numeric(0, 85));
+
+// Flush the entire cache
+$client->flushCache();
 ```
 
 #### Cache key format
 
 Keys are generated from the endpoint URL, NodeId, and browse parameters.
-This ensures that two clients pointing to different servers never collide,
-and Redis/Memcached caches can be safely shared across multiple PHP processes:
+This ensures that two clients pointing to different servers never collide:
 
 ```
-opcua:{endpoint_hash}:browse:{nodeId}:{direction}:{nodeClassMask}
-opcua:{endpoint_hash}:browse-all:{nodeId}:{direction}:{nodeClassMask}
-opcua:{endpoint_hash}:resolve:{path_hash}:{startingNodeId}
+opcua:{endpoint_hash}:browse:{nodeId}:{direction}:{includeSubtypes}:{nodeClassMask}
+opcua:{endpoint_hash}:browseAll:{nodeId}:{direction}:{includeSubtypes}:{nodeClassMask}
+opcua:{endpoint_hash}:resolve:{startingNodeId}:{path_hash}
 ```
 
 ### CLI Tool
@@ -357,6 +339,9 @@ The session manager ([`gianfriaur/opcua-php-client-session-manager`](https://git
 - **The daemon is a separate process anyway.** Even if the code lived in the same package, you'd still need to start a separate `php bin/opcua-session-manager` process. It's not middleware you plug in — it's infrastructure you deploy.
 
 The session manager is fully functional as a standalone package. See the [Ecosystem](#ecosystem) section for all related packages.
+
+### RedisDriver / MemcachedDriver cache drivers
+These would require `ext-redis` or `ext-memcached` (or `predis/predis`), breaking the zero-dependency philosophy. The cache system uses PSR-16 `CacheInterface`, so any Redis or Memcached adapter that implements PSR-16 works out of the box — including `illuminate/cache` (Laravel), `symfony/cache`, and `cache/redis-adapter`. There is no reason to bundle drivers that would force all users to install extensions they may not need.
 
 ### Full OPC UA Server Implementation (here)
 This library is a client-only implementation. Building a server requires a fundamentally different architecture (address space management, session handling, subscription engine, etc.).

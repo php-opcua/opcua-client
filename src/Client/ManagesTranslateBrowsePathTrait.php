@@ -67,48 +67,56 @@ trait ManagesTranslateBrowsePathTrait
      * @throws ServiceException If the path cannot be resolved, yields no targets, or the server returns a bad status code.
      * @throws \Gianfriaur\OpcuaPhpClient\Exception\ConnectionException If the connection is lost during the request.
      */
-    public function resolveNodeId(string $path, NodeId|string|null $startingNodeId = null): NodeId
+    public function resolveNodeId(string $path, NodeId|string|null $startingNodeId = null, bool $useCache = true): NodeId
     {
         if (is_string($startingNodeId)) {
             $startingNodeId = NodeId::parse($startingNodeId);
         }
         $startingNodeId ??= NodeId::numeric(0, 84); // Root
 
-        $path = trim($path, '/');
-        $segments = explode('/', $path);
+        $normalizedPath = trim($path, '/');
+        $cacheKey = $this->buildCacheKey('resolve', $startingNodeId, md5($normalizedPath));
 
-        $elements = [];
-        foreach ($segments as $segment) {
-            $elements[] = [
-                'targetName' => self::parseQualifiedName($segment),
-            ];
-        }
+        return $this->cachedFetch(
+            $cacheKey,
+            function () use ($normalizedPath, $startingNodeId, $path) {
+                $segments = explode('/', $normalizedPath);
 
-        $results = $this->translateBrowsePaths([
-            [
-                'startingNodeId' => $startingNodeId,
-                'relativePath' => $elements,
-            ],
-        ]);
+                $elements = [];
+                foreach ($segments as $segment) {
+                    $elements[] = [
+                        'targetName' => self::parseQualifiedName($segment),
+                    ];
+                }
 
-        if (empty($results)) {
-            throw new ServiceException("TranslateBrowsePaths returned no results for path: /{$path}", StatusCode::BadNoData);
-        }
+                $results = $this->translateBrowsePaths([
+                    [
+                        'startingNodeId' => $startingNodeId,
+                        'relativePath' => $elements,
+                    ],
+                ]);
 
-        $result = $results[0];
+                if (empty($results)) {
+                    throw new ServiceException("TranslateBrowsePaths returned no results for path: /{$normalizedPath}", StatusCode::BadNoData);
+                }
 
-        if (StatusCode::isBad($result->statusCode)) {
-            throw new ServiceException(
-                sprintf("Failed to resolve path '/%s': %s", $path, StatusCode::getName($result->statusCode)),
-                $result->statusCode,
-            );
-        }
+                $result = $results[0];
 
-        if (empty($result->targets)) {
-            throw new ServiceException("No targets found for path: /{$path}", StatusCode::BadNoData);
-        }
+                if (StatusCode::isBad($result->statusCode)) {
+                    throw new ServiceException(
+                        sprintf("Failed to resolve path '/%s': %s", $normalizedPath, StatusCode::getName($result->statusCode)),
+                        $result->statusCode,
+                    );
+                }
 
-        return $result->targets[0]->targetId;
+                if (empty($result->targets)) {
+                    throw new ServiceException("No targets found for path: /{$normalizedPath}", StatusCode::BadNoData);
+                }
+
+                return $result->targets[0]->targetId;
+            },
+            $useCache,
+        );
     }
 
     private static function parseQualifiedName(string $segment): QualifiedName

@@ -6,6 +6,7 @@ namespace Gianfriaur\OpcuaPhpClient;
 
 use Gianfriaur\OpcuaPhpClient\Client\ManagesAutoRetryTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesBatchingTrait;
+use Gianfriaur\OpcuaPhpClient\Client\ManagesCacheTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesBrowseDepthTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesBrowseTrait;
 use Gianfriaur\OpcuaPhpClient\Client\ManagesConnectionTrait;
@@ -54,6 +55,7 @@ class Client implements OpcUaClientInterface
     use ManagesTimeoutTrait;
     use ManagesAutoRetryTrait;
     use ManagesBatchingTrait;
+    use ManagesCacheTrait;
     use ManagesBrowseDepthTrait;
     use ManagesConnectionTrait;
     use ManagesHandshakeTrait;

@@ -282,6 +282,85 @@ Each path element supports:
 | `isInverse` | `false` | Follow inverse references |
 | `includeSubtypes` | `true` | Include subtypes |
 
+## Caching
+
+Browse results are cached by default using an in-memory PSR-16 cache with a 300-second TTL. This avoids redundant server round-trips when the address space is browsed repeatedly — common in industrial PLC environments where the node tree rarely changes.
+
+### Default Behavior
+
+Caching is active out of the box. No setup required:
+
+```php
+$refs = $client->browse('i=85');       // hits the server
+$refs = $client->browse('i=85');       // served from cache
+```
+
+### Cache Bypass
+
+Skip the cache for a single call with `useCache: false`:
+
+```php
+$refs = $client->browse('i=85', useCache: false);
+$refs = $client->browseAll('i=85', useCache: false);
+$nodeId = $client->resolveNodeId('/Objects/Server', useCache: false);
+```
+
+### Custom Cache Driver
+
+Any PSR-16 `CacheInterface` implementation works — including Laravel's cache:
+
+```php
+use Gianfriaur\OpcuaPhpClient\Cache\InMemoryCache;
+use Gianfriaur\OpcuaPhpClient\Cache\FileCache;
+
+// In-memory (default)
+$client->setCache(new InMemoryCache(ttl: 300));
+
+// File-based (survives PHP process restart)
+$client->setCache(new FileCache('/tmp/opcua-cache', ttl: 600));
+
+// Laravel
+$client->setCache(app('cache')->store('redis'));
+
+// Disable caching entirely
+$client->setCache(null);
+```
+
+### Cache Invalidation
+
+```php
+// Invalidate results for a specific node
+$client->invalidateCache(NodeId::numeric(0, 85));
+
+// Flush all cached results
+$client->flushCache();
+```
+
+### Cached Methods
+
+| Method | Cached |
+|--------|--------|
+| `browse()` | Yes |
+| `browseAll()` | Yes |
+| `resolveNodeId()` | Yes |
+| `getEndpoints()` | Yes |
+| `discoverDataTypes()` | Yes (discovered type definitions are cached and replayed) |
+| `browseWithContinuation()` | No |
+| `browseNext()` | No |
+| `browseRecursive()` | No (but each internal `browseAll()` call is cached) |
+
+### Cache Key Format
+
+Keys include the endpoint URL hash, operation type, NodeId, and browse parameters. Two clients pointing at different servers never collide:
+
+```
+opcua:{endpoint_hash}:browse:{nodeId}:{direction}:{includeSubtypes}:{nodeClassMask}
+opcua:{endpoint_hash}:browseAll:{nodeId}:{direction}:{includeSubtypes}:{nodeClassMask}
+opcua:{endpoint_hash}:resolve:{startingNodeId}:{path_hash}
+opcua:{endpoint_hash}:endpoints:{url_hash}
+opcua:{endpoint_hash}:dataTypes:{namespaceIndex|all}
+```
+
 ## Well-Known NodeIds
 
 | Name | NodeId | Description |

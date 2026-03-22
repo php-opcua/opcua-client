@@ -30,10 +30,28 @@ trait ManagesTypeDiscoveryTrait
      * @throws \Gianfriaur\OpcuaPhpClient\Exception\ConnectionException If the connection is lost.
      * @throws \Gianfriaur\OpcuaPhpClient\Exception\ServiceException If the server returns an error.
      */
-    public function discoverDataTypes(?int $namespaceIndex = null): int
+    public function discoverDataTypes(?int $namespaceIndex = null, bool $useCache = true): int
     {
         $this->ensureConnected();
         $this->logger->info('Discovering data types' . ($namespaceIndex !== null ? " for namespace {$namespaceIndex}" : ''));
+
+        $cacheKey = $this->buildSimpleCacheKey('dataTypes', (string)($namespaceIndex ?? 'all'));
+
+        $this->ensureCacheInitialized();
+        $cached = ($useCache && $this->cache !== null) ? $this->cache->get($cacheKey) : null;
+
+        if ($cached !== null && is_array($cached)) {
+            $registered = 0;
+            foreach ($cached as $entry) {
+                if ($this->extensionObjectRepository->has($entry['encodingId'])) {
+                    continue;
+                }
+                $this->extensionObjectRepository->register($entry['encodingId'], new DynamicCodec($entry['definition']));
+                $registered++;
+            }
+            $this->logger->info('Restored {count} data type(s) from cache', ['count' => $registered]);
+            return $registered;
+        }
 
         $tree = $this->browseRecursive(
             NodeId::numeric(0, 22),
@@ -44,7 +62,12 @@ trait ManagesTypeDiscoveryTrait
         );
 
         $registered = 0;
-        $this->discoverFromTree($tree, $namespaceIndex, $registered);
+        $discoveredEntries = [];
+        $this->discoverFromTree($tree, $namespaceIndex, $registered, $discoveredEntries);
+
+        if ($useCache && $this->cache !== null && !empty($discoveredEntries)) {
+            $this->cache->set($cacheKey, $discoveredEntries);
+        }
 
         $this->logger->info('Discovered {count} data type(s)', ['count' => $registered]);
         return $registered;
@@ -54,8 +77,9 @@ trait ManagesTypeDiscoveryTrait
      * @param \Gianfriaur\OpcuaPhpClient\Types\BrowseNode[] $nodes
      * @param ?int $namespaceIndex
      * @param int $registered
+     * @param array<array{encodingId: NodeId, definition: \Gianfriaur\OpcuaPhpClient\Types\StructureDefinition}> $discoveredEntries
      */
-    private function discoverFromTree(array $nodes, ?int $namespaceIndex, int &$registered): void
+    private function discoverFromTree(array $nodes, ?int $namespaceIndex, int &$registered, array &$discoveredEntries): void
     {
         foreach ($nodes as $node) {
             $nodeId = $node->reference->nodeId;
@@ -63,46 +87,50 @@ trait ManagesTypeDiscoveryTrait
             if ($nodeId->namespaceIndex !== 0) {
                 if ($namespaceIndex === null || $nodeId->namespaceIndex === $namespaceIndex) {
                     try {
-                        $registered += $this->discoverSingleDataType($nodeId) ? 1 : 0;
+                        $entry = $this->discoverSingleDataType($nodeId);
+                        if ($entry !== null) {
+                            $registered++;
+                            $discoveredEntries[] = $entry;
+                        }
                     } catch (Throwable) {
                     }
                 }
             }
 
             if ($node->hasChildren()) {
-                $this->discoverFromTree($node->getChildren(), $namespaceIndex, $registered);
+                $this->discoverFromTree($node->getChildren(), $namespaceIndex, $registered, $discoveredEntries);
             }
         }
     }
 
     /**
      * @param NodeId $dataTypeNodeId
-     * @return bool
+     * @return ?array{encodingId: NodeId, definition: \Gianfriaur\OpcuaPhpClient\Types\StructureDefinition}
      */
-    private function discoverSingleDataType(NodeId $dataTypeNodeId): bool
+    private function discoverSingleDataType(NodeId $dataTypeNodeId): ?array
     {
         $encodingId = $this->findBinaryEncodingId($dataTypeNodeId);
         if ($encodingId === null) {
-            return false;
+            return null;
         }
 
         if ($this->extensionObjectRepository->has($encodingId)) {
-            return false;
+            return null;
         }
 
         $dv = $this->read($dataTypeNodeId, 26);
         if (StatusCode::isBad($dv->statusCode)) {
-            return false;
+            return null;
         }
 
         $raw = $dv->getValue();
         if (!is_array($raw) || !isset($raw['body']) || !is_string($raw['body'])) {
-            return false;
+            return null;
         }
 
         if (isset($raw['typeId']) && $raw['typeId'] instanceof NodeId) {
             if ($raw['typeId']->namespaceIndex === 0 && $raw['typeId']->identifier === 123) {
-                return false;
+                return null;
             }
         }
 
@@ -111,7 +139,7 @@ trait ManagesTypeDiscoveryTrait
 
         $this->extensionObjectRepository->register($encodingId, new DynamicCodec($definition));
 
-        return true;
+        return ['encodingId' => $encodingId, 'definition' => $definition];
     }
 
     /**

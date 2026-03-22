@@ -7,7 +7,7 @@ Repository: https://github.com/GianfriAur/opcua-php-client
 Packagist: https://packagist.org/packages/gianfriaur/opcua-php-client
 License: MIT
 PHP: >= 8.2
-Dependencies: ext-openssl (only)
+Dependencies: ext-openssl, psr/log ^3.0, psr/simple-cache ^3.0 (both interface-only, zero runtime code)
 
 ---
 
@@ -34,6 +34,7 @@ composer require gianfriaur/opcua-php-client
 - Security — 6 policies (None through Aes256Sha256RsaPss), 3 modes
 - Authentication — anonymous, username/password, X.509 certificate
 - PSR-3 Logging — optional structured logging via any PSR-3 logger; NullLogger by default
+- PSR-16 Cache — browse/browseAll/resolveNodeId/getEndpoints/discoverDataTypes results cached by default (InMemoryCache, 300s TTL). Any PSR-16 driver works (FileCache, Laravel, Redis). Per-call bypass with useCache: false. discoverDataTypes replays cached type definitions without server round-trips.
 - Auto-Retry — automatic reconnect on failure
 - Fluent Builder API — readMulti(), writeMulti(), createMonitoredItems(), and translateBrowsePaths() support a chainable builder when called without arguments
 - Auto-Batching — transparent batching for readMulti/writeMulti
@@ -42,7 +43,7 @@ composer require gianfriaur/opcua-php-client
 - Typed everywhere — all responses return public readonly DTOs, not arrays
 - MockClient — in-memory test double implementing OpcUaClientInterface; register handlers, assert calls, no TCP connection
 - DataValue factory methods — ofInt32(), ofDouble(), ofString(), ofBoolean(), of($value, BuiltinType), bad(StatusCode), etc.
-- 750+ tests, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
+- 950+ tests, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
 
 ### Property access style
 
@@ -267,6 +268,35 @@ $results = $client->translateBrowsePaths([
         ],
     ],
 ]);
+```
+
+### Caching
+
+Browse, browseAll, and resolveNodeId results are cached by default (InMemoryCache, 300s TTL).
+
+```php
+use Gianfriaur\OpcuaPhpClient\Cache\InMemoryCache;
+use Gianfriaur\OpcuaPhpClient\Cache\FileCache;
+
+// Default: InMemoryCache with 300s TTL (active out of the box)
+
+// File-based cache
+$client->setCache(new FileCache('/tmp/opcua-cache', defaultTtl: 600));
+
+// Laravel
+$client->setCache(app('cache')->store('redis'));
+
+// Disable
+$client->setCache(null);
+
+// Bypass cache for a single call
+$refs = $client->browse('i=85', useCache: false);
+$refs = $client->browseAll('i=85', useCache: false);
+$nodeId = $client->resolveNodeId('/Objects/Server', useCache: false);
+
+// Invalidation
+$client->invalidateCache(NodeId::numeric(0, 85));
+$client->flushCache();
 ```
 
 ---
@@ -579,6 +609,8 @@ src/
 ├── Security/*.php                # SecureChannel, MessageSecurity, CertificateManager, enums
 ├── Types/*.php                   # 22 type/enum/DTO classes (all public readonly)
 ├── Builder/*.php                 # Fluent builders for multi-operations
+├── Cache/InMemoryCache.php        # PSR-16 in-memory cache
+├── Cache/FileCache.php            # PSR-16 file-based cache
 ├── Repository/ExtensionObjectRepository.php  # Per-client codec registry
 ├── Testing/MockClient.php        # In-memory test double (no TCP)
 └── Exception/*.php               # 8 exception classes

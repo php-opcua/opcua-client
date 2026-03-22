@@ -28,6 +28,7 @@ use Gianfriaur\OpcuaPhpClient\Exception\ConnectionException;
 use Gianfriaur\OpcuaPhpClient\Exception\InvalidNodeIdException;
 use Gianfriaur\OpcuaPhpClient\Exception\ServiceException;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
 
 /**
  * Contract for an OPC UA client capable of connecting, browsing, reading, writing, and subscribing to an OPC UA server.
@@ -55,6 +56,40 @@ interface OpcUaClientInterface
      * @see ExtensionObjectRepository
      */
     public function getExtensionObjectRepository(): ExtensionObjectRepository;
+
+    /**
+     * Set the cache driver. Pass null to disable caching entirely.
+     *
+     * @param ?CacheInterface $cache A PSR-16 cache instance, or null to disable.
+     * @return self
+     *
+     * @see CacheInterface
+     */
+    public function setCache(?CacheInterface $cache): self;
+
+    /**
+     * Get the current cache driver, or null if caching is disabled.
+     *
+     * @return ?CacheInterface
+     */
+    public function getCache(): ?CacheInterface;
+
+    /**
+     * Invalidate cached browse results for a specific node.
+     *
+     * @param NodeId|string $nodeId The node whose cache entries should be invalidated.
+     * @return void
+     *
+     * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
+     */
+    public function invalidateCache(NodeId|string $nodeId): void;
+
+    /**
+     * Flush the entire cache.
+     *
+     * @return void
+     */
+    public function flushCache(): void;
 
     /**
      * Set the network timeout for transport operations.
@@ -165,6 +200,7 @@ interface OpcUaClientInterface
      * Discover server-defined structured data types and register dynamic codecs for them.
      *
      * @param ?int $namespaceIndex Only discover types in this namespace. Null for all non-zero namespaces.
+     * @param bool $useCache Whether to use the cache for this call.
      * @return int The number of types successfully discovered and registered.
      *
      * @throws ConnectionException If the connection is lost.
@@ -172,12 +208,13 @@ interface OpcUaClientInterface
      *
      * @see \Gianfriaur\OpcuaPhpClient\Encoding\DynamicCodec
      */
-    public function discoverDataTypes(?int $namespaceIndex = null): int;
+    public function discoverDataTypes(?int $namespaceIndex = null, bool $useCache = true): int;
 
     /**
      * Discover endpoints available at the given server URL.
      *
      * @param string $endpointUrl The OPC UA endpoint URL to query.
+     * @param bool $useCache Whether to use the cache for this call.
      * @return EndpointDescription[]
      *
      * @throws ConnectionException If the connection is lost during the request.
@@ -185,7 +222,7 @@ interface OpcUaClientInterface
      *
      * @see EndpointDescription
      */
-    public function getEndpoints(string $endpointUrl): array;
+    public function getEndpoints(string $endpointUrl, bool $useCache = true): array;
 
     /**
      * Browse references from a single node, returning up to one page of results.
@@ -195,6 +232,7 @@ interface OpcUaClientInterface
      * @param ?NodeId $referenceTypeId Filter by reference type, or null for all.
      * @param bool $includeSubtypes Whether to include subtypes of the reference type.
      * @param NodeClass[] $nodeClasses Filter by node classes. Empty array means all classes.
+     * @param bool $useCache Whether to use the browse cache for this call.
      * @return ReferenceDescription[]
      *
      * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
@@ -207,6 +245,7 @@ interface OpcUaClientInterface
         ?NodeId         $referenceTypeId = null,
         bool            $includeSubtypes = true,
         array           $nodeClasses = [],
+        bool            $useCache = true,
     ): array;
 
     /**
@@ -254,6 +293,7 @@ interface OpcUaClientInterface
      * @param ?NodeId $referenceTypeId Filter by reference type, or null for all.
      * @param bool $includeSubtypes Whether to include subtypes of the reference type.
      * @param NodeClass[] $nodeClasses Filter by node classes. Empty array means all classes.
+     * @param bool $useCache Whether to use the browse cache for this call.
      * @return ReferenceDescription[]
      *
      * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
@@ -266,6 +306,7 @@ interface OpcUaClientInterface
         ?NodeId         $referenceTypeId = null,
         bool            $includeSubtypes = true,
         array           $nodeClasses = [],
+        bool            $useCache = true,
     ): array;
 
     /**
@@ -328,13 +369,14 @@ interface OpcUaClientInterface
      *
      * @param string $path Slash-separated browse path (e.g. "Objects/MyFolder/MyNode").
      * @param NodeId|string|null $startingNodeId Starting node, defaults to the Root node (ns=0;i=84).
+     * @param bool $useCache Whether to use the browse cache for this call.
      * @return NodeId
      *
      * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
      * @throws ServiceException If the path cannot be resolved or yields no targets.
      * @throws ConnectionException If the connection is lost during the request.
      */
-    public function resolveNodeId(string $path, NodeId|string|null $startingNodeId = null): NodeId;
+    public function resolveNodeId(string $path, NodeId|string|null $startingNodeId = null, bool $useCache = true): NodeId;
 
     /**
      * Read a single attribute from a node.

@@ -9,6 +9,7 @@ use Gianfriaur\OpcuaPhpClient\Builder\MonitoredItemsBuilder;
 use Gianfriaur\OpcuaPhpClient\Builder\ReadMultiBuilder;
 use Gianfriaur\OpcuaPhpClient\Builder\WriteMultiBuilder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
+use Gianfriaur\OpcuaPhpClient\Testing\MockClient;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 
@@ -49,50 +50,8 @@ describe('ReadMultiBuilder', function () {
     });
 
     it('supports all attribute shortcuts', function () {
-        $builder = new ReadMultiBuilder(
-            new class implements \Gianfriaur\OpcuaPhpClient\OpcUaClientInterface {
-                public array $captured = [];
-                public function readMulti(?array $readItems = null): array|\Gianfriaur\OpcuaPhpClient\Builder\ReadMultiBuilder { $this->captured = $readItems; return []; }
-                public function setLogger(\Psr\Log\LoggerInterface $l): self { return $this; } public function getLogger(): \Psr\Log\LoggerInterface { return new \Psr\Log\NullLogger(); } public function getExtensionObjectRepository(): \Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository { return new \Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository(); }
-                public function setTimeout(float $timeout): self { return $this; }
-                public function getTimeout(): float { return 5.0; }
-                public function setAutoRetry(int $maxRetries): self { return $this; }
-                public function getAutoRetry(): int { return 0; }
-                public function setBatchSize(int $batchSize): self { return $this; }
-                public function getBatchSize(): ?int { return null; }
-                public function getServerMaxNodesPerRead(): ?int { return null; }
-                public function getServerMaxNodesPerWrite(): ?int { return null; }
-                public function connect(string $endpointUrl): void {}
-                public function reconnect(): void {}
-                public function disconnect(): void {}
-                public function isConnected(): bool { return true; }
-                public function getConnectionState(): \Gianfriaur\OpcuaPhpClient\Types\ConnectionState { return \Gianfriaur\OpcuaPhpClient\Types\ConnectionState::Connected; }
-                public function discoverDataTypes(?int $namespaceIndex = null): int { return 0; }
-                public function getEndpoints(string $endpointUrl): array { return []; }
-                public function browse(NodeId|string $nodeId, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $direction = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = []): array { return []; }
-                public function browseWithContinuation(NodeId|string $nodeId, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $direction = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = []): \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet { return new \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet([], null); }
-                public function browseNext(string $continuationPoint): \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet { return new \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet([], null); }
-                public function browseAll(NodeId|string $nodeId, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $direction = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = []): array { return []; }
-                public function setDefaultBrowseMaxDepth(int $maxDepth): self { return $this; }
-                public function getDefaultBrowseMaxDepth(): int { return 10; }
-                public function browseRecursive(NodeId|string $nodeId, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $direction = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?int $maxDepth = null, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = []): array { return []; }
-                public function translateBrowsePaths(?array $browsePaths = null): array|\Gianfriaur\OpcuaPhpClient\Builder\BrowsePathsBuilder { return []; }
-                public function resolveNodeId(string $path, NodeId|string|null $startingNodeId = null): NodeId { return NodeId::numeric(0, 0); }
-                public function read(NodeId|string $nodeId, int $attributeId = 13): \Gianfriaur\OpcuaPhpClient\Types\DataValue { return new \Gianfriaur\OpcuaPhpClient\Types\DataValue(); }
-                public function write(NodeId|string $nodeId, mixed $value, BuiltinType $type): int { return 0; }
-                public function writeMulti(?array $writeItems = null): array|WriteMultiBuilder { return []; }
-                public function call(NodeId|string $objectId, NodeId|string $methodId, array $inputArguments = []): \Gianfriaur\OpcuaPhpClient\Types\CallResult { return new \Gianfriaur\OpcuaPhpClient\Types\CallResult(0, [], []); }
-                public function createSubscription(float $publishingInterval = 500.0, int $lifetimeCount = 2400, int $maxKeepAliveCount = 10, int $maxNotificationsPerPublish = 0, bool $publishingEnabled = true, int $priority = 0): \Gianfriaur\OpcuaPhpClient\Types\SubscriptionResult { return new \Gianfriaur\OpcuaPhpClient\Types\SubscriptionResult(0, 0, 0, 0); }
-                public function createMonitoredItems(int $subscriptionId, ?array $items = null): array|MonitoredItemsBuilder { return []; }
-                public function createEventMonitoredItem(int $subscriptionId, NodeId|string $nodeId, array $selectFields = [], int $clientHandle = 1): \Gianfriaur\OpcuaPhpClient\Types\MonitoredItemResult { return new \Gianfriaur\OpcuaPhpClient\Types\MonitoredItemResult(0, 0, 0, 0); }
-                public function deleteMonitoredItems(int $subscriptionId, array $monitoredItemIds): array { return []; }
-                public function deleteSubscription(int $subscriptionId): int { return 0; }
-                public function publish(array $acknowledgements = []): \Gianfriaur\OpcuaPhpClient\Types\PublishResult { return new \Gianfriaur\OpcuaPhpClient\Types\PublishResult(0, 0, false, [], []); } public function transferSubscriptions(array $s, bool $i = false): array { return []; } public function republish(int $s, int $r): array { return []; }
-                public function historyReadRaw(NodeId|string $nodeId, ?\DateTimeImmutable $startTime = null, ?\DateTimeImmutable $endTime = null, int $numValuesPerNode = 0, bool $returnBounds = false): array { return []; }
-                public function historyReadProcessed(NodeId|string $nodeId, \DateTimeImmutable $startTime, \DateTimeImmutable $endTime, float $processingInterval, NodeId $aggregateType): array { return []; }
-                public function historyReadAtTime(NodeId|string $nodeId, array $timestamps): array { return []; }
-            }
-        );
+        $mockClient = MockClient::create();
+        $builder = new ReadMultiBuilder($mockClient);
 
         $builder->node('i=1')->value()
             ->node('i=2')->displayName()
@@ -104,7 +63,7 @@ describe('ReadMultiBuilder', function () {
 
         $builder->execute();
 
-        expect(true)->toBeTrue();
+        expect($mockClient->callCount('readMulti'))->toBe(1);
     });
 });
 
@@ -129,49 +88,8 @@ describe('WriteMultiBuilder', function () {
     });
 
     it('supports all type shortcuts', function () {
-        $builder = new WriteMultiBuilder(
-            $GLOBALS['_mockClient'] ?? new class implements \Gianfriaur\OpcuaPhpClient\OpcUaClientInterface {
-                public function writeMulti(?array $writeItems = null): array|WriteMultiBuilder { return []; }
-                public function setLogger(\Psr\Log\LoggerInterface $l): self { return $this; } public function getLogger(): \Psr\Log\LoggerInterface { return new \Psr\Log\NullLogger(); } public function getExtensionObjectRepository(): \Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository { return new \Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository(); }
-                public function setTimeout(float $timeout): self { return $this; }
-                public function getTimeout(): float { return 5.0; }
-                public function setAutoRetry(int $maxRetries): self { return $this; }
-                public function getAutoRetry(): int { return 0; }
-                public function setBatchSize(int $batchSize): self { return $this; }
-                public function getBatchSize(): ?int { return null; }
-                public function getServerMaxNodesPerRead(): ?int { return null; }
-                public function getServerMaxNodesPerWrite(): ?int { return null; }
-                public function connect(string $endpointUrl): void {}
-                public function reconnect(): void {}
-                public function disconnect(): void {}
-                public function isConnected(): bool { return true; }
-                public function getConnectionState(): \Gianfriaur\OpcuaPhpClient\Types\ConnectionState { return \Gianfriaur\OpcuaPhpClient\Types\ConnectionState::Connected; }
-                public function discoverDataTypes(?int $namespaceIndex = null): int { return 0; }
-                public function getEndpoints(string $endpointUrl): array { return []; }
-                public function browse(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $r = null, bool $i = true, array $c = []): array { return []; }
-                public function browseWithContinuation(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $r = null, bool $i = true, array $c = []): \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet { return new \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet([], null); }
-                public function browseNext(string $cp): \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet { return new \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet([], null); }
-                public function browseAll(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $r = null, bool $i = true, array $c = []): array { return []; }
-                public function setDefaultBrowseMaxDepth(int $m): self { return $this; }
-                public function getDefaultBrowseMaxDepth(): int { return 10; }
-                public function browseRecursive(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?int $m = null, ?NodeId $r = null, bool $i = true, array $c = []): array { return []; }
-                public function translateBrowsePaths(?array $b = null): array|BrowsePathsBuilder { return []; }
-                public function resolveNodeId(string $p, NodeId|string|null $s = null): NodeId { return NodeId::numeric(0, 0); }
-                public function read(NodeId|string $n, int $a = 13): \Gianfriaur\OpcuaPhpClient\Types\DataValue { return new \Gianfriaur\OpcuaPhpClient\Types\DataValue(); }
-                public function readMulti(?array $r = null): array|ReadMultiBuilder { return []; }
-                public function write(NodeId|string $n, mixed $v, BuiltinType $t): int { return 0; }
-                public function call(NodeId|string $o, NodeId|string $m, array $i = []): \Gianfriaur\OpcuaPhpClient\Types\CallResult { return new \Gianfriaur\OpcuaPhpClient\Types\CallResult(0, [], []); }
-                public function createSubscription(float $pi = 500.0, int $lc = 2400, int $mkac = 10, int $mnpp = 0, bool $pe = true, int $p = 0): \Gianfriaur\OpcuaPhpClient\Types\SubscriptionResult { return new \Gianfriaur\OpcuaPhpClient\Types\SubscriptionResult(0, 0, 0, 0); }
-                public function createMonitoredItems(int $sid, ?array $items = null): array|MonitoredItemsBuilder { return []; }
-                public function createEventMonitoredItem(int $sid, NodeId|string $n, array $sf = [], int $ch = 1): \Gianfriaur\OpcuaPhpClient\Types\MonitoredItemResult { return new \Gianfriaur\OpcuaPhpClient\Types\MonitoredItemResult(0, 0, 0, 0); }
-                public function deleteMonitoredItems(int $sid, array $ids): array { return []; }
-                public function deleteSubscription(int $sid): int { return 0; }
-                public function publish(array $a = []): \Gianfriaur\OpcuaPhpClient\Types\PublishResult { return new \Gianfriaur\OpcuaPhpClient\Types\PublishResult(0, 0, false, [], []); } public function transferSubscriptions(array $s, bool $i = false): array { return []; } public function republish(int $s, int $r): array { return []; }
-                public function historyReadRaw(NodeId|string $n, ?\DateTimeImmutable $s = null, ?\DateTimeImmutable $e = null, int $nv = 0, bool $rb = false): array { return []; }
-                public function historyReadProcessed(NodeId|string $n, \DateTimeImmutable $s, \DateTimeImmutable $e, float $pi, NodeId $at): array { return []; }
-                public function historyReadAtTime(NodeId|string $n, array $t): array { return []; }
-            }
-        );
+        $mockClient = MockClient::create();
+        $builder = new WriteMultiBuilder($mockClient);
 
         $builder->node('i=1')->boolean(true)
             ->node('i=2')->sbyte(-1)
@@ -188,7 +106,7 @@ describe('WriteMultiBuilder', function () {
             ->node('i=13')->typed(42, BuiltinType::Int32);
 
         $builder->execute();
-        expect(true)->toBeTrue();
+        expect($mockClient->callCount('writeMulti'))->toBe(1);
     });
 });
 
@@ -253,68 +171,23 @@ describe('BrowsePathsBuilder', function () {
     });
 
     it('auto-adds root node when from() is not called', function () {
-        $builder = new BrowsePathsBuilder(
-            new class implements \Gianfriaur\OpcuaPhpClient\OpcUaClientInterface {
-                public array $captured = [];
-                public function translateBrowsePaths(?array $browsePaths = null): array|BrowsePathsBuilder { $this->captured = $browsePaths; return []; }
-                public function setLogger(\Psr\Log\LoggerInterface $l): self { return $this; } public function getLogger(): \Psr\Log\LoggerInterface { return new \Psr\Log\NullLogger(); } public function getExtensionObjectRepository(): \Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository { return new \Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository(); }
-                public function setTimeout(float $t): self { return $this; }
-                public function getTimeout(): float { return 5.0; }
-                public function setAutoRetry(int $m): self { return $this; }
-                public function getAutoRetry(): int { return 0; }
-                public function setBatchSize(int $b): self { return $this; }
-                public function getBatchSize(): ?int { return null; }
-                public function getServerMaxNodesPerRead(): ?int { return null; }
-                public function getServerMaxNodesPerWrite(): ?int { return null; }
-                public function connect(string $u): void {}
-                public function reconnect(): void {}
-                public function disconnect(): void {}
-                public function isConnected(): bool { return true; }
-                public function getConnectionState(): \Gianfriaur\OpcuaPhpClient\Types\ConnectionState { return \Gianfriaur\OpcuaPhpClient\Types\ConnectionState::Connected; }
-                public function discoverDataTypes(?int $n = null): int { return 0; }
-                public function getEndpoints(string $u): array { return []; }
-                public function browse(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $r = null, bool $i = true, array $c = []): array { return []; }
-                public function browseWithContinuation(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $r = null, bool $i = true, array $c = []): \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet { return new \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet([], null); }
-                public function browseNext(string $cp): \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet { return new \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet([], null); }
-                public function browseAll(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $r = null, bool $i = true, array $c = []): array { return []; }
-                public function setDefaultBrowseMaxDepth(int $m): self { return $this; }
-                public function getDefaultBrowseMaxDepth(): int { return 10; }
-                public function browseRecursive(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?int $m = null, ?NodeId $r = null, bool $i = true, array $c = []): array { return []; }
-                public function resolveNodeId(string $p, NodeId|string|null $s = null): NodeId { return NodeId::numeric(0, 0); }
-                public function read(NodeId|string $n, int $a = 13): \Gianfriaur\OpcuaPhpClient\Types\DataValue { return new \Gianfriaur\OpcuaPhpClient\Types\DataValue(); }
-                public function readMulti(?array $r = null): array|ReadMultiBuilder { return []; }
-                public function write(NodeId|string $n, mixed $v, BuiltinType $t): int { return 0; }
-                public function writeMulti(?array $w = null): array|WriteMultiBuilder { return []; }
-                public function call(NodeId|string $o, NodeId|string $m, array $i = []): \Gianfriaur\OpcuaPhpClient\Types\CallResult { return new \Gianfriaur\OpcuaPhpClient\Types\CallResult(0, [], []); }
-                public function createSubscription(float $pi = 500.0, int $lc = 2400, int $mkac = 10, int $mnpp = 0, bool $pe = true, int $p = 0): \Gianfriaur\OpcuaPhpClient\Types\SubscriptionResult { return new \Gianfriaur\OpcuaPhpClient\Types\SubscriptionResult(0, 0, 0, 0); }
-                public function createMonitoredItems(int $sid, ?array $items = null): array|MonitoredItemsBuilder { return []; }
-                public function createEventMonitoredItem(int $sid, NodeId|string $n, array $sf = [], int $ch = 1): \Gianfriaur\OpcuaPhpClient\Types\MonitoredItemResult { return new \Gianfriaur\OpcuaPhpClient\Types\MonitoredItemResult(0, 0, 0, 0); }
-                public function deleteMonitoredItems(int $sid, array $ids): array { return []; }
-                public function deleteSubscription(int $sid): int { return 0; }
-                public function publish(array $a = []): \Gianfriaur\OpcuaPhpClient\Types\PublishResult { return new \Gianfriaur\OpcuaPhpClient\Types\PublishResult(0, 0, false, [], []); } public function transferSubscriptions(array $s, bool $i = false): array { return []; } public function republish(int $s, int $r): array { return []; }
-                public function historyReadRaw(NodeId|string $n, ?\DateTimeImmutable $s = null, ?\DateTimeImmutable $e = null, int $nv = 0, bool $rb = false): array { return []; }
-                public function historyReadProcessed(NodeId|string $n, \DateTimeImmutable $s, \DateTimeImmutable $e, float $pi, NodeId $at): array { return []; }
-                public function historyReadAtTime(NodeId|string $n, array $t): array { return []; }
-            }
-        );
+        $mockClient = MockClient::create();
+        $builder = new BrowsePathsBuilder($mockClient);
 
         $builder->path('Objects', 'Server')->execute();
-        expect(true)->toBeTrue();
+
+        expect($mockClient->callCount('translateBrowsePaths'))->toBe(1);
     });
 
     it('supports explicit QualifiedName segments', function () {
-        $builder = new BrowsePathsBuilder(
-            new class implements \Gianfriaur\OpcuaPhpClient\OpcUaClientInterface {
-                public function translateBrowsePaths(?array $b = null): array|BrowsePathsBuilder { return []; }
-                public function setLogger(\Psr\Log\LoggerInterface $l): self { return $this; } public function getLogger(): \Psr\Log\LoggerInterface { return new \Psr\Log\NullLogger(); } public function getExtensionObjectRepository(): \Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository { return new \Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository(); }
-                public function setTimeout(float $t): self { return $this; } public function getTimeout(): float { return 5.0; } public function setAutoRetry(int $m): self { return $this; } public function getAutoRetry(): int { return 0; } public function setBatchSize(int $b): self { return $this; } public function getBatchSize(): ?int { return null; } public function getServerMaxNodesPerRead(): ?int { return null; } public function getServerMaxNodesPerWrite(): ?int { return null; } public function connect(string $u): void {} public function reconnect(): void {} public function disconnect(): void {} public function isConnected(): bool { return true; } public function getConnectionState(): \Gianfriaur\OpcuaPhpClient\Types\ConnectionState { return \Gianfriaur\OpcuaPhpClient\Types\ConnectionState::Connected; } public function discoverDataTypes(?int $n = null): int { return 0; } public function getEndpoints(string $u): array { return []; } public function browse(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $r = null, bool $i = true, array $c = []): array { return []; } public function browseWithContinuation(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $r = null, bool $i = true, array $c = []): \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet { return new \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet([], null); } public function browseNext(string $cp): \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet { return new \Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet([], null); } public function browseAll(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?NodeId $r = null, bool $i = true, array $c = []): array { return []; } public function setDefaultBrowseMaxDepth(int $m): self { return $this; } public function getDefaultBrowseMaxDepth(): int { return 10; } public function browseRecursive(NodeId|string $n, \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection $d = \Gianfriaur\OpcuaPhpClient\Types\BrowseDirection::Forward, ?int $m = null, ?NodeId $r = null, bool $i = true, array $c = []): array { return []; } public function resolveNodeId(string $p, NodeId|string|null $s = null): NodeId { return NodeId::numeric(0, 0); } public function read(NodeId|string $n, int $a = 13): \Gianfriaur\OpcuaPhpClient\Types\DataValue { return new \Gianfriaur\OpcuaPhpClient\Types\DataValue(); } public function readMulti(?array $r = null): array|ReadMultiBuilder { return []; } public function write(NodeId|string $n, mixed $v, BuiltinType $t): int { return 0; } public function writeMulti(?array $w = null): array|WriteMultiBuilder { return []; } public function call(NodeId|string $o, NodeId|string $m, array $i = []): \Gianfriaur\OpcuaPhpClient\Types\CallResult { return new \Gianfriaur\OpcuaPhpClient\Types\CallResult(0, [], []); } public function createSubscription(float $pi = 500.0, int $lc = 2400, int $mkac = 10, int $mnpp = 0, bool $pe = true, int $p = 0): \Gianfriaur\OpcuaPhpClient\Types\SubscriptionResult { return new \Gianfriaur\OpcuaPhpClient\Types\SubscriptionResult(0, 0, 0, 0); } public function createMonitoredItems(int $sid, ?array $items = null): array|MonitoredItemsBuilder { return []; } public function createEventMonitoredItem(int $sid, NodeId|string $n, array $sf = [], int $ch = 1): \Gianfriaur\OpcuaPhpClient\Types\MonitoredItemResult { return new \Gianfriaur\OpcuaPhpClient\Types\MonitoredItemResult(0, 0, 0, 0); } public function deleteMonitoredItems(int $sid, array $ids): array { return []; } public function deleteSubscription(int $sid): int { return 0; } public function publish(array $a = []): \Gianfriaur\OpcuaPhpClient\Types\PublishResult { return new \Gianfriaur\OpcuaPhpClient\Types\PublishResult(0, 0, false, [], []); } public function transferSubscriptions(array $s, bool $i = false): array { return []; } public function republish(int $s, int $r): array { return []; } public function historyReadRaw(NodeId|string $n, ?\DateTimeImmutable $s = null, ?\DateTimeImmutable $e = null, int $nv = 0, bool $rb = false): array { return []; } public function historyReadProcessed(NodeId|string $n, \DateTimeImmutable $s, \DateTimeImmutable $e, float $pi, NodeId $at): array { return []; } public function historyReadAtTime(NodeId|string $n, array $t): array { return []; }
-            }
-        );
+        $mockClient = MockClient::create();
+        $builder = new BrowsePathsBuilder($mockClient);
 
         $builder->from('i=85')
             ->segment(new \Gianfriaur\OpcuaPhpClient\Types\QualifiedName(2, 'Custom'))
             ->execute();
-        expect(true)->toBeTrue();
+
+        expect($mockClient->callCount('translateBrowsePaths'))->toBe(1);
     });
 });
 

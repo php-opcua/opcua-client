@@ -52,6 +52,7 @@ $client->disconnect();
 - Browse the server address space with automatic continuation
 - Recursive browsing with cycle detection
 - Path resolution via `TranslateBrowsePathsToNodeIds` — turn `"/Objects/MyPLC/Temperature"` into a NodeId
+- Cache for browse and resolve results — InMemoryCache (default) and FileCache included
 
 **Read & Write**
 - Read and write node attributes, single or multi
