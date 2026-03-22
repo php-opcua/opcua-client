@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Gianfriaur\OpcuaPhpClient\Types;
 
+/**
+ * OPC UA built-in data type identifiers as defined in Part 6.
+ */
 enum BuiltinType: int
 {
     case Boolean = 1;

@@ -7,6 +7,9 @@ namespace Gianfriaur\OpcuaPhpClient\Protocol;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 
+/**
+ * OPC UA OPN (OpenSecureChannel) request encoding.
+ */
 class SecureChannelRequest
 {
     /**

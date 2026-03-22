@@ -146,6 +146,11 @@ trait ManagesCacheTrait
         return $result;
     }
 
+    /**
+     * Initializes the cache with a default InMemoryCache if not yet configured.
+     *
+     * @return void
+     */
     private function ensureCacheInitialized(): void
     {
         if (!$this->cacheInitialized) {
@@ -154,6 +159,12 @@ trait ManagesCacheTrait
         }
     }
 
+    /**
+     * Deletes all InMemoryCache entries whose keys start with the given prefix.
+     *
+     * @param string $prefix
+     * @return void
+     */
     private function invalidateByPrefix(string $prefix): void
     {
         if (!($this->cache instanceof InMemoryCache)) {

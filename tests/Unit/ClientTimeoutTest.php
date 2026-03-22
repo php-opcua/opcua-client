@@ -12,7 +12,7 @@ describe('Client timeout configuration', function () {
 
     it('has default timeout matching TcpTransport default', function () {
         $client = new Client();
-        expect($client->getTimeout())->toBe(TcpTransport::DAFAUT_TIMEOUT);
+        expect($client->getTimeout())->toBe(TcpTransport::DEFAULT_TIMEOUT);
     });
 
     it('setTimeout updates the timeout value', function () {

@@ -6,6 +6,9 @@ namespace Gianfriaur\OpcuaPhpClient\Exception;
 
 use Throwable;
 
+/**
+ * Thrown when an OPC UA service call returns a bad status code.
+ */
 class ServiceException extends OpcUaException
 {
     private int $statusCode;

@@ -20,6 +20,8 @@ class BrowsePathsBuilder
     private array $paths = [];
 
     /**
+     * Creates a new BrowsePathsBuilder bound to the given client.
+     *
      * @param OpcUaClientInterface $client
      */
     public function __construct(
@@ -29,6 +31,8 @@ class BrowsePathsBuilder
     }
 
     /**
+     * Sets the starting node for a new browse path.
+     *
      * @param NodeId|string $startingNodeId
      * @return $this
      */
@@ -39,6 +43,8 @@ class BrowsePathsBuilder
     }
 
     /**
+     * Appends one or more path segments to the current browse path.
+     *
      * @param string ...$segments
      * @return $this
      */
@@ -56,6 +62,8 @@ class BrowsePathsBuilder
     }
 
     /**
+     * Appends a single QualifiedName segment to the current browse path.
+     *
      * @param QualifiedName $name
      * @return $this
      */
@@ -71,6 +79,8 @@ class BrowsePathsBuilder
     }
 
     /**
+     * Translates all configured browse paths and returns the results.
+     *
      * @return BrowsePathResult[]
      */
     public function execute(): array
@@ -78,6 +88,12 @@ class BrowsePathsBuilder
         return $this->client->translateBrowsePaths($this->paths);
     }
 
+    /**
+     * Parses a string segment into a QualifiedName, supporting optional namespace prefix.
+     *
+     * @param string $segment
+     * @return QualifiedName
+     */
     private static function parseSegment(string $segment): QualifiedName
     {
         if (str_contains($segment, ':')) {

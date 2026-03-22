@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Gianfriaur\OpcuaPhpClient\Security;
 
+/**
+ * OPC UA security policy URIs with associated algorithm configuration.
+ */
 enum SecurityPolicy: string
 {
     case None = 'http://opcfoundation.org/UA/SecurityPolicy#None';

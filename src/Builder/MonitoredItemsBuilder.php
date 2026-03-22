@@ -19,6 +19,8 @@ class MonitoredItemsBuilder
     private array $items = [];
 
     /**
+     * Creates a new MonitoredItemsBuilder for the given subscription.
+     *
      * @param OpcUaClientInterface $client
      * @param int $subscriptionId
      */
@@ -30,6 +32,8 @@ class MonitoredItemsBuilder
     }
 
     /**
+     * Adds a node to be monitored.
+     *
      * @param NodeId|string $nodeId
      * @return $this
      */
@@ -40,6 +44,8 @@ class MonitoredItemsBuilder
     }
 
     /**
+     * Sets the sampling interval for the last added item.
+     *
      * @param float $ms
      * @return $this
      */
@@ -52,6 +58,8 @@ class MonitoredItemsBuilder
     }
 
     /**
+     * Sets the queue size for the last added item.
+     *
      * @param int $size
      * @return $this
      */
@@ -64,6 +72,8 @@ class MonitoredItemsBuilder
     }
 
     /**
+     * Sets the client handle for the last added item.
+     *
      * @param int $handle
      * @return $this
      */
@@ -76,6 +86,8 @@ class MonitoredItemsBuilder
     }
 
     /**
+     * Sets the attribute identifier for the last added item.
+     *
      * @param int $attributeId
      * @return $this
      */
@@ -88,6 +100,8 @@ class MonitoredItemsBuilder
     }
 
     /**
+     * Creates the monitored items on the server and returns the results.
+     *
      * @return MonitoredItemResult[]
      */
     public function execute(): array

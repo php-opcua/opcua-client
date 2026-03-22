@@ -7,6 +7,9 @@ namespace Gianfriaur\OpcuaPhpClient\Protocol;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 
+/**
+ * OPC UA message header encoding and decoding (message type, chunk type, size).
+ */
 class MessageHeader
 {
     public const HEADER_SIZE = 8;

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Gianfriaur\OpcuaPhpClient\Types;
 
+/**
+ * OPC UA node class bitmask values for filtering browse results.
+ */
 enum NodeClass: int
 {
     case Unspecified = 0;

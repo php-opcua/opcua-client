@@ -6,6 +6,9 @@ namespace Gianfriaur\OpcuaPhpClient\Protocol;
 
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 
+/**
+ * OPC UA ACK (Acknowledge) message received during TCP handshake.
+ */
 class AcknowledgeMessage
 {
     /**

@@ -15,7 +15,7 @@ trait ManagesTimeoutTrait
 
     private function initTimeout(): void
     {
-        $this->timeout = TcpTransport::DAFAUT_TIMEOUT;
+        $this->timeout = TcpTransport::DEFAULT_TIMEOUT;
     }
 
     /**

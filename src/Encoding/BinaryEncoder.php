@@ -13,20 +13,32 @@ use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\QualifiedName;
 use Gianfriaur\OpcuaPhpClient\Types\Variant;
 
+/**
+ * OPC UA binary protocol serializer. Writes typed values to a byte buffer.
+ */
 class BinaryEncoder
 {
     private string $buffer = '';
 
+    /**
+     * Return the encoded byte buffer.
+     */
     public function getBuffer(): string
     {
         return $this->buffer;
     }
 
+    /**
+     * Return the current buffer size in bytes.
+     */
     public function getSize(): int
     {
         return strlen($this->buffer);
     }
 
+    /**
+     * Reset the buffer to empty.
+     */
     public function reset(): void
     {
         $this->buffer = '';

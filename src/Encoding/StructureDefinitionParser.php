@@ -21,7 +21,7 @@ final class StructureDefinitionParser
     public static function parse(BinaryDecoder $decoder): StructureDefinition
     {
         $defaultEncodingId = $decoder->readNodeId();
-        $decoder->readNodeId(); // baseDataType (not stored)
+        $decoder->readNodeId();
         $structureType = $decoder->readUInt32();
 
         $fieldCount = $decoder->readInt32();
@@ -29,16 +29,16 @@ final class StructureDefinitionParser
 
         for ($i = 0; $i < $fieldCount; $i++) {
             $name = $decoder->readString();
-            $decoder->readLocalizedText(); // description (not stored)
+            $decoder->readLocalizedText();
             $dataType = $decoder->readNodeId();
             $valueRank = $decoder->readInt32();
 
             $arrayDimCount = $decoder->readInt32();
             for ($j = 0; $j < $arrayDimCount; $j++) {
-                $decoder->readUInt32(); // arrayDimensions (not stored)
+                $decoder->readUInt32();
             }
 
-            $decoder->readUInt32(); // maxStringLength (not stored)
+            $decoder->readUInt32();
             $isOptional = $decoder->readBoolean();
 
             $fields[] = new StructureField($name, $dataType, $valueRank, $isOptional);

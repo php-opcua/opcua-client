@@ -26,6 +26,9 @@ class InMemoryCache implements CacheInterface
         $this->defaultTtl = $defaultTtl;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function get(string $key, mixed $default = null): mixed
     {
         if (!isset($this->store[$key])) {
@@ -42,6 +45,9 @@ class InMemoryCache implements CacheInterface
         return $entry['value'];
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function set(string $key, mixed $value, null|int|\DateInterval $ttl = null): bool
     {
         $seconds = $this->resolveTtl($ttl);
@@ -54,18 +60,27 @@ class InMemoryCache implements CacheInterface
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function delete(string $key): bool
     {
         unset($this->store[$key]);
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function clear(): bool
     {
         $this->store = [];
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getMultiple(iterable $keys, mixed $default = null): iterable
     {
         $results = [];
@@ -75,6 +90,9 @@ class InMemoryCache implements CacheInterface
         return $results;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
     {
         foreach ($values as $key => $value) {
@@ -83,6 +101,9 @@ class InMemoryCache implements CacheInterface
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function deleteMultiple(iterable $keys): bool
     {
         foreach ($keys as $key) {
@@ -91,12 +112,17 @@ class InMemoryCache implements CacheInterface
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function has(string $key): bool
     {
         return $this->get($key) !== null;
     }
 
     /**
+     * Returns the default time-to-live in seconds.
+     *
      * @return int
      */
     public function getDefaultTtl(): int
@@ -104,6 +130,12 @@ class InMemoryCache implements CacheInterface
         return $this->defaultTtl;
     }
 
+    /**
+     * Resolves a TTL value to an integer number of seconds.
+     *
+     * @param null|int|\DateInterval $ttl
+     * @return int
+     */
     private function resolveTtl(null|int|\DateInterval $ttl): int
     {
         if ($ttl === null) {

@@ -17,6 +17,9 @@ use Gianfriaur\OpcuaPhpClient\Types\QualifiedName;
 use Gianfriaur\OpcuaPhpClient\Types\ReferenceDescription;
 use Gianfriaur\OpcuaPhpClient\Types\Variant;
 
+/**
+ * OPC UA binary protocol deserializer. Reads typed values from a byte buffer.
+ */
 class BinaryDecoder
 {
     private int $offset = 0;
@@ -32,11 +35,17 @@ class BinaryDecoder
     {
     }
 
+    /**
+     * Return the current read position in the buffer.
+     */
     public function getOffset(): int
     {
         return $this->offset;
     }
 
+    /**
+     * Return the number of unread bytes remaining.
+     */
     public function getRemainingLength(): int
     {
         return strlen($this->buffer) - $this->offset;

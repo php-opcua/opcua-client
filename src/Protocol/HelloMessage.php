@@ -7,6 +7,9 @@ namespace Gianfriaur\OpcuaPhpClient\Protocol;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 
+/**
+ * OPC UA HEL (Hello) message for TCP connection handshake.
+ */
 class HelloMessage
 {
     /**

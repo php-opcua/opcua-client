@@ -32,6 +32,9 @@ class FileCache implements CacheInterface
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function get(string $key, mixed $default = null): mixed
     {
         $path = $this->path($key);
@@ -59,6 +62,9 @@ class FileCache implements CacheInterface
         return $entry['value'] ?? $default;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function set(string $key, mixed $value, null|int|\DateInterval $ttl = null): bool
     {
         $seconds = $this->resolveTtl($ttl);
@@ -77,6 +83,9 @@ class FileCache implements CacheInterface
         return file_put_contents($path, serialize($entry), LOCK_EX) !== false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function delete(string $key): bool
     {
         $path = $this->path($key);
@@ -86,6 +95,9 @@ class FileCache implements CacheInterface
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function clear(): bool
     {
         $files = glob($this->directory . '/*.cache');
@@ -98,6 +110,9 @@ class FileCache implements CacheInterface
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getMultiple(iterable $keys, mixed $default = null): iterable
     {
         $results = [];
@@ -107,6 +122,9 @@ class FileCache implements CacheInterface
         return $results;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
     {
         foreach ($values as $key => $value) {
@@ -115,6 +133,9 @@ class FileCache implements CacheInterface
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function deleteMultiple(iterable $keys): bool
     {
         foreach ($keys as $key) {
@@ -123,12 +144,17 @@ class FileCache implements CacheInterface
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function has(string $key): bool
     {
         return $this->get($key) !== null;
     }
 
     /**
+     * Returns the default time-to-live in seconds.
+     *
      * @return int
      */
     public function getDefaultTtl(): int
@@ -136,11 +162,23 @@ class FileCache implements CacheInterface
         return $this->defaultTtl;
     }
 
+    /**
+     * Returns the filesystem path for the given cache key.
+     *
+     * @param string $key
+     * @return string
+     */
     private function path(string $key): string
     {
         return $this->directory . '/' . sha1($key) . '.cache';
     }
 
+    /**
+     * Resolves a TTL value to an integer number of seconds.
+     *
+     * @param null|int|\DateInterval $ttl
+     * @return int
+     */
     private function resolveTtl(null|int|\DateInterval $ttl): int
     {
         if ($ttl === null) {

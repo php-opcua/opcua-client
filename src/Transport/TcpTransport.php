@@ -7,13 +7,16 @@ namespace Gianfriaur\OpcuaPhpClient\Transport;
 use Gianfriaur\OpcuaPhpClient\Exception\ConnectionException;
 use Gianfriaur\OpcuaPhpClient\Exception\ProtocolException;
 
+/**
+ * TCP socket transport for OPC UA binary protocol communication.
+ */
 class TcpTransport
 {
     /** @var resource|null */
     private $socket = null;
     private int $receiveBufferSize = 65535;
 
-    public const  DAFAUT_TIMEOUT = 5.0;
+    public const  DEFAULT_TIMEOUT = 5.0;
 
     /**
      * @param string $host
@@ -23,7 +26,7 @@ class TcpTransport
     public function connect(string $host, int $port, null|float $timeout = null): void
     {
         if ($timeout === null) {
-            $timeout = self::DAFAUT_TIMEOUT;
+            $timeout = self::DEFAULT_TIMEOUT;
         }
 
         $errno = 0;
@@ -64,6 +67,9 @@ class TcpTransport
         }
     }
 
+    /**
+     * Read a complete OPC UA message from the socket.
+     */
     public function receive(): string
     {
         if ($this->socket === null) {
@@ -120,6 +126,9 @@ class TcpTransport
         $this->receiveBufferSize = $size;
     }
 
+    /**
+     * Close the TCP connection.
+     */
     public function close(): void
     {
         if ($this->socket !== null) {
@@ -128,6 +137,9 @@ class TcpTransport
         }
     }
 
+    /**
+     * Check whether the TCP socket is open.
+     */
     public function isConnected(): bool
     {
         return $this->socket !== null;

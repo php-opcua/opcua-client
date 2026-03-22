@@ -20,6 +20,8 @@ class WriteMultiBuilder
     private NodeId|string|null $currentNodeId = null;
 
     /**
+     * Creates a new WriteMultiBuilder bound to the given client.
+     *
      * @param OpcUaClientInterface $client
      */
     public function __construct(
@@ -29,6 +31,8 @@ class WriteMultiBuilder
     }
 
     /**
+     * Selects the target node for the next write operation.
+     *
      * @param NodeId|string $nodeId
      * @return $this
      */
@@ -39,6 +43,8 @@ class WriteMultiBuilder
     }
 
     /**
+     * Adds a typed value to write to the current node.
+     *
      * @param mixed $value
      * @param BuiltinType $type
      * @return $this
@@ -49,43 +55,93 @@ class WriteMultiBuilder
         return $this;
     }
 
-    /** @return $this */
+    /**
+     * Writes a Boolean value to the current node.
+     *
+     * @return $this
+     */
     public function boolean(bool $value): self { return $this->typed($value, BuiltinType::Boolean); }
 
-    /** @return $this */
+    /**
+     * Writes an SByte value to the current node.
+     *
+     * @return $this
+     */
     public function sbyte(int $value): self { return $this->typed($value, BuiltinType::SByte); }
 
-    /** @return $this */
+    /**
+     * Writes a Byte value to the current node.
+     *
+     * @return $this
+     */
     public function byte(int $value): self { return $this->typed($value, BuiltinType::Byte); }
 
-    /** @return $this */
+    /**
+     * Writes an Int16 value to the current node.
+     *
+     * @return $this
+     */
     public function int16(int $value): self { return $this->typed($value, BuiltinType::Int16); }
 
-    /** @return $this */
+    /**
+     * Writes a UInt16 value to the current node.
+     *
+     * @return $this
+     */
     public function uint16(int $value): self { return $this->typed($value, BuiltinType::UInt16); }
 
-    /** @return $this */
+    /**
+     * Writes an Int32 value to the current node.
+     *
+     * @return $this
+     */
     public function int32(int $value): self { return $this->typed($value, BuiltinType::Int32); }
 
-    /** @return $this */
+    /**
+     * Writes a UInt32 value to the current node.
+     *
+     * @return $this
+     */
     public function uint32(int $value): self { return $this->typed($value, BuiltinType::UInt32); }
 
-    /** @return $this */
+    /**
+     * Writes an Int64 value to the current node.
+     *
+     * @return $this
+     */
     public function int64(int $value): self { return $this->typed($value, BuiltinType::Int64); }
 
-    /** @return $this */
+    /**
+     * Writes a UInt64 value to the current node.
+     *
+     * @return $this
+     */
     public function uint64(int $value): self { return $this->typed($value, BuiltinType::UInt64); }
 
-    /** @return $this */
+    /**
+     * Writes a Float value to the current node.
+     *
+     * @return $this
+     */
     public function float(float $value): self { return $this->typed($value, BuiltinType::Float); }
 
-    /** @return $this */
+    /**
+     * Writes a Double value to the current node.
+     *
+     * @return $this
+     */
     public function double(float $value): self { return $this->typed($value, BuiltinType::Double); }
 
-    /** @return $this */
+    /**
+     * Writes a String value to the current node.
+     *
+     * @return $this
+     */
     public function string(string $value): self { return $this->typed($value, BuiltinType::String); }
 
     /**
+     * Executes the multi-node write and returns per-node status codes.
+     *
      * @return int[]
      */
     public function execute(): array

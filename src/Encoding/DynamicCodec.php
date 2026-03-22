@@ -27,6 +27,8 @@ class DynamicCodec implements ExtensionObjectCodec
     }
 
     /**
+     * Returns the structure definition used by this codec.
+     *
      * @return StructureDefinition
      */
     public function getDefinition(): StructureDefinition

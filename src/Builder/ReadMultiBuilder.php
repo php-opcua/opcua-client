@@ -20,6 +20,8 @@ class ReadMultiBuilder
     private array $items = [];
 
     /**
+     * Creates a new ReadMultiBuilder bound to the given client.
+     *
      * @param OpcUaClientInterface $client
      */
     public function __construct(
@@ -29,6 +31,8 @@ class ReadMultiBuilder
     }
 
     /**
+     * Adds a node to the read request.
+     *
      * @param NodeId|string $nodeId
      * @return $this
      */
@@ -39,6 +43,8 @@ class ReadMultiBuilder
     }
 
     /**
+     * Sets the attribute to read as Value for the last added node.
+     *
      * @return $this
      */
     public function value(): self
@@ -47,6 +53,8 @@ class ReadMultiBuilder
     }
 
     /**
+     * Sets the attribute to read as DisplayName for the last added node.
+     *
      * @return $this
      */
     public function displayName(): self
@@ -55,6 +63,8 @@ class ReadMultiBuilder
     }
 
     /**
+     * Sets the attribute to read as BrowseName for the last added node.
+     *
      * @return $this
      */
     public function browseName(): self
@@ -63,6 +73,8 @@ class ReadMultiBuilder
     }
 
     /**
+     * Sets the attribute to read as NodeClass for the last added node.
+     *
      * @return $this
      */
     public function nodeClass(): self
@@ -71,6 +83,8 @@ class ReadMultiBuilder
     }
 
     /**
+     * Sets the attribute to read as Description for the last added node.
+     *
      * @return $this
      */
     public function description(): self
@@ -79,6 +93,8 @@ class ReadMultiBuilder
     }
 
     /**
+     * Sets the attribute to read as DataType for the last added node.
+     *
      * @return $this
      */
     public function dataType(): self
@@ -87,6 +103,8 @@ class ReadMultiBuilder
     }
 
     /**
+     * Sets a custom attribute identifier for the last added node.
+     *
      * @param int $attributeId
      * @return $this
      */
@@ -99,6 +117,8 @@ class ReadMultiBuilder
     }
 
     /**
+     * Executes the multi-node read and returns the results.
+     *
      * @return DataValue[]
      */
     public function execute(): array
