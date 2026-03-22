@@ -256,6 +256,7 @@ $point = $client->read($pointNodeId)->getValue();
 - **Cross-platform** — Linux, macOS, Windows. No FFI, no COM.
 - **Thoroughly tested** — 750+ tests, 99%+ code coverage across PHP 8.2, 8.3, 8.4, and 8.5.
 - **Typed everywhere** — all service responses return `public readonly` DTOs, not arrays.
+- **Session persistence** — keep OPC UA connections alive across PHP requests via [`opcua-php-client-session-manager`](https://github.com/GianfriAur/opcua-php-client-session-manager).
 - **Laravel-ready** — drop-in via [`opcua-laravel-client`](https://github.com/GianfriAur/opcua-laravel-client).
 
 ## Features
