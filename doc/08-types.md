@@ -130,6 +130,51 @@ $dv = new DataValue(
 
 > **Tip:** `getValue()` returns the raw scalar or array directly. If you need to know the OPC UA type, call `getVariant()` instead and check `->type`.
 
+**Factory methods:**
+
+`DataValue` provides static factory methods for creating instances with common types. Each returns a `DataValue` with status `Good`, no timestamps, and the appropriate `Variant` inside.
+
+```php
+use Gianfriaur\OpcuaPhpClient\Types\DataValue;
+use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
+use Gianfriaur\OpcuaPhpClient\Types\StatusCode;
+
+// Typed factories
+DataValue::ofInt32(42);
+DataValue::ofDouble(3.14);
+DataValue::ofString('Hello');
+DataValue::ofBoolean(true);
+DataValue::ofFloat(1.5);
+DataValue::ofUInt32(100);
+DataValue::ofInt16(7);
+DataValue::ofUInt16(8);
+DataValue::ofInt64(123456789);
+DataValue::ofUInt64(987654321);
+DataValue::ofDateTime(new DateTimeImmutable());
+
+// Generic factory — any BuiltinType
+DataValue::of(42, BuiltinType::Int32);
+
+// Bad status (no value)
+DataValue::bad(StatusCode::BadNodeIdUnknown);
+```
+
+| Factory Method | Type | Description |
+|---|---|---|
+| `ofInt32(int $v)` | `BuiltinType::Int32` | Signed 32-bit integer |
+| `ofDouble(float $v)` | `BuiltinType::Double` | 64-bit float |
+| `ofString(string $v)` | `BuiltinType::String` | UTF-8 string |
+| `ofBoolean(bool $v)` | `BuiltinType::Boolean` | Boolean |
+| `ofFloat(float $v)` | `BuiltinType::Float` | 32-bit float |
+| `ofUInt32(int $v)` | `BuiltinType::UInt32` | Unsigned 32-bit integer |
+| `ofInt16(int $v)` | `BuiltinType::Int16` | Signed 16-bit integer |
+| `ofUInt16(int $v)` | `BuiltinType::UInt16` | Unsigned 16-bit integer |
+| `ofInt64(int $v)` | `BuiltinType::Int64` | Signed 64-bit integer |
+| `ofUInt64(int $v)` | `BuiltinType::UInt64` | Unsigned 64-bit integer |
+| `ofDateTime(DateTimeImmutable $v)` | `BuiltinType::DateTime` | Date/time |
+| `of(mixed $v, BuiltinType $type)` | any | Generic factory for any built-in type |
+| `bad(int $statusCode)` | N/A | DataValue with no value and a bad status code |
+
 ---
 
 ### BuiltinType (Enum)

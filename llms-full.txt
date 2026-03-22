@@ -40,6 +40,8 @@ composer require gianfriaur/opcua-php-client
 - ExtensionObject Codecs — per-client instance-level codec registry
 - Automatic DataType Discovery — discoverDataTypes() auto-detects custom structures from server metadata (OPC UA 1.04+)
 - Typed everywhere — all responses return public readonly DTOs, not arrays
+- MockClient — in-memory test double implementing OpcUaClientInterface; register handlers, assert calls, no TCP connection
+- DataValue factory methods — ofInt32(), ofDouble(), ofString(), ofBoolean(), of($value, BuiltinType), bad(StatusCode), etc.
 - 750+ tests, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
 
 ### Property access style
@@ -459,6 +461,7 @@ Methods: isMultiDimensional()
 ### DataValue
 Properties: statusCode (int), sourceTimestamp (?DateTimeImmutable), serverTimestamp (?DateTimeImmutable)
 Methods: getValue() (unwraps Variant), getVariant()
+Factory methods: ofInt32(int), ofDouble(float), ofString(string), ofBoolean(bool), ofFloat(float), ofUInt32(int), ofInt16(int), ofUInt16(int), ofInt64(int), ofUInt64(int), ofDateTime(DateTimeImmutable), of(mixed, BuiltinType), bad(int statusCode)
 
 ### QualifiedName
 Properties: namespaceIndex (int), name (string)
@@ -559,6 +562,7 @@ src/
 ├── Types/*.php                   # 22 type/enum/DTO classes (all public readonly)
 ├── Builder/*.php                 # Fluent builders for multi-operations
 ├── Repository/ExtensionObjectRepository.php  # Per-client codec registry
+├── Testing/MockClient.php        # In-memory test double (no TCP)
 └── Exception/*.php               # 8 exception classes
 ```
 
@@ -620,6 +624,82 @@ Limitations: binary encoding only (not XML), no built-in codecs shipped. Each Cl
 
 ---
 
+## 13. MockClient (Testing)
+
+`Gianfriaur\OpcuaPhpClient\Testing\MockClient` implements `OpcUaClientInterface` without any TCP connection. Use it to test code that depends on an OPC UA client without needing a real server.
+
+### Creating a MockClient
+
+```php
+use Gianfriaur\OpcuaPhpClient\Testing\MockClient;
+
+$client = MockClient::create();
+```
+
+### Registering Handlers
+
+```php
+use Gianfriaur\OpcuaPhpClient\Types\DataValue;
+use Gianfriaur\OpcuaPhpClient\Types\NodeId;
+
+// Read handler — receives the NodeId, returns a DataValue
+$client->onRead(function (NodeId $nodeId) {
+    return DataValue::ofDouble(23.5);
+});
+
+// Write handler — receives NodeId, value, type; returns status code
+$client->onWrite(function (NodeId $nodeId, mixed $value, BuiltinType $type) {
+    return StatusCode::Good;
+});
+
+// Browse handler — receives NodeId, returns ReferenceDescription[]
+$client->onBrowse(function (NodeId $nodeId) {
+    return [];
+});
+
+// Call handler — receives objectId, methodId, arguments; returns CallResult
+$client->onCall(function (NodeId $objectId, NodeId $methodId, array $args) {
+    return new CallResult(statusCode: 0, inputArgumentResults: [], outputArguments: []);
+});
+
+// Path resolution handler
+$client->onResolveNodeId(function (string $path) {
+    return NodeId::numeric(2, 1001);
+});
+```
+
+### Default Behaviors
+
+Unregistered operations return sensible defaults: empty arrays for browse, status Good for writes, empty DataValue for reads.
+
+### Call Tracking
+
+```php
+$client->read('ns=2;s=Temperature');
+$client->read('ns=2;s=Pressure');
+$client->write('ns=2;i=1001', 42, BuiltinType::Int32);
+
+$client->getCalls();              // all recorded calls
+$client->getCallsFor('read');     // only read calls
+$client->callCount('read');       // 2
+$client->callCount('write');      // 1
+$client->resetCalls();            // clear all recorded calls
+```
+
+### Works with Fluent Builders
+
+```php
+$client = MockClient::create();
+$client->onRead(fn (NodeId $n) => DataValue::ofInt32(42));
+
+$results = $client->readMulti()
+    ->node('i=2259')->value()
+    ->node('ns=2;i=1001')->value()
+    ->execute();
+```
+
+---
+
 ## Main Classes
 
 - Gianfriaur\OpcuaPhpClient\Client — main client, accepts optional ExtensionObjectRepository
@@ -635,6 +715,7 @@ Limitations: binary encoding only (not XML), no built-in codecs shipped. Each Cl
 - Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet — public readonly: references, continuationPoint
 - Gianfriaur\OpcuaPhpClient\Types\BrowsePathResult — public readonly: statusCode, targets
 - Gianfriaur\OpcuaPhpClient\Types\BrowsePathTarget — public readonly: targetId, remainingPathIndex
+- Gianfriaur\OpcuaPhpClient\Testing\MockClient — in-memory test double (static create(), onRead/onWrite/onBrowse/onCall/onResolveNodeId, getCalls/getCallsFor/callCount/resetCalls)
 - Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository — per-client codec registry (instance-level)
 - Gianfriaur\OpcuaPhpClient\Encoding\DynamicCodec — auto-generated codec from StructureDefinition
 - Gianfriaur\OpcuaPhpClient\Encoding\DataTypeMapping — maps DataType NodeIds to BuiltinTypes

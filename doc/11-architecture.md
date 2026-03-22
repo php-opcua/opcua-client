@@ -94,6 +94,9 @@ src/
 ├── Repository/
 │   └── ExtensionObjectRepository.php  # Per-client codec registry
 │
+├── Testing/
+│   └── MockClient.php                # In-memory test double (no TCP)
+│
 └── Exception/
     ├── OpcUaException.php             # Base exception
     ├── ConfigurationException.php     # Config errors

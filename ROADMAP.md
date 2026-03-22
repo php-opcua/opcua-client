@@ -16,7 +16,7 @@
 - [X] Human-readable NodeId strings (`NodeId|string` union type)
 - [X] Full ExtensionObject Type System `OPC UA Part 6 5.2.7`
 - [X] PSR-3 Logging (`setLogger()`, NullLogger default)
-- [ ] MockClient, 
+- [X] MockClient for testing
 - [ ] Transfer Subscriptions ( for `gianfriaur/opcua-php-client-session-manager` )
 - [ ] Republish  ( for `gianfriaur/opcua-php-client-session-manager` )
 - [ ] Cache for browse results 

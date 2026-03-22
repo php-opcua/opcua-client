@@ -75,6 +75,23 @@ describe('Client PSR-3 Logger', function () {
         expect($messages)->toContain('Disconnecting');
     });
 
+    it('logs error on retry exhaustion', function () {
+        $logger = new TestLogger();
+        $mock = new MockTransport();
+
+        $client = setupConnectedClient($mock);
+        $client->setLogger($logger);
+        $client->setAutoRetry(0);
+
+        try {
+            $client->read('i=2259');
+        } catch (\Gianfriaur\OpcuaPhpClient\Exception\ConnectionException) {
+        }
+
+        $levels = array_column($logger->logs, 0);
+        expect($levels)->toContain('error');
+    });
+
     it('logs batch split on readMulti', function () {
         $logger = new TestLogger();
         $mock = new MockTransport();

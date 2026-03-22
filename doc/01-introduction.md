@@ -76,6 +76,9 @@ $client->disconnect();
 - PSR-3 logging — pass any compatible logger (Monolog, Laravel, etc.) for structured diagnostics
 - NullLogger by default — zero overhead when logging is not needed
 
+**Testing**
+- MockClient for testing — implements `OpcUaClientInterface` with no TCP connection, register handlers, assert calls
+
 **Reliability**
 - Connection state tracking (Disconnected, Connected, Broken)
 - `reconnect()` for re-establishing dropped connections

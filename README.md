@@ -196,6 +196,29 @@ $point = $client->read($pointNodeId)->getValue();
 
 Each client gets its own isolated codec registry — no global state, no cross-contamination.
 
+### Test without a real server
+
+```php
+use Gianfriaur\OpcuaPhpClient\Testing\MockClient;
+use Gianfriaur\OpcuaPhpClient\Types\DataValue;
+
+$client = MockClient::create();
+
+// Register a handler for read operations
+$client->onRead(function (NodeId $nodeId) {
+    return DataValue::ofDouble(23.5);
+});
+
+// Use the same API as a real client
+$value = $client->read('ns=2;s=Temperature');
+echo $value->getValue(); // 23.5
+
+// Verify what was called
+echo $client->callCount('read'); // 1
+```
+
+`MockClient` implements `OpcUaClientInterface` with no TCP connection. Register handlers with `onRead()`, `onWrite()`, `onBrowse()`, `onCall()`, and `onResolveNodeId()`. Track calls with `getCalls()`, `getCallsFor($method)`, `callCount($method)`, and `resetCalls()`. Works with fluent builders (`readMulti()`, `writeMulti()`, etc.).
+
 ### Add structured logging
 
 ```php
@@ -253,6 +276,7 @@ $point = $client->read($pointNodeId)->getValue();
 | **Auto-Batching** | Transparent batching for `readMulti`/`writeMulti` |
 | **ExtensionObject Codecs** | Pluggable per-client codec system for custom structures |
 | **Auto-Discovery** | `discoverDataTypes()` auto-detects custom structures without manual codecs |
+| **MockClient** | In-memory test double — register handlers, assert calls, no TCP connection needed |
 | **PSR-3 Logging** | Optional structured logging via any PSR-3 logger — connect, retry, errors, protocol details |
 
 ## Documentation
@@ -271,10 +295,11 @@ $point = $client->read($pointNodeId)->getValue();
 | 10 | [Security](doc/10-security.md) | Security policies, certificates, crypto internals |
 | 11 | [Architecture](doc/11-architecture.md) | Project structure, layers, protocol flow |
 | 12 | [ExtensionObject Codecs](doc/12-extension-object-codecs.md) | Custom type decoding, codec interface, repository API |
+| 13 | [Testing](doc/13-testing.md) | MockClient, DataValue factories, call tracking, test examples |
 
 ## Testing
 
-750+ tests with **99%+ code coverage**. Unit tests cover encoding, crypto, protocol services, and error paths. Integration tests run against [opcua-test-server-suite](https://github.com/GianfriAur/opcua-test-server-suite) — a Docker-based OPC UA environment with multiple security configs, custom types, and real-world scenarios.
+890+ tests with **99%+ code coverage**. Unit tests cover encoding, crypto, protocol services, and error paths. Integration tests run against [opcua-test-server-suite](https://github.com/GianfriAur/opcua-test-server-suite) — a Docker-based OPC UA environment with multiple security configs, custom types, and real-world scenarios.
 
 ```bash
 ./vendor/bin/pest                                          # everything

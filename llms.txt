@@ -34,6 +34,7 @@ A PHP library for connecting to OPC UA servers (industrial automation protocol).
 - Automatic DataType Discovery: discoverDataTypes() auto-detects and decodes custom structures without manual codecs (OPC UA 1.04+)
 - PSR-3 Logging: optional structured logging via any PSR-3 logger (Monolog, Laravel, etc.); NullLogger by default
 - Connection State: lifecycle tracking (Disconnected, Connected, Broken) with reconnect()
+- MockClient: in-memory test double implementing OpcUaClientInterface — register handlers, assert calls, no TCP connection
 - Typed everywhere: all service responses return public readonly DTOs, not arrays
 - Thoroughly tested: 750+ tests, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
 
@@ -50,6 +51,7 @@ All Type classes and result DTOs use public readonly properties. Access is $ref-
 - Security (src/Security/): secure channel, crypto operations, certificate management
 - Types (src/Types/): OPC UA data types, enums, and result DTOs
 - Repository (src/Repository/): per-client ExtensionObject codec registry
+- Testing (src/Testing/): MockClient — in-memory test double
 - Exception (src/Exception/): exception hierarchy
 
 ## Installation
@@ -145,6 +147,7 @@ $client->connect('opc.tcp://192.168.1.100:4840');
 - Gianfriaur\OpcuaPhpClient\Security\SecurityPolicy — enum of 6 security policies
 - Gianfriaur\OpcuaPhpClient\Security\SecurityMode — enum (None, Sign, SignAndEncrypt)
 - Gianfriaur\OpcuaPhpClient\Encoding\ExtensionObjectCodec — interface for custom type codecs
+- Gianfriaur\OpcuaPhpClient\Testing\MockClient — in-memory test double (no TCP); static create(), handler registration, call tracking
 - Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository — per-client codec registry (instance-level, not static)
 
 ## Related packages
