@@ -30,6 +30,7 @@
 - **`discoverServerCertificate()`** (72 lines) split into `discoverServerCertificate()`, `performDiscoveryHandshake()`, `extractServerCertificateFromEndpoints()`, and `extractTokenPolicies()`.
 - **`openSecureChannelWithSecurity()`** (68 lines) split into `openSecureChannelWithSecurity()`, `loadClientCertificateAndKey()`, and `buildCertificateChain()`.
 - **`createAndActivateSession()`** (56 lines) split into `createAndActivateSession()`, `createSession()`, `activateSession()`, and `loadUserCertificate()`.
+- **Diagnostic info skip helper.** Extracted duplicated `skipDiagnosticInfo()` from 8 Protocol service classes into `BinaryDecoder::skipDiagnosticInfo()`, `skipDiagnosticInfoBody()`, and `skipDiagnosticInfoArray()`.
 
 ## [3.0.0] - 2026-03-22
 

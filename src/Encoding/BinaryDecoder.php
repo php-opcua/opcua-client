@@ -467,4 +467,55 @@ class BinaryDecoder
         $this->ensureAvailable($bytes);
         $this->offset += $bytes;
     }
+
+    /**
+     * Skip a single DiagnosticInfo structure.
+     *
+     * @return void
+     */
+    public function skipDiagnosticInfo(): void
+    {
+        $this->skipDiagnosticInfoBody($this->readByte());
+    }
+
+    /**
+     * Skip the body of a DiagnosticInfo structure when the mask byte has already been read.
+     *
+     * @param int $mask
+     * @return void
+     */
+    public function skipDiagnosticInfoBody(int $mask): void
+    {
+        if ($mask & 0x01) {
+            $this->readInt32();
+        }
+        if ($mask & 0x02) {
+            $this->readInt32();
+        }
+        if ($mask & 0x04) {
+            $this->readInt32();
+        }
+        if ($mask & 0x08) {
+            $this->readString();
+        }
+        if ($mask & 0x10) {
+            $this->readUInt32();
+        }
+        if ($mask & 0x20) {
+            $this->skipDiagnosticInfo();
+        }
+    }
+
+    /**
+     * Skip an array of DiagnosticInfo structures (Int32 count + N entries).
+     *
+     * @return void
+     */
+    public function skipDiagnosticInfoArray(): void
+    {
+        $count = $this->readInt32();
+        for ($i = 0; $i < $count; $i++) {
+            $this->skipDiagnosticInfo();
+        }
+    }
 }

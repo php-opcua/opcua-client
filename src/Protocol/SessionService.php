@@ -244,10 +244,7 @@ class SessionService
         for ($i = 0; $i < $count; $i++) {
             $decoder->readUInt32();
         }
-        $diagCount = $decoder->readInt32();
-        for ($i = 0; $i < $diagCount; $i++) {
-            $this->skipDiagnosticInfo($decoder);
-        }
+        $decoder->skipDiagnosticInfoArray();
     }
 
     /**
@@ -310,7 +307,7 @@ class SessionService
         $decoder->readUInt32();
         $statusCode = $decoder->readUInt32();
         $diagMask = $decoder->readByte();
-        $this->skipDiagnosticInfoBody($decoder, $diagMask);
+        $decoder->skipDiagnosticInfoBody($diagMask);
         $count = $decoder->readInt32();
         for ($i = 0; $i < $count; $i++) {
             $decoder->readString();
@@ -719,41 +716,6 @@ class SessionService
     {
         $decoder->readByteString();
         $decoder->readByteString();
-    }
-
-    /**
-     * @param BinaryDecoder $decoder
-     */
-    private function skipDiagnosticInfo(BinaryDecoder $decoder): void
-    {
-        $mask = $decoder->readByte();
-        $this->skipDiagnosticInfoBody($decoder, $mask);
-    }
-
-    /**
-     * @param BinaryDecoder $decoder
-     * @param int $mask
-     */
-    private function skipDiagnosticInfoBody(BinaryDecoder $decoder, int $mask): void
-    {
-        if ($mask & 0x01) {
-            $decoder->readInt32();
-        }
-        if ($mask & 0x02) {
-            $decoder->readInt32();
-        }
-        if ($mask & 0x04) {
-            $decoder->readInt32();
-        }
-        if ($mask & 0x08) {
-            $decoder->readString();
-        }
-        if ($mask & 0x10) {
-            $decoder->readUInt32();
-        }
-        if ($mask & 0x20) {
-            $this->skipDiagnosticInfo($decoder);
-        }
     }
 
     /**

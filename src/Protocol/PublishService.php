@@ -107,10 +107,7 @@ class PublishService
             $decoder->readUInt32();
         }
 
-        $diagCount = $decoder->readInt32();
-        for ($i = 0; $i < $diagCount; $i++) {
-            $this->skipDiagnosticInfo($decoder);
-        }
+        $decoder->skipDiagnosticInfoArray();
 
         return new PublishResult($subscriptionId, $sequenceNumber, $moreNotifications, $notifications, $availableSequenceNumbers);
     }
@@ -134,10 +131,7 @@ class PublishService
             ];
         }
 
-        $diagCount = $decoder->readInt32();
-        for ($i = 0; $i < $diagCount; $i++) {
-            $this->skipDiagnosticInfo($decoder);
-        }
+        $decoder->skipDiagnosticInfoArray();
 
         return $items;
     }
@@ -223,32 +217,6 @@ class PublishService
         $body->writeUInt32(10000);
         $body->writeNodeId(NodeId::numeric(0, 0));
         $body->writeByte(0);
-    }
-
-    /**
-     * @param BinaryDecoder $decoder
-     */
-    private function skipDiagnosticInfo(BinaryDecoder $decoder): void
-    {
-        $mask = $decoder->readByte();
-        if ($mask & 0x01) {
-            $decoder->readInt32();
-        }
-        if ($mask & 0x02) {
-            $decoder->readInt32();
-        }
-        if ($mask & 0x04) {
-            $decoder->readInt32();
-        }
-        if ($mask & 0x08) {
-            $decoder->readString();
-        }
-        if ($mask & 0x10) {
-            $decoder->readUInt32();
-        }
-        if ($mask & 0x20) {
-            $this->skipDiagnosticInfo($decoder);
-        }
     }
 
     /**

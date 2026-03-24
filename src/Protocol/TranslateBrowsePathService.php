@@ -74,10 +74,7 @@ class TranslateBrowsePathService
             $results[] = new BrowsePathResult($statusCode, $targets);
         }
 
-        $diagCount = $decoder->readInt32();
-        for ($i = 0; $i < $diagCount; $i++) {
-            $this->skipDiagnosticInfo($decoder);
-        }
+        $decoder->skipDiagnosticInfoArray();
 
         return $results;
     }
@@ -143,28 +140,5 @@ class TranslateBrowsePathService
         $encoder->writeRawBytes($bodyBytes);
 
         return $encoder->getBuffer();
-    }
-
-    private function skipDiagnosticInfo(BinaryDecoder $decoder): void
-    {
-        $mask = $decoder->readByte();
-        if ($mask & 0x01) {
-            $decoder->readInt32();
-        }
-        if ($mask & 0x02) {
-            $decoder->readInt32();
-        }
-        if ($mask & 0x04) {
-            $decoder->readInt32();
-        }
-        if ($mask & 0x08) {
-            $decoder->readString();
-        }
-        if ($mask & 0x10) {
-            $decoder->readUInt32();
-        }
-        if ($mask & 0x20) {
-            $this->skipDiagnosticInfo($decoder);
-        }
     }
 }
