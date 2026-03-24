@@ -10,15 +10,8 @@ use Gianfriaur\OpcuaPhpClient\Types\CallResult;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\Variant;
 
-class CallService
+class CallService extends AbstractProtocolService
 {
-    /**
-     * @param SessionService $session
-     */
-    public function __construct(private readonly SessionService $session)
-    {
-    }
-
     /**
      * @param int $requestId
      * @param NodeId $objectId
@@ -33,20 +26,10 @@ class CallService
         array $inputArguments,
         NodeId $authToken,
     ): string {
-        $secureChannel = $this->session->getSecureChannel();
-        if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
-            return $this->encodeCallRequestSecure($requestId, $objectId, $methodId, $inputArguments, $authToken);
-        }
-
         $body = new BinaryEncoder();
-
-        $body->writeUInt32($this->session->getTokenId());
-        $body->writeUInt32($this->session->getNextSequenceNumber());
-        $body->writeUInt32($requestId);
-
         $this->writeCallInnerBody($body, $requestId, $objectId, $methodId, $inputArguments, $authToken);
 
-        return $this->wrapInMessage($body->getBuffer());
+        return $this->encodeRequestAuto($requestId, $body->getBuffer());
     }
 
     /**
@@ -55,13 +38,7 @@ class CallService
      */
     public function decodeCallResponse(BinaryDecoder $decoder): CallResult
     {
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-
-        $decoder->readNodeId();
-
-        $this->session->readResponseHeader($decoder);
+        $this->readResponseMetadata($decoder);
 
         $resultCount = $decoder->readInt32();
 
@@ -91,26 +68,6 @@ class CallService
     }
 
     /**
-     * @param int $requestId
-     * @param NodeId $objectId
-     * @param NodeId $methodId
-     * @param Variant[] $inputArguments
-     * @param NodeId $authToken
-     */
-    private function encodeCallRequestSecure(
-        int $requestId,
-        NodeId $objectId,
-        NodeId $methodId,
-        array $inputArguments,
-        NodeId $authToken,
-    ): string {
-        $body = new BinaryEncoder();
-        $this->writeCallInnerBody($body, $requestId, $objectId, $methodId, $inputArguments, $authToken);
-
-        return $this->session->getSecureChannel()->buildMessage($body->getBuffer());
-    }
-
-    /**
      * @param BinaryEncoder $body
      * @param int $requestId
      * @param NodeId $objectId
@@ -128,14 +85,7 @@ class CallService
     ): void {
         $body->writeNodeId(NodeId::numeric(0, 712));
 
-        $body->writeNodeId($authToken);
-        $body->writeInt64(0);
-        $body->writeUInt32($requestId);
-        $body->writeUInt32(0);
-        $body->writeString(null);
-        $body->writeUInt32(10000);
-        $body->writeNodeId(NodeId::numeric(0, 0));
-        $body->writeByte(0);
+        $this->writeRequestHeader($body, $requestId, $authToken);
 
         $body->writeInt32(1);
 
@@ -146,21 +96,5 @@ class CallService
         foreach ($inputArguments as $arg) {
             $body->writeVariant($arg);
         }
-    }
-
-    /**
-     * @param string $bodyBytes
-     */
-    private function wrapInMessage(string $bodyBytes): string
-    {
-        $totalSize = MessageHeader::HEADER_SIZE + 4 + strlen($bodyBytes);
-
-        $encoder = new BinaryEncoder();
-        $header = new MessageHeader('MSG', 'F', $totalSize);
-        $header->encode($encoder);
-        $encoder->writeUInt32($this->session->getSecureChannelId());
-        $encoder->writeRawBytes($bodyBytes);
-
-        return $encoder->getBuffer();
     }
 }

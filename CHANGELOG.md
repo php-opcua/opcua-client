@@ -31,6 +31,7 @@
 - **`openSecureChannelWithSecurity()`** (68 lines) split into `openSecureChannelWithSecurity()`, `loadClientCertificateAndKey()`, and `buildCertificateChain()`.
 - **`createAndActivateSession()`** (56 lines) split into `createAndActivateSession()`, `createSession()`, `activateSession()`, and `loadUserCertificate()`.
 - **Diagnostic info skip helper.** Extracted duplicated `skipDiagnosticInfo()` from 8 Protocol service classes into `BinaryDecoder::skipDiagnosticInfo()`, `skipDiagnosticInfoBody()`, and `skipDiagnosticInfoArray()`.
+- **Protocol service base class.** Introduced `AbstractProtocolService` with shared `encodeRequestAuto()`, `writeRequestHeader()`, `readResponseMetadata()`, and `wrapInMessage()`. All 10 Protocol service classes now extend it, eliminating ~400 lines of duplicated encode/decode boilerplate.
 
 ## [3.0.0] - 2026-03-22
 

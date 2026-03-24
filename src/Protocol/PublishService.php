@@ -11,15 +11,8 @@ use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\PublishResult;
 use Gianfriaur\OpcuaPhpClient\Types\Variant;
 
-class PublishService
+class PublishService extends AbstractProtocolService
 {
-    /**
-     * @param SessionService $session
-     */
-    public function __construct(private readonly SessionService $session)
-    {
-    }
-
     /**
      * @param int $requestId
      * @param NodeId $authToken
@@ -30,20 +23,10 @@ class PublishService
         NodeId $authToken,
         array $acknowledgements = [],
     ): string {
-        $secureChannel = $this->session->getSecureChannel();
-        if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
-            return $this->encodePublishRequestSecure($requestId, $authToken, $acknowledgements);
-        }
-
         $body = new BinaryEncoder();
-
-        $body->writeUInt32($this->session->getTokenId());
-        $body->writeUInt32($this->session->getNextSequenceNumber());
-        $body->writeUInt32($requestId);
-
         $this->writePublishInnerBody($body, $requestId, $authToken, $acknowledgements);
 
-        return $this->wrapInMessage($body->getBuffer());
+        return $this->encodeRequestAuto($requestId, $body->getBuffer());
     }
 
     /**
@@ -52,13 +35,7 @@ class PublishService
      */
     public function decodePublishResponse(BinaryDecoder $decoder): PublishResult
     {
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-
-        $decoder->readNodeId();
-
-        $this->session->readResponseHeader($decoder);
+        $this->readResponseMetadata($decoder);
 
         $subscriptionId = $decoder->readUInt32();
 
@@ -164,22 +141,6 @@ class PublishService
     }
 
     /**
-     * @param int $requestId
-     * @param NodeId $authToken
-     * @param array<array{subscriptionId: int, sequenceNumber: int}> $acknowledgements
-     */
-    private function encodePublishRequestSecure(
-        int $requestId,
-        NodeId $authToken,
-        array $acknowledgements,
-    ): string {
-        $body = new BinaryEncoder();
-        $this->writePublishInnerBody($body, $requestId, $authToken, $acknowledgements);
-
-        return $this->session->getSecureChannel()->buildMessage($body->getBuffer());
-    }
-
-    /**
      * @param BinaryEncoder $body
      * @param int $requestId
      * @param NodeId $authToken
@@ -200,38 +161,5 @@ class PublishService
             $body->writeUInt32($ack['subscriptionId']);
             $body->writeUInt32($ack['sequenceNumber']);
         }
-    }
-
-    /**
-     * @param BinaryEncoder $body
-     * @param int $requestId
-     * @param NodeId $authToken
-     */
-    private function writeRequestHeader(BinaryEncoder $body, int $requestId, NodeId $authToken): void
-    {
-        $body->writeNodeId($authToken);
-        $body->writeInt64(0);
-        $body->writeUInt32($requestId);
-        $body->writeUInt32(0);
-        $body->writeString(null);
-        $body->writeUInt32(10000);
-        $body->writeNodeId(NodeId::numeric(0, 0));
-        $body->writeByte(0);
-    }
-
-    /**
-     * @param string $bodyBytes
-     */
-    private function wrapInMessage(string $bodyBytes): string
-    {
-        $totalSize = MessageHeader::HEADER_SIZE + 4 + strlen($bodyBytes);
-
-        $encoder = new BinaryEncoder();
-        $header = new MessageHeader('MSG', 'F', $totalSize);
-        $header->encode($encoder);
-        $encoder->writeUInt32($this->session->getSecureChannelId());
-        $encoder->writeRawBytes($bodyBytes);
-
-        return $encoder->getBuffer();
     }
 }

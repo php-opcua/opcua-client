@@ -10,15 +10,8 @@ use Gianfriaur\OpcuaPhpClient\Types\EndpointDescription;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\UserTokenPolicy;
 
-class GetEndpointsService
+class GetEndpointsService extends AbstractProtocolService
 {
-    /**
-     * @param SessionService $session
-     */
-    public function __construct(private readonly SessionService $session)
-    {
-    }
-
     /**
      * @param int $requestId
      * @param string $endpointUrl
@@ -26,20 +19,10 @@ class GetEndpointsService
      */
     public function encodeGetEndpointsRequest(int $requestId, string $endpointUrl, NodeId $authToken): string
     {
-        $secureChannel = $this->session->getSecureChannel();
-        if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
-            return $this->encodeGetEndpointsRequestSecure($requestId, $endpointUrl, $authToken);
-        }
-
         $body = new BinaryEncoder();
-
-        $body->writeUInt32($this->session->getTokenId());
-        $body->writeUInt32($this->session->getNextSequenceNumber());
-        $body->writeUInt32($requestId);
-
         $this->writeGetEndpointsInnerBody($body, $requestId, $endpointUrl, $authToken);
 
-        return $this->wrapInMessage($body->getBuffer());
+        return $this->encodeRequestAuto($requestId, $body->getBuffer());
     }
 
     /**
@@ -48,13 +31,7 @@ class GetEndpointsService
      */
     public function decodeGetEndpointsResponse(BinaryDecoder $decoder): array
     {
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-
-        $decoder->readNodeId();
-
-        $this->session->readResponseHeader($decoder);
+        $this->readResponseMetadata($decoder);
 
         $count = $decoder->readInt32();
         $endpoints = [];
@@ -67,19 +44,6 @@ class GetEndpointsService
     }
 
     /**
-     * @param int $requestId
-     * @param string $endpointUrl
-     * @param NodeId $authToken
-     */
-    private function encodeGetEndpointsRequestSecure(int $requestId, string $endpointUrl, NodeId $authToken): string
-    {
-        $body = new BinaryEncoder();
-        $this->writeGetEndpointsInnerBody($body, $requestId, $endpointUrl, $authToken);
-
-        return $this->session->getSecureChannel()->buildMessage($body->getBuffer());
-    }
-
-    /**
      * @param BinaryEncoder $body
      * @param int $requestId
      * @param string $endpointUrl
@@ -89,14 +53,7 @@ class GetEndpointsService
     {
         $body->writeNodeId(NodeId::numeric(0, 428));
 
-        $body->writeNodeId($authToken);
-        $body->writeInt64(0);
-        $body->writeUInt32($requestId);
-        $body->writeUInt32(0);
-        $body->writeString(null);
-        $body->writeUInt32(10000);
-        $body->writeNodeId(NodeId::numeric(0, 0));
-        $body->writeByte(0);
+        $this->writeRequestHeader($body, $requestId, $authToken);
 
         $body->writeString($endpointUrl);
 
@@ -151,21 +108,5 @@ class GetEndpointsService
             transportProfileUri: $transportProfileUri,
             securityLevel: $securityLevel,
         );
-    }
-
-    /**
-     * @param string $bodyBytes
-     */
-    private function wrapInMessage(string $bodyBytes): string
-    {
-        $totalSize = MessageHeader::HEADER_SIZE + 4 + strlen($bodyBytes);
-
-        $encoder = new BinaryEncoder();
-        $header = new MessageHeader('MSG', 'F', $totalSize);
-        $header->encode($encoder);
-        $encoder->writeUInt32($this->session->getSecureChannelId());
-        $encoder->writeRawBytes($bodyBytes);
-
-        return $encoder->getBuffer();
     }
 }

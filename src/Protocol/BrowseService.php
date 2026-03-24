@@ -11,15 +11,8 @@ use Gianfriaur\OpcuaPhpClient\Types\BrowseResultSet;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\ReferenceDescription;
 
-class BrowseService
+class BrowseService extends AbstractProtocolService
 {
-    /**
-     * @param SessionService $session
-     */
-    public function __construct(private readonly SessionService $session)
-    {
-    }
-
     /**
      * @param int $requestId
      * @param NodeId $nodeId
@@ -38,28 +31,10 @@ class BrowseService
         bool $includeSubtypes = true,
         int $nodeClassMask = 0,
     ): string {
-        $secureChannel = $this->session->getSecureChannel();
-        if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
-            return $this->encodeBrowseRequestSecure(
-                $requestId,
-                $nodeId,
-                $authToken,
-                $direction,
-                $referenceTypeId,
-                $includeSubtypes,
-                $nodeClassMask,
-            );
-        }
-
         $body = new BinaryEncoder();
-
-        $body->writeUInt32($this->session->getTokenId());
-        $body->writeUInt32($this->session->getNextSequenceNumber());
-        $body->writeUInt32($requestId);
-
         $this->writeBrowseInnerBody($body, $requestId, $nodeId, $authToken, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask);
 
-        return $this->wrapInMessage($body->getBuffer());
+        return $this->encodeRequestAuto($requestId, $body->getBuffer());
     }
 
     /**
@@ -68,13 +43,7 @@ class BrowseService
      */
     public function decodeBrowseResponseWithContinuation(BinaryDecoder $decoder): BrowseResultSet
     {
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-
-        $decoder->readNodeId();
-
-        $this->session->readResponseHeader($decoder);
+        $this->readResponseMetadata($decoder);
 
         $resultCount = $decoder->readInt32();
         $references = [];
@@ -116,34 +85,10 @@ class BrowseService
      */
     public function encodeBrowseNextRequest(int $requestId, string $continuationPoint, NodeId $authToken): string
     {
-        $secureChannel = $this->session->getSecureChannel();
-        if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
-            return $this->encodeBrowseNextRequestSecure($requestId, $continuationPoint, $authToken);
-        }
-
         $body = new BinaryEncoder();
+        $this->writeBrowseNextInnerBody($body, $requestId, $continuationPoint, $authToken);
 
-        $body->writeUInt32($this->session->getTokenId());
-        $body->writeUInt32($this->session->getNextSequenceNumber());
-        $body->writeUInt32($requestId);
-
-        $body->writeNodeId(NodeId::numeric(0, 533));
-
-        $body->writeNodeId($authToken);
-        $body->writeInt64(0);
-        $body->writeUInt32($requestId);
-        $body->writeUInt32(0);
-        $body->writeString(null);
-        $body->writeUInt32(10000);
-        $body->writeNodeId(NodeId::numeric(0, 0));
-        $body->writeByte(0);
-
-        $body->writeBoolean(false);
-
-        $body->writeInt32(1);
-        $body->writeByteString($continuationPoint);
-
-        return $this->wrapInMessage($body->getBuffer());
+        return $this->encodeRequestAuto($requestId, $body->getBuffer());
     }
 
     /**
@@ -152,13 +97,7 @@ class BrowseService
      */
     public function decodeBrowseNextResponse(BinaryDecoder $decoder): BrowseResultSet
     {
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-
-        $decoder->readNodeId();
-
-        $this->session->readResponseHeader($decoder);
+        $this->readResponseMetadata($decoder);
 
         $resultCount = $decoder->readInt32();
         $references = [];
@@ -183,59 +122,6 @@ class BrowseService
     }
 
     /**
-     * @param int $requestId
-     * @param NodeId $nodeId
-     * @param NodeId $authToken
-     * @param BrowseDirection $direction
-     * @param ?NodeId $referenceTypeId
-     * @param bool $includeSubtypes
-     * @param int $nodeClassMask
-     */
-    private function encodeBrowseRequestSecure(
-        int $requestId,
-        NodeId $nodeId,
-        NodeId $authToken,
-        BrowseDirection $direction,
-        ?NodeId $referenceTypeId,
-        bool $includeSubtypes,
-        int $nodeClassMask,
-    ): string {
-        $body = new BinaryEncoder();
-        $this->writeBrowseInnerBody($body, $requestId, $nodeId, $authToken, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask);
-
-        return $this->session->getSecureChannel()->buildMessage($body->getBuffer());
-    }
-
-    /**
-     * @param int $requestId
-     * @param string $continuationPoint
-     * @param NodeId $authToken
-     * @return string
-     */
-    private function encodeBrowseNextRequestSecure(int $requestId, string $continuationPoint, NodeId $authToken): string
-    {
-        $body = new BinaryEncoder();
-
-        $body->writeNodeId(NodeId::numeric(0, 533));
-
-        $body->writeNodeId($authToken);
-        $body->writeInt64(0);
-        $body->writeUInt32($requestId);
-        $body->writeUInt32(0);
-        $body->writeString(null);
-        $body->writeUInt32(10000);
-        $body->writeNodeId(NodeId::numeric(0, 0));
-        $body->writeByte(0);
-
-        $body->writeBoolean(false);
-
-        $body->writeInt32(1);
-        $body->writeByteString($continuationPoint);
-
-        return $this->session->getSecureChannel()->buildMessage($body->getBuffer());
-    }
-
-    /**
      * @param BinaryEncoder $body
      * @param int $requestId
      * @param NodeId $nodeId
@@ -257,14 +143,7 @@ class BrowseService
     ): void {
         $body->writeNodeId(NodeId::numeric(0, 527));
 
-        $body->writeNodeId($authToken);
-        $body->writeInt64(0);
-        $body->writeUInt32($requestId);
-        $body->writeUInt32(0);
-        $body->writeString(null);
-        $body->writeUInt32(10000);
-        $body->writeNodeId(NodeId::numeric(0, 0));
-        $body->writeByte(0);
+        $this->writeRequestHeader($body, $requestId, $authToken);
 
         $body->writeNodeId(NodeId::numeric(0, 0));
         $body->writeInt64(0);
@@ -283,19 +162,20 @@ class BrowseService
     }
 
     /**
-     * @param string $bodyBytes
-     * @return string
+     * @param BinaryEncoder $body
+     * @param int $requestId
+     * @param string $continuationPoint
+     * @param NodeId $authToken
      */
-    private function wrapInMessage(string $bodyBytes): string
+    private function writeBrowseNextInnerBody(BinaryEncoder $body, int $requestId, string $continuationPoint, NodeId $authToken): void
     {
-        $totalSize = MessageHeader::HEADER_SIZE + 4 + strlen($bodyBytes);
+        $body->writeNodeId(NodeId::numeric(0, 533));
 
-        $encoder = new BinaryEncoder();
-        $header = new MessageHeader('MSG', 'F', $totalSize);
-        $header->encode($encoder);
-        $encoder->writeUInt32($this->session->getSecureChannelId());
-        $encoder->writeRawBytes($bodyBytes);
+        $this->writeRequestHeader($body, $requestId, $authToken);
 
-        return $encoder->getBuffer();
+        $body->writeBoolean(false);
+
+        $body->writeInt32(1);
+        $body->writeByteString($continuationPoint);
     }
 }

@@ -10,15 +10,8 @@ use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Types\DataValue;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 
-class HistoryReadService
+class HistoryReadService extends AbstractProtocolService
 {
-    /**
-     * @param SessionService $session
-     */
-    public function __construct(private readonly SessionService $session)
-    {
-    }
-
     /**
      * @param int $requestId
      * @param NodeId $authToken
@@ -96,20 +89,10 @@ class HistoryReadService
         int $detailsTypeId,
         string $detailsBody,
     ): string {
-        $secureChannel = $this->session->getSecureChannel();
-        if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
-            return $this->encodeHistoryReadRequestSecure($requestId, $authToken, $nodeIds, $detailsTypeId, $detailsBody);
-        }
-
         $body = new BinaryEncoder();
-
-        $body->writeUInt32($this->session->getTokenId());
-        $body->writeUInt32($this->session->getNextSequenceNumber());
-        $body->writeUInt32($requestId);
-
         $this->writeHistoryReadInnerBody($body, $requestId, $authToken, $nodeIds, $detailsTypeId, $detailsBody);
 
-        return $this->wrapInMessage($body->getBuffer());
+        return $this->encodeRequestAuto($requestId, $body->getBuffer());
     }
 
     /**
@@ -118,13 +101,7 @@ class HistoryReadService
      */
     public function decodeHistoryReadResponse(BinaryDecoder $decoder): array
     {
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-
-        $decoder->readNodeId();
-
-        $this->session->readResponseHeader($decoder);
+        $this->readResponseMetadata($decoder);
 
         $resultCount = $decoder->readInt32();
         $allValues = [];
@@ -165,26 +142,6 @@ class HistoryReadService
         $decoder->skipDiagnosticInfoArray();
 
         return $allValues;
-    }
-
-    /**
-     * @param int $requestId
-     * @param NodeId $authToken
-     * @param NodeId[] $nodeIds
-     * @param int $detailsTypeId
-     * @param string $detailsBody
-     */
-    private function encodeHistoryReadRequestSecure(
-        int $requestId,
-        NodeId $authToken,
-        array $nodeIds,
-        int $detailsTypeId,
-        string $detailsBody,
-    ): string {
-        $body = new BinaryEncoder();
-        $this->writeHistoryReadInnerBody($body, $requestId, $authToken, $nodeIds, $detailsTypeId, $detailsBody);
-
-        return $this->session->getSecureChannel()->buildMessage($body->getBuffer());
     }
 
     /**
@@ -298,39 +255,6 @@ class HistoryReadService
         }
 
         $encoder->writeBoolean(true);
-
-        return $encoder->getBuffer();
-    }
-
-    /**
-     * @param BinaryEncoder $body
-     * @param int $requestId
-     * @param NodeId $authToken
-     */
-    private function writeRequestHeader(BinaryEncoder $body, int $requestId, NodeId $authToken): void
-    {
-        $body->writeNodeId($authToken);
-        $body->writeInt64(0);
-        $body->writeUInt32($requestId);
-        $body->writeUInt32(0);
-        $body->writeString(null);
-        $body->writeUInt32(10000);
-        $body->writeNodeId(NodeId::numeric(0, 0));
-        $body->writeByte(0);
-    }
-
-    /**
-     * @param string $bodyBytes
-     */
-    private function wrapInMessage(string $bodyBytes): string
-    {
-        $totalSize = MessageHeader::HEADER_SIZE + 4 + strlen($bodyBytes);
-
-        $encoder = new BinaryEncoder();
-        $header = new MessageHeader('MSG', 'F', $totalSize);
-        $header->encode($encoder);
-        $encoder->writeUInt32($this->session->getSecureChannelId());
-        $encoder->writeRawBytes($bodyBytes);
 
         return $encoder->getBuffer();
     }

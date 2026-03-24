@@ -11,12 +11,8 @@ use Gianfriaur\OpcuaPhpClient\Types\BrowsePathTarget;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\QualifiedName;
 
-class TranslateBrowsePathService
+class TranslateBrowsePathService extends AbstractProtocolService
 {
-    public function __construct(private readonly SessionService $session)
-    {
-    }
-
     /**
      * @param int $requestId
      * @param array<array{startingNodeId: NodeId, relativePath: array<array{referenceTypeId?: NodeId, isInverse?: bool, includeSubtypes?: bool, targetName: QualifiedName}>}> $browsePaths
@@ -25,20 +21,10 @@ class TranslateBrowsePathService
      */
     public function encodeTranslateRequest(int $requestId, array $browsePaths, NodeId $authToken): string
     {
-        $secureChannel = $this->session->getSecureChannel();
-        if ($secureChannel !== null && $secureChannel->isSecurityActive()) {
-            return $this->encodeTranslateRequestSecure($requestId, $browsePaths, $authToken);
-        }
-
         $body = new BinaryEncoder();
-
-        $body->writeUInt32($this->session->getTokenId());
-        $body->writeUInt32($this->session->getNextSequenceNumber());
-        $body->writeUInt32($requestId);
-
         $this->writeTranslateInnerBody($body, $requestId, $browsePaths, $authToken);
 
-        return $this->wrapInMessage($body->getBuffer());
+        return $this->encodeRequestAuto($requestId, $body->getBuffer());
     }
 
     /**
@@ -47,13 +33,7 @@ class TranslateBrowsePathService
      */
     public function decodeTranslateResponse(BinaryDecoder $decoder): array
     {
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-        $decoder->readUInt32();
-
-        $decoder->readNodeId();
-
-        $this->session->readResponseHeader($decoder);
+        $this->readResponseMetadata($decoder);
 
         $resultCount = $decoder->readInt32();
         $results = [];
@@ -80,20 +60,6 @@ class TranslateBrowsePathService
     }
 
     /**
-     * @param int $requestId
-     * @param array $browsePaths
-     * @param NodeId $authToken
-     * @return string
-     */
-    private function encodeTranslateRequestSecure(int $requestId, array $browsePaths, NodeId $authToken): string
-    {
-        $body = new BinaryEncoder();
-        $this->writeTranslateInnerBody($body, $requestId, $browsePaths, $authToken);
-
-        return $this->session->getSecureChannel()->buildMessage($body->getBuffer());
-    }
-
-    /**
      * @param BinaryEncoder $body
      * @param int $requestId
      * @param array $browsePaths
@@ -103,14 +69,7 @@ class TranslateBrowsePathService
     {
         $body->writeNodeId(NodeId::numeric(0, 554));
 
-        $body->writeNodeId($authToken);
-        $body->writeInt64(0);
-        $body->writeUInt32($requestId);
-        $body->writeUInt32(0);
-        $body->writeString(null);
-        $body->writeUInt32(10000);
-        $body->writeNodeId(NodeId::numeric(0, 0));
-        $body->writeByte(0);
+        $this->writeRequestHeader($body, $requestId, $authToken);
 
         $body->writeInt32(count($browsePaths));
 
@@ -127,18 +86,5 @@ class TranslateBrowsePathService
                 $body->writeQualifiedName($element['targetName']);
             }
         }
-    }
-
-    private function wrapInMessage(string $bodyBytes): string
-    {
-        $totalSize = MessageHeader::HEADER_SIZE + 4 + strlen($bodyBytes);
-
-        $encoder = new BinaryEncoder();
-        $header = new MessageHeader('MSG', 'F', $totalSize);
-        $header->encode($encoder);
-        $encoder->writeUInt32($this->session->getSecureChannelId());
-        $encoder->writeRawBytes($bodyBytes);
-
-        return $encoder->getBuffer();
     }
 }
