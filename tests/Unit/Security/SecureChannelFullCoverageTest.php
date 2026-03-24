@@ -91,4 +91,59 @@ describe('SecureChannel asymmetricSignAndEncrypt (dead code coverage)', function
 
         expect(strlen($encrypted))->toBeGreaterThan(0);
     });
+
+    it('extractKeyLengthBytes throws SecurityException on false input', function () {
+        [$certDer, $privKey] = generateTestCertKeyPair();
+        $sc = new SecureChannel(
+            SecurityPolicy::Basic256Sha256,
+            SecurityMode::SignAndEncrypt,
+            $certDer,
+            $privKey,
+            $certDer,
+        );
+
+        $method = new ReflectionMethod($sc, 'extractKeyLengthBytes');
+
+        expect(fn () => $method->invoke($sc, false))
+            ->toThrow(SecurityException::class, 'Failed to get client private key details');
+    });
+
+    it('extractKeyLengthBytes returns correct length for valid key details', function () {
+        [$certDer, $privKey] = generateTestCertKeyPair();
+        $sc = new SecureChannel(
+            SecurityPolicy::Basic256Sha256,
+            SecurityMode::SignAndEncrypt,
+            $certDer,
+            $privKey,
+            $certDer,
+        );
+
+        $method = new ReflectionMethod($sc, 'extractKeyLengthBytes');
+        $details = openssl_pkey_get_details($privKey);
+        $result = $method->invoke($sc, $details);
+
+        expect($result)->toBe((int) ($details['bits'] / 8));
+    });
+
+    it('addAsymmetricPadding with remainder zero produces paddingSize 1', function () {
+        [$certDer, $privKey] = generateTestCertKeyPair();
+        $sc = new SecureChannel(
+            SecurityPolicy::Basic256Sha256,
+            SecurityMode::SignAndEncrypt,
+            $certDer,
+            $privKey,
+            $certDer,
+        );
+
+        $method = new ReflectionMethod($sc, 'addAsymmetricPadding');
+        $signatureSize = 20;
+        $plainTextBlockSize = 16;
+        $keyLengthBytes = 128;
+        $body = str_repeat('A', 11);
+
+        $result = $method->invoke($sc, $body, $signatureSize, $plainTextBlockSize, $keyLengthBytes);
+
+        expect(strlen($result))->toBe(strlen($body) + 1);
+        expect(ord($result[strlen($result) - 1]))->toBe(0);
+    });
 });

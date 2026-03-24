@@ -114,6 +114,20 @@ src/
 │   ├── Cache*.php                     # Cache hit/miss events (2)
 │   └── Retry*.php                     # Retry events (2)
 │
+├── Cli/
+│   ├── Application.php                # CLI entry point and routing
+│   ├── ArgvParser.php                 # Zero-dep argument parser
+│   ├── CommandRunner.php              # Client configuration from CLI options
+│   ├── StreamLogger.php               # PSR-3 logger for streams
+│   ├── Commands/
+│   │   ├── BrowseCommand.php          # Browse with tree rendering
+│   │   ├── ReadCommand.php            # Read node values/attributes
+│   │   ├── EndpointsCommand.php       # Discover endpoints
+│   │   └── WatchCommand.php           # Real-time value watching
+│   └── Output/
+│       ├── ConsoleOutput.php          # ANSI colors, tree chars
+│       └── JsonOutput.php             # JSON output
+│
 ├── Cache/
 │   ├── InMemoryCache.php              # PSR-16 in-memory cache
 │   └── FileCache.php                  # PSR-16 file-based cache

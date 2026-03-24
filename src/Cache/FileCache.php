@@ -44,15 +44,8 @@ class FileCache implements CacheInterface
             return $default;
         }
 
-        $raw = file_get_contents($path);
-        if ($raw === false) {
-            return $default;
-        }
-
-        $entry = @unserialize($raw);
-        if ($entry === false) {
-            @unlink($path);
-
+        $entry = $this->readEntry($path);
+        if ($entry === null) {
             return $default;
         }
 
@@ -168,6 +161,29 @@ class FileCache implements CacheInterface
     public function getDefaultTtl(): int
     {
         return $this->defaultTtl;
+    }
+
+    /**
+     * Read and unserialize a cache entry from disk.
+     *
+     * @param string $path
+     * @return ?array
+     */
+    private function readEntry(string $path): ?array
+    {
+        $raw = file_get_contents($path);
+        if ($raw === false) {
+            return null;
+        }
+
+        $entry = @unserialize($raw);
+        if ($entry === false) {
+            @unlink($path);
+
+            return null;
+        }
+
+        return $entry;
     }
 
     /**

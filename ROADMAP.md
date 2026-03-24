@@ -7,7 +7,7 @@
 ### Features
 - [x] PSR-14 Event Dispatcher — 38 granular events (connection, session, subscription, data change, alarms, read/write, browse, cache, retry). NullEventDispatcher by default, zero overhead. Alarm deduction from event fields (ActiveState, AckedState, ConfirmedState, ShelvingState, LimitAlarm, OffNormalAlarm).
 - [ ] Cache for metadata `read()` (DisplayName, BrowseName, DataType, NodeClass, Description), **`not Value`**
-- [ ] CLI Tool
+- [x] CLI Tool — `bin/opcua-cli` with browse, read, endpoints, watch commands. Security, JSON, debug logging.
 - [ ] xml Code Generator
 - [ ] `TBD` Telemetry
 - [ ] Server Trust Management (also for cli)
@@ -90,6 +90,18 @@ Verify that the server certificate has not been revoked before connecting. Requi
 - `SetTriggering` — configure a node that triggers sampling of other nodes
 - `ModifyMonitoredItems` — change sampling interval or queue size on existing monitored items without recreating them
 
+
+## v5.x
+
+### CLI Commands
+- [ ] `write` — write a value to a node (`opcua-cli write <endpoint> <nodeId> <value> --type=Int32`)
+- [ ] `call` — invoke a method (`opcua-cli call <endpoint> <objectId> <methodId> [args...]`)
+- [ ] `history` — read historical data (`opcua-cli history <endpoint> <nodeId> --from="1 hour ago" --to=now`)
+- [ ] `tree` — dump the full address space as tree/JSON
+- [ ] `subscribe` — subscription with continuous output on stdout (pipe-friendly)
+- [ ] `discover-types` — list server custom types
+
+---
 
 ## Won't Do (by design)
 

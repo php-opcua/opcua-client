@@ -8,6 +8,7 @@
     "docs": "https://github.com/GianfriAur/opcua-php-client/tree/master/doc"
   },
   "type": "library",
+  "bin": ["bin/opcua-cli"],
   "license": "MIT",
   "autoload": {
     "psr-4": {

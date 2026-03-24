@@ -24,6 +24,8 @@
 - Unit tests for the event system: NullEventDispatcher, custom dispatcher, event properties, alarm event classes.
 - Documentation: [Events](doc/14-events.md) chapter with full event reference, Laravel integration, and practical examples.
 - **Code style enforcement.** Added `friendsofphp/php-cs-fixer` with Laravel-style rules (PSR-12 + opinionated). Run `composer format` before committing. `.editorconfig` included for IDE support.
+- **CLI Tool** (`bin/opcua-cli`). Four commands: `browse` (flat + recursive tree), `read` (any attribute), `endpoints` (discover security), `watch` (subscription or polling). Full security, JSON output, debug logging. Zero additional dependencies. Documentation: [CLI Tool](doc/15-cli.md).
+- `MockClient::onGetEndpoints()` handler for mocking endpoint discovery results.
 
 ### Refactored
 

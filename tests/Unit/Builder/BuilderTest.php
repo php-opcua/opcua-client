@@ -228,6 +228,25 @@ describe('MonitoredItemsBuilder', function () {
         expect($results)->toHaveCount(2);
     });
 
+    it('segment without prior from auto-creates root starting node', function () {
+        $mock = new MockTransport();
+        $mock->addResponse(buildMsgResponse(557, function (BinaryEncoder $e) {
+            $e->writeInt32(1);
+            $e->writeUInt32(0);
+            $e->writeInt32(1);
+            $e->writeExpandedNodeId(NodeId::numeric(0, 2253));
+            $e->writeUInt32(0xFFFFFFFF);
+            $e->writeInt32(0);
+        }));
+
+        $client = setupConnectedClient($mock);
+        $results = $client->translateBrowsePaths()
+            ->segment(new Gianfriaur\OpcuaPhpClient\Types\QualifiedName(0, 'Server'))
+            ->execute();
+
+        expect($results)->toHaveCount(1);
+    });
+
     it('supports segment with explicit QualifiedName in BrowsePathsBuilder', function () {
         $mock = new MockTransport();
         $mock->addResponse(buildMsgResponse(557, function (BinaryEncoder $e) {

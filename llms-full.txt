@@ -625,6 +625,8 @@ src/
 ├── Security/*.php                # SecureChannel, MessageSecurity, CertificateManager, enums
 ├── Types/*.php                   # 23 type/enum/DTO classes (all public readonly, includes ExtensionObject)
 ├── Builder/*.php                 # Fluent builders for multi-operations
+├── Cli/Application.php            # CLI entry point, command routing
+├── Cli/Commands/*.php             # 4 CLI commands (browse, read, endpoints, watch)
 ├── Event/NullEventDispatcher.php   # No-op PSR-14 dispatcher
 ├── Event/*.php                    # 38 event classes
 ├── Cache/InMemoryCache.php        # PSR-16 in-memory cache

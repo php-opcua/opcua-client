@@ -235,6 +235,19 @@ describe('InMemoryCache', function () {
 
         expect($cache->get('expiring', 'gone'))->toBe('gone');
     });
+
+    it('deleteByPrefix removes matching entries', function () {
+        $cache = new InMemoryCache(300);
+        $cache->set('opcua:abc:browse:i=85', 'data1');
+        $cache->set('opcua:abc:browse:i=86', 'data2');
+        $cache->set('opcua:xyz:browse:i=85', 'data3');
+
+        $cache->deleteByPrefix('opcua:abc');
+
+        expect($cache->get('opcua:abc:browse:i=85'))->toBeNull();
+        expect($cache->get('opcua:abc:browse:i=86'))->toBeNull();
+        expect($cache->get('opcua:xyz:browse:i=85'))->toBe('data3');
+    });
 });
 
 describe('FileCache', function () {
@@ -499,6 +512,48 @@ describe('ManagesCacheTrait / Client integration', function () {
         @array_map('unlink', glob($cacheDir . '/*.cache') ?: []);
         @rmdir($cacheDir);
         expect(true)->toBeTrue();
+    });
+
+    it('FileCache set creates directory if not exists', function () {
+        $newDir = sys_get_temp_dir() . '/opcua-mkdir-test-' . uniqid() . '/nested';
+        $cache = new FileCache($newDir, 300);
+        $cache->set('testKey', 'testValue');
+        expect($cache->get('testKey'))->toBe('testValue');
+        @array_map('unlink', glob($newDir . '/*.cache') ?: []);
+        @rmdir($newDir);
+    });
+
+    it('FileCache readEntry returns null for non-existent path', function () {
+        $dir = sys_get_temp_dir() . '/opcua-readentry-test-' . uniqid();
+        $cache = new FileCache($dir, 300);
+        $method = new ReflectionMethod($cache, 'readEntry');
+        $result = $method->invoke($cache, '/non/existent/path/file.cache');
+        expect($result)->toBeNull();
+        @rmdir($dir);
+    });
+
+    it('FileCache readEntry returns null for corrupted file', function () {
+        $dir = sys_get_temp_dir() . '/opcua-readentry-corrupt-' . uniqid();
+        $cache = new FileCache($dir, 300);
+        $path = $dir . '/corrupt.cache';
+        file_put_contents($path, 'not-valid-serialized-data');
+        $method = new ReflectionMethod($cache, 'readEntry');
+        $result = $method->invoke($cache, $path);
+        expect($result)->toBeNull();
+        expect(file_exists($path))->toBeFalse();
+        @rmdir($dir);
+    });
+
+    it('FileCache set recreates directory if deleted after construction', function () {
+        $dir = sys_get_temp_dir() . '/opcua-rmdir-test-' . uniqid();
+        $cache = new FileCache($dir, 300);
+        rmdir($dir);
+        expect(is_dir($dir))->toBeFalse();
+        $cache->set('testKey', 'testValue');
+        expect(is_dir($dir))->toBeTrue();
+        expect($cache->get('testKey'))->toBe('testValue');
+        @array_map('unlink', glob($dir . '/*.cache') ?: []);
+        @rmdir($dir);
     });
 
     it('invalidateByPrefix handles empty store', function () {

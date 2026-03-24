@@ -61,6 +61,9 @@ class MockClient implements OpcUaClientInterface
     /** @var array<string, callable> */
     private array $resolveHandlers = [];
 
+    /** @var ?callable */
+    private $endpointsHandler = null;
+
     /** @var array<array{method: string, args: array}> */
     private array $calls = [];
 
@@ -328,7 +331,7 @@ class MockClient implements OpcUaClientInterface
             $this->cacheInitialized = true;
         }
 
-return $this->cache;
+        return $this->cache;
     }
 
     public function invalidateCache(NodeId|string $nodeId): void
@@ -443,9 +446,24 @@ return $this->cache;
         return new CallResult(0, [], []);
     }
 
+    /**
+     * @param callable(string $endpointUrl): EndpointDescription[] $handler
+     * @return $this
+     */
+    public function onGetEndpoints(callable $handler): self
+    {
+        $this->endpointsHandler = $handler;
+
+        return $this;
+    }
+
     public function getEndpoints(string $endpointUrl, bool $useCache = true): array
     {
         $this->record('getEndpoints', [$endpointUrl]);
+
+        if ($this->endpointsHandler !== null) {
+            return ($this->endpointsHandler)($endpointUrl);
+        }
 
         return [];
     }

@@ -639,7 +639,15 @@ class SecureChannel
             return 0;
         }
 
-        $details = openssl_pkey_get_details($this->clientPrivateKey);
+        return $this->extractKeyLengthBytes(openssl_pkey_get_details($this->clientPrivateKey));
+    }
+
+    /**
+     * @param array|false $details
+     * @return int
+     */
+    private function extractKeyLengthBytes(array|false $details): int
+    {
         if ($details === false) {
             throw new SecurityException('Failed to get client private key details');
         }

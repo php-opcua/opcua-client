@@ -275,6 +275,30 @@ class AlarmHandler {
 }
 ```
 
+### Explore from the terminal
+
+```bash
+# Browse the address space
+php vendor/bin/opcua-cli browse opc.tcp://192.168.1.10:4840 /Objects
+
+# Read a value
+php vendor/bin/opcua-cli read opc.tcp://192.168.1.10:4840 "ns=2;i=1001"
+
+# Watch a value in real time (subscription mode)
+php vendor/bin/opcua-cli watch opc.tcp://192.168.1.10:4840 "ns=2;i=1001"
+
+# Discover endpoints
+php vendor/bin/opcua-cli endpoints opc.tcp://192.168.1.10:4840
+
+# With security and JSON output
+php vendor/bin/opcua-cli read opc.tcp://server:4840 "i=2259" \
+  -s Basic256Sha256 -m SignAndEncrypt \
+  --cert=/certs/client.pem --key=/certs/client.key \
+  -u operator -p secret --json
+```
+
+Zero additional dependencies. Full security support, JSON output (`--json`), debug logging (`--debug`). See [CLI documentation](doc/15-cli.md) for details.
+
 ### Auto-discover custom types
 
 ```php
@@ -322,6 +346,7 @@ $point = $client->read($pointNodeId)->getValue();
 | **Logging** | Optional structured logging via any PSR-3 logger — connect, retry, errors, protocol details |
 | **Cache** | Browse and resolve results cached by default (InMemoryCache, 300s TTL). Plug in any PSR-16 driver (FileCache, Laravel, Redis) |
 | **Events** | 38 granular PSR-14 events — connection, session, subscription, data change, alarms, read/write, browse, cache, retry. Zero overhead when unused |
+| **CLI Tool** | `opcua-cli` — browse, read, watch, and discover endpoints from the terminal. Security, JSON output, and debug logging |
 
 ## Documentation
 
@@ -341,6 +366,7 @@ $point = $client->read($pointNodeId)->getValue();
 | 12 | [ExtensionObject Codecs](doc/12-extension-object-codecs.md) | Custom type decoding, codec interface, repository API |
 | 13 | [Testing](doc/13-testing.md) | MockClient, DataValue factories, call tracking, test examples |
 | 14 | [Events](doc/14-events.md) | PSR-14 event system, 38 events, alarm deduction, Laravel integration, examples |
+| 15 | [CLI Tool](doc/15-cli.md) | Browse, read, watch, endpoints — from the terminal with security and JSON |
 
 ## Testing
 
