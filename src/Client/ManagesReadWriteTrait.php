@@ -10,7 +10,6 @@ use Gianfriaur\OpcuaPhpClient\Event\NodeValueWritten;
 use Gianfriaur\OpcuaPhpClient\Event\WriteTypeDetected;
 use Gianfriaur\OpcuaPhpClient\Event\WriteTypeDetecting;
 use Gianfriaur\OpcuaPhpClient\Exception\WriteTypeDetectionException;
-use Gianfriaur\OpcuaPhpClient\Exception\WriteTypeMismatchException;
 use Gianfriaur\OpcuaPhpClient\Types\AttributeId;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
 use Gianfriaur\OpcuaPhpClient\Types\CallResult;

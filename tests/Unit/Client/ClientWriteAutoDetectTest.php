@@ -7,9 +7,7 @@ require_once __DIR__ . '/ClientTraitsCoverageTest.php';
 use Gianfriaur\OpcuaPhpClient\Client;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Exception\WriteTypeDetectionException;
-use Gianfriaur\OpcuaPhpClient\Exception\WriteTypeMismatchException;
 use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
-use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\StatusCode;
 
 function writeResponseMsg(int $statusCode = 0): string

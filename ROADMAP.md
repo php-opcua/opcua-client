@@ -10,9 +10,7 @@
 - [ ] Cache for metadata `read()` (DisplayName, BrowseName, DataType, NodeClass, Description), **`not Value`**
 - [x] CLI Tool — `bin/opcua-cli` with browse, read, write, endpoints, watch commands. Security, JSON, debug logging.
 - [ ] xml Code Generator
-- [ ] `TBD` Telemetry
 - [x] Server Trust Management (also for cli) — FileTrustStore, TrustPolicy enum, autoAccept(force), CLI trust/trust:list/trust:remove, 3 events
-- [ ] NodeManagement Services
 - [ ] Triggering / ModifyMonitoredItems
 - [ ] Symfony integration like Laravel ( `gianfriaur/opcua-symfony-client` )
 
@@ -84,9 +82,6 @@ Verify that the server certificate has not been revoked before connecting. Requi
 ### Query Services
 `QueryFirst` / `QueryNext` — structured queries on the address space for servers where browse is too slow due to the size of the node tree.
 
-### NodeManagement Services
-`AddNodes`, `DeleteNodes`, `AddReferences` — for OPC UA servers that support dynamic address space modification at runtime.
-
 ### Triggering / ModifyMonitoredItems
 - `SetTriggering` — configure a node that triggers sampling of other nodes
 - `ModifyMonitoredItems` — change sampling interval or queue size on existing monitored items without recreating them
@@ -100,6 +95,21 @@ Verify that the server certificate has not been revoked before connecting. Requi
 - [ ] `tree` — dump the full address space as tree/JSON
 - [ ] `subscribe` — subscription with continuous output on stdout (pipe-friendly)
 - [ ] `discover-types` — list server custom types
+
+---
+
+## Blocked
+
+Features that are ready to implement but blocked by external dependencies. This library requires integration test coverage for every service before shipping — unit tests on encoding/decoding alone are not sufficient.
+
+| Feature | OPC UA | Blocked by | Unblocks when |
+|---------|--------|-----------|---------------|
+| NodeManagement Services | 1.01+ | node-opcua returns `BadServiceUnsupported` | node-opcua implements it |
+
+### NodeManagement Services
+`AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences` — for OPC UA servers that support dynamic address space modification at runtime.
+
+The test infrastructure ([opcua-test-server-suite](https://github.com/GianfriAur/opcua-test-server-suite)) uses [node-opcua](https://github.com/node-opcua/node-opcua), which does not implement NodeManagement services. All four handlers (`_on_AddNodes`, `_on_DeleteNodes`, `_on_AddReferences`, `_on_DeleteReferences`) return `BadServiceUnsupported`. The NodeManagement server profile is explicitly commented out as unimplemented in the node-opcua source.
 
 ---
 
@@ -126,6 +136,14 @@ I don't see a valid use case for it in this library.
 
 ### RedisDriver / MemcachedDriver cache drivers
 These would require `ext-redis` or `ext-memcached` (or `predis/predis`), breaking the zero-dependency philosophy. The cache system uses PSR-16 `CacheInterface`, so any Redis or Memcached adapter that implements PSR-16 works out of the box — including `illuminate/cache` (Laravel), `symfony/cache`, and `cache/redis-adapter`. There is no reason to bundle drivers that would force all users to install extensions they may not need.
+
+### OpenTelemetry Integration (here)
+Telemetry (distributed tracing, metrics) belongs in the session manager ([`gianfriaur/opcua-php-client-session-manager`](https://github.com/GianfriAur/opcua-php-client-session-manager)), not in this library. The reasons:
+
+- **Short-lived connections make spans meaningless.** This client is synchronous — each PHP request opens a connection, performs a few operations, and disconnects. An OpenTelemetry span wrapping `connect → read → disconnect` in a 50ms request adds no insight you don't already get from APM tools already instrumenting your HTTP layer (Laravel Telescope, Datadog APM, New Relic, etc.).
+- **Telemetry shines on long-lived processes.** The session manager runs as a persistent daemon, maintaining connections across hundreds of PHP requests. That's where spans like `opcua.publish`, retry histograms, active session counts, and subscription latency distributions actually provide value — correlating OPC UA operations across time, not within a single request.
+
+Telemetry support will be implemented in `gianfriaur/opcua-php-client-session-manager` where persistent connections make it meaningful.
 
 ### Full OPC UA Server Implementation (here)
 This library is a client-only implementation. Building a server requires a fundamentally different architecture (address space management, session handling, subscription engine, etc.).
