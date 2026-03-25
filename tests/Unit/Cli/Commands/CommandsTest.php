@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\BrowseCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\EndpointsCommand;
+use Gianfriaur\OpcuaPhpClient\Cli\Commands\GenerateNodesetCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\ReadCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\WatchCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\WriteCommand;
@@ -626,5 +627,69 @@ describe('WriteCommand', function () {
         $decoded = json_decode(getStreamContent($stdout), true);
         expect($decoded['NodeId'])->toBe('ns=2;i=1001');
         expect($decoded['Value'])->toBe('42');
+    });
+});
+
+describe('GenerateNodesetCommand', function () {
+
+    it('returns name and description', function () {
+        $cmd = new GenerateNodesetCommand();
+        expect($cmd->getName())->toBe('generate:nodeset');
+        expect($cmd->getDescription())->toBeString();
+        expect($cmd->getUsage())->toContain('generate:nodeset');
+        expect($cmd->requiresConnection())->toBeFalse();
+    });
+
+    it('returns 1 when no arguments', function () {
+        $cmd = new GenerateNodesetCommand();
+        $client = MockClient::create();
+        [$stdout, $stderr] = createOutputStream();
+        $output = new ConsoleOutput($stdout, $stderr);
+        $code = $cmd->execute($client, [], [], $output);
+        expect($code)->toBe(1);
+    });
+
+    it('returns 1 for nonexistent file', function () {
+        $cmd = new GenerateNodesetCommand();
+        $client = MockClient::create();
+        [$stdout, $stderr] = createOutputStream();
+        $output = new ConsoleOutput($stdout, $stderr);
+        $code = $cmd->execute($client, ['/nonexistent/file.xml'], [], $output);
+        expect($code)->toBe(1);
+        expect(getStreamContent($stderr))->toContain('File not found');
+    });
+
+    it('generates files from test fixture', function () {
+        $cmd = new GenerateNodesetCommand();
+        $client = MockClient::create();
+        [$stdout, $stderr] = createOutputStream();
+        $output = new ConsoleOutput($stdout, $stderr);
+
+        $outputDir = sys_get_temp_dir() . '/opcua-gen-test-' . uniqid();
+
+        $code = $cmd->execute(
+            $client,
+            [__DIR__ . '/../../../Fixtures/TestNodeSet2.xml'],
+            ['output' => $outputDir, 'namespace' => 'Test\\Generated'],
+            $output,
+        );
+
+        expect($code)->toBe(0);
+        expect(file_exists($outputDir . '/TestNodeIds.php'))->toBeTrue();
+        expect(file_exists($outputDir . '/Codecs/TestPointCodec.php'))->toBeTrue();
+        expect(file_exists($outputDir . '/Codecs/TestRangeCodec.php'))->toBeTrue();
+        expect(file_exists($outputDir . '/Codecs/TestPersonCodec.php'))->toBeTrue();
+        expect(file_exists($outputDir . '/TestRegistrar.php'))->toBeTrue();
+
+        $content = getStreamContent($stdout);
+        expect($content)->toContain('6 file(s) generated');
+        expect(file_exists($outputDir . '/Enums/TestStatusEnum.php'))->toBeTrue();
+
+        array_map('unlink', glob($outputDir . '/Enums/*.php') ?: []);
+        @rmdir($outputDir . '/Enums');
+        array_map('unlink', glob($outputDir . '/Codecs/*.php') ?: []);
+        @rmdir($outputDir . '/Codecs');
+        array_map('unlink', glob($outputDir . '/*.php') ?: []);
+        @rmdir($outputDir);
     });
 });

@@ -164,6 +164,41 @@ Output:
 
 Stop with Ctrl+C.
 
+### `generate:nodeset` — Generate PHP classes from NodeSet2.xml
+
+```bash
+# Generate with default output
+php vendor/bin/opcua-cli generate:nodeset path/to/Opc.Ua.Di.NodeSet2.xml
+
+# Specify output directory and namespace
+php vendor/bin/opcua-cli generate:nodeset path/to/Opc.Ua.Di.NodeSet2.xml \
+  --output=src/Generated/Di/ --namespace=App\\OpcUa\\Di
+```
+
+Output:
+
+```
+Generated: src/Generated/Di/DiNodeIds.php
+Generated: src/Generated/Di/Codecs/DeviceTypeCodec.php
+Generated: src/Generated/Di/DiRegistrar.php
+
+Done. 3 file(s) generated in src/Generated/Di/
+```
+
+Generates three types of files:
+- **NodeId constants** — one class with all node IDs as string constants
+- **Codec classes** — one per structured DataType, implementing `ExtensionObjectCodec`
+- **Registrar** — a class with `register(ExtensionObjectRepository)` to batch-register all codecs
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--output=PATH` | Output directory (default: `./generated/`) |
+| `--namespace=NS` | PHP namespace for generated classes (default: `Generated\\OpcUa`) |
+
+**No server connection required** — reads the XML file locally.
+
 ## Security Options
 
 All commands support full security configuration:

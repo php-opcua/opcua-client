@@ -387,9 +387,9 @@ $point = $client->read($pointNodeId)->getValue();
 | **MockClient** | In-memory test double — register handlers, assert calls, no TCP connection needed |
 | **Logging** | Optional structured logging via any PSR-3 logger — connect, retry, errors, protocol details |
 | **Cache** | Browse, resolve, and metadata read results cached (InMemoryCache, 300s TTL). Plug in any PSR-16 driver (FileCache, Laravel, Redis). Metadata cache opt-in via `setReadMetadataCache(true)` |
-| **Events** | 38 granular PSR-14 events — connection, session, subscription, data change, alarms, read/write, browse, cache, retry. Zero overhead when unused |
+| **Events** | 47 granular PSR-14 events — connection, session, subscription, data change, alarms, read/write, browse, cache, retry. Zero overhead when unused |
 | **Trust Store** | Persistent server certificate validation — file-based trust store, 3 policies (fingerprint/expiry/full CA chain), TOFU auto-accept, CLI management |
-| **CLI Tool** | `opcua-cli` — browse, read, write, watch, discover endpoints, and manage trusted certificates. Security, JSON output, and debug logging |
+| **CLI Tool** | `opcua-cli` — browse, read, write, watch, discover endpoints, manage trusted certificates, and generate code from NodeSet2.xml. Security, JSON output, and debug logging |
 
 ## Documentation
 

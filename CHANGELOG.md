@@ -4,6 +4,7 @@
 
 ### Added
 
+- **NodeSet2.xml Code Generator.** New `generate:nodeset` CLI command reads OPC UA NodeSet2.xml files (companion specs, PLC information models) and generates PHP classes: NodeId constants, ExtensionObjectCodec classes for each structured DataType, and a Registrar class for batch registration. Usage: `opcua-cli generate:nodeset path/to/File.NodeSet2.xml --output=src/Generated/ --namespace=App\\OpcUa`. No server connection required — works offline from the XML file.
 - **ModifyMonitoredItems.** Change sampling interval, queue size, and other parameters on existing monitored items without recreating them. `$client->modifyMonitoredItems($subId, [...])` returns `MonitoredItemModifyResult[]` with revised parameters. Dispatches `MonitoredItemModified` event per item.
 - **SetTriggering.** Configure a monitored item as a trigger for other items — linked items are only sampled when the trigger changes. `$client->setTriggering($subId, $triggerId, $linksToAdd, $linksToRemove)` returns `SetTriggeringResult` with per-link status codes. Dispatches `TriggeringConfigured` event.
 - **Read Metadata Cache.** Non-Value attributes (DisplayName, BrowseName, DataType, NodeClass, Description, etc.) can now be cached via PSR-16 to avoid redundant server reads. Opt-in via `setReadMetadataCache(true)`. The Value attribute (id 13) is never cached. Use `read($nodeId, $attributeId, refresh: true)` to bypass the cache and re-read from the server. `invalidateCache($nodeId)` clears all cached metadata for a node.

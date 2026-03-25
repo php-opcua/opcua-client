@@ -126,7 +126,8 @@ src/
 │   │   ├── ReadCommand.php            # Read node values/attributes
 │   │   ├── WriteCommand.php           # Write values to nodes
 │   │   ├── EndpointsCommand.php       # Discover endpoints
-│   │   └── WatchCommand.php           # Real-time value watching
+│   │   ├── WatchCommand.php           # Real-time value watching
+│   │   └── GenerateNodesetCommand.php # Generate PHP from NodeSet2.xml
 │   └── Output/
 │       ├── ConsoleOutput.php          # ANSI colors, tree chars
 │       └── JsonOutput.php             # JSON output

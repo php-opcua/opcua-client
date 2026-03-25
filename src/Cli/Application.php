@@ -7,6 +7,7 @@ namespace Gianfriaur\OpcuaPhpClient\Cli;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\BrowseCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\CommandInterface;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\EndpointsCommand;
+use Gianfriaur\OpcuaPhpClient\Cli\Commands\GenerateNodesetCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\ReadCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\TrustCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\TrustListCommand;
@@ -36,6 +37,7 @@ class Application
         $this->registerCommand(new WriteCommand());
         $this->registerCommand(new EndpointsCommand());
         $this->registerCommand(new WatchCommand());
+        $this->registerCommand(new GenerateNodesetCommand());
         $this->registerCommand(new TrustCommand());
         $this->registerCommand(new TrustListCommand());
         $this->registerCommand(new TrustRemoveCommand());

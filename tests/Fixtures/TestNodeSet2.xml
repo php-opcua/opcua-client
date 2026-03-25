@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UANodeSet xmlns="http://opcfoundation.org/UA/2011/03/UANodeSet.xsd"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:uax="http://opcfoundation.org/UA/2008/02/Types.xsd">
+
+  <NamespaceUris>
+    <Uri>urn:test:opcua:nodeset-generator</Uri>
+  </NamespaceUris>
+
+  <Models>
+    <Model ModelUri="urn:test:opcua:nodeset-generator" Version="1.0.0" PublicationDate="2026-03-25T00:00:00Z" />
+  </Models>
+
+  <Aliases>
+    <Alias Alias="Boolean">i=1</Alias>
+    <Alias Alias="Int32">i=6</Alias>
+    <Alias Alias="UInt32">i=7</Alias>
+    <Alias Alias="Double">i=11</Alias>
+    <Alias Alias="String">i=12</Alias>
+    <Alias Alias="HasSubtype">i=45</Alias>
+    <Alias Alias="HasEncoding">i=38</Alias>
+    <Alias Alias="HasComponent">i=47</Alias>
+    <Alias Alias="Organizes">i=35</Alias>
+  </Aliases>
+
+  <!-- Structured DataType: TestPoint with X, Y, Z -->
+  <UADataType NodeId="ns=1;i=3001" BrowseName="1:TestPoint">
+    <DisplayName>TestPoint</DisplayName>
+    <References>
+      <Reference ReferenceType="HasSubtype" IsForward="false">i=22</Reference>
+      <Reference ReferenceType="HasEncoding" IsForward="true">ns=1;i=5001</Reference>
+    </References>
+    <Definition Name="TestPoint">
+      <Field Name="X" DataType="Double" />
+      <Field Name="Y" DataType="Double" />
+      <Field Name="Z" DataType="Double" />
+    </Definition>
+  </UADataType>
+
+  <!-- Binary Encoding object for TestPoint -->
+  <UAObject NodeId="ns=1;i=5001" BrowseName="1:Default Binary">
+    <DisplayName>Default Binary</DisplayName>
+    <References>
+      <Reference ReferenceType="HasEncoding" IsForward="false">ns=1;i=3001</Reference>
+    </References>
+  </UAObject>
+
+  <!-- Structured DataType: TestRange with Min, Max, Value -->
+  <UADataType NodeId="ns=1;i=3002" BrowseName="1:TestRange">
+    <DisplayName>TestRange</DisplayName>
+    <References>
+      <Reference ReferenceType="HasSubtype" IsForward="false">i=22</Reference>
+      <Reference ReferenceType="HasEncoding" IsForward="true">ns=1;i=5002</Reference>
+    </References>
+    <Definition Name="TestRange">
+      <Field Name="Min" DataType="Double" />
+      <Field Name="Max" DataType="Double" />
+      <Field Name="Value" DataType="Double" />
+    </Definition>
+  </UADataType>
+
+  <UAObject NodeId="ns=1;i=5002" BrowseName="1:Default Binary">
+    <DisplayName>Default Binary</DisplayName>
+    <References>
+      <Reference ReferenceType="HasEncoding" IsForward="false">ns=1;i=3002</Reference>
+    </References>
+  </UAObject>
+
+  <!-- Structured DataType: TestPerson with mixed types -->
+  <UADataType NodeId="ns=1;i=3003" BrowseName="1:TestPerson">
+    <DisplayName>TestPerson</DisplayName>
+    <References>
+      <Reference ReferenceType="HasSubtype" IsForward="false">i=22</Reference>
+      <Reference ReferenceType="HasEncoding" IsForward="true">ns=1;i=5003</Reference>
+    </References>
+    <Definition Name="TestPerson">
+      <Field Name="Name" DataType="String" />
+      <Field Name="Age" DataType="UInt32" />
+      <Field Name="Active" DataType="Boolean" />
+    </Definition>
+  </UADataType>
+
+  <UAObject NodeId="ns=1;i=5003" BrowseName="1:Default Binary">
+    <DisplayName>Default Binary</DisplayName>
+    <References>
+      <Reference ReferenceType="HasEncoding" IsForward="false">ns=1;i=3003</Reference>
+    </References>
+  </UAObject>
+
+  <!-- Enumeration DataType -->
+  <UADataType NodeId="ns=1;i=3010" BrowseName="1:TestStatusEnum">
+    <DisplayName>TestStatusEnum</DisplayName>
+    <References>
+      <Reference ReferenceType="HasSubtype" IsForward="false">i=29</Reference>
+    </References>
+    <Definition Name="TestStatusEnum">
+      <Field Name="IDLE" Value="0" />
+      <Field Name="RUNNING" Value="1" />
+      <Field Name="ERROR" Value="2" />
+      <Field Name="STOPPED" Value="3" />
+    </Definition>
+  </UADataType>
+
+  <!-- Regular Object node (for NodeId constants) -->
+  <UAObject NodeId="ns=1;i=1000" BrowseName="1:TestFolder">
+    <DisplayName>TestFolder</DisplayName>
+    <References>
+      <Reference ReferenceType="Organizes" IsForward="false">i=85</Reference>
+    </References>
+  </UAObject>
+
+  <!-- Variable nodes -->
+  <UAVariable NodeId="ns=1;i=2001" BrowseName="1:Temperature" DataType="Double">
+    <DisplayName>Temperature</DisplayName>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">ns=1;i=1000</Reference>
+    </References>
+  </UAVariable>
+
+  <UAVariable NodeId="ns=1;i=2002" BrowseName="1:Counter" DataType="Int32">
+    <DisplayName>Counter</DisplayName>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">ns=1;i=1000</Reference>
+    </References>
+  </UAVariable>
+
+  <!-- Method node -->
+  <UAMethod NodeId="ns=1;i=7001" BrowseName="1:Reset">
+    <DisplayName>Reset</DisplayName>
+    <References>
+      <Reference ReferenceType="HasComponent" IsForward="false">ns=1;i=1000</Reference>
+    </References>
+  </UAMethod>
+
+</UANodeSet>
