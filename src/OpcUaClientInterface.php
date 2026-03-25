@@ -647,6 +647,39 @@ interface OpcUaClientInterface
     public function deleteMonitoredItems(int $subscriptionId, array $monitoredItemIds): array;
 
     /**
+     * Modify parameters of existing monitored items without recreating them.
+     *
+     * @param int $subscriptionId The subscription owning the monitored items.
+     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool}> $itemsToModify Items to modify.
+     * @return Types\MonitoredItemModifyResult[]
+     *
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     *
+     * @see Types\MonitoredItemModifyResult
+     */
+    public function modifyMonitoredItems(int $subscriptionId, array $itemsToModify): array;
+
+    /**
+     * Configure triggering links between monitored items.
+     *
+     * The triggering item controls when linked items are sampled and reported.
+     * Linked items only produce notifications when the triggering item changes.
+     *
+     * @param int $subscriptionId The subscription owning the items.
+     * @param int $triggeringItemId The monitored item that acts as the trigger.
+     * @param int[] $linksToAdd Monitored item IDs to link as triggered items.
+     * @param int[] $linksToRemove Monitored item IDs to unlink.
+     * @return Types\SetTriggeringResult
+     *
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     *
+     * @see Types\SetTriggeringResult
+     */
+    public function setTriggering(int $subscriptionId, int $triggeringItemId, array $linksToAdd = [], array $linksToRemove = []): Types\SetTriggeringResult;
+
+    /**
      * Delete a subscription and all its monitored items.
      *
      * @param int $subscriptionId The subscription to delete.

@@ -169,6 +169,50 @@ for ($i = 0; $i < 100; $i++) {
 }
 ```
 
+## Modifying Monitored Items
+
+Change sampling interval, queue size, or other parameters on existing monitored items without recreating them:
+
+```php
+$results = $client->modifyMonitoredItems($subscriptionId, [
+    ['monitoredItemId' => $monId1, 'samplingInterval' => 1000.0],
+    ['monitoredItemId' => $monId2, 'queueSize' => 10, 'discardOldest' => false],
+]);
+
+foreach ($results as $result) {
+    echo "Status: " . StatusCode::getName($result->statusCode) . "\n";
+    echo "Revised interval: {$result->revisedSamplingInterval}ms\n";
+    echo "Revised queue: {$result->revisedQueueSize}\n";
+}
+```
+
+> **Events:** Dispatches `MonitoredItemModified` per item. See [Events](14-events.md).
+
+## SetTriggering
+
+Configure a monitored item as a trigger for other items. Linked items are only sampled and reported when the triggering item changes — useful for reducing traffic when you have many variables but only care about them during specific conditions:
+
+```php
+$result = $client->setTriggering(
+    $subscriptionId,
+    $triggeringItemId,    // master: e.g. a "CycleComplete" flag
+    [$linkedId1, $linkedId2],  // slaves: sampled only when master changes
+);
+
+foreach ($result->addResults as $statusCode) {
+    echo StatusCode::getName($statusCode) . "\n"; // Good
+}
+
+// Later: remove a link
+$result = $client->setTriggering(
+    $subscriptionId,
+    $triggeringItemId,
+    linksToRemove: [$linkedId1],
+);
+```
+
+> **Events:** Dispatches `TriggeringConfigured` after the operation completes. See [Events](14-events.md).
+
 ## Cleanup
 
 Delete monitored items or the entire subscription when you are done:

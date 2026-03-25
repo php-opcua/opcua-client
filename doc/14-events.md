@@ -86,6 +86,8 @@ Every event is a `readonly` class in `Gianfriaur\OpcuaPhpClient\Event\`. All eve
 | `SubscriptionTransferred` | `$subscriptionId`, `$statusCode` | After `transferSubscriptions()` (per item) |
 | `MonitoredItemCreated` | `$subscriptionId`, `$monitoredItemId`, `$nodeId`, `$statusCode` | After `createMonitoredItems()` / `createEventMonitoredItem()` (per item) |
 | `MonitoredItemDeleted` | `$subscriptionId`, `$monitoredItemId`, `$statusCode` | After `deleteMonitoredItems()` (per item) |
+| `MonitoredItemModified` | `$subscriptionId`, `$monitoredItemId`, `$statusCode` | After `modifyMonitoredItems()` (per item) |
+| `TriggeringConfigured` | `$subscriptionId`, `$triggeringItemId`, `$addResults`, `$removeResults` | After `setTriggering()` |
 
 ### Publish Events
 

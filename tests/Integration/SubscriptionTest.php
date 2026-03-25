@@ -156,4 +156,65 @@ describe('Subscription', function () {
         }
     })->group('integration');
 
+    it('modifies sampling interval on a monitored item', function () {
+        $client = null;
+        try {
+            $client = TestHelper::connectNoSecurity();
+
+            $sub = $client->createSubscription(500.0);
+            $subId = $sub->subscriptionId;
+
+            $counterNodeId = TestHelper::browseToNode($client, ['TestServer', 'Dynamic', 'Counter']);
+            $monResults = $client->createMonitoredItems($subId, [
+                ['nodeId' => $counterNodeId, 'samplingInterval' => 500.0],
+            ]);
+            $monId = $monResults[0]->monitoredItemId;
+
+            $modifyResults = $client->modifyMonitoredItems($subId, [
+                ['monitoredItemId' => $monId, 'samplingInterval' => 1000.0, 'queueSize' => 5],
+            ]);
+
+            expect($modifyResults)->toHaveCount(1);
+            expect(StatusCode::isGood($modifyResults[0]->statusCode))->toBeTrue();
+            expect($modifyResults[0]->revisedSamplingInterval)->toBeFloat();
+
+            $client->deleteMonitoredItems($subId, [$monId]);
+            $client->deleteSubscription($subId);
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
+    it('configures triggering between monitored items', function () {
+        $client = null;
+        try {
+            $client = TestHelper::connectNoSecurity();
+
+            $sub = $client->createSubscription(500.0);
+            $subId = $sub->subscriptionId;
+
+            $counterNodeId = TestHelper::browseToNode($client, ['TestServer', 'Dynamic', 'Counter']);
+            $randomNodeId = TestHelper::browseToNode($client, ['TestServer', 'Dynamic', 'Random']);
+
+            $monResults = $client->createMonitoredItems($subId, [
+                ['nodeId' => $counterNodeId, 'clientHandle' => 1],
+                ['nodeId' => $randomNodeId, 'clientHandle' => 2],
+            ]);
+
+            $triggerId = $monResults[0]->monitoredItemId;
+            $linkedId = $monResults[1]->monitoredItemId;
+
+            $result = $client->setTriggering($subId, $triggerId, [$linkedId]);
+
+            expect($result->addResults)->toHaveCount(1);
+            expect(StatusCode::isGood($result->addResults[0]))->toBeTrue();
+
+            $monIds = array_map(fn ($r) => $r->monitoredItemId, $monResults);
+            $client->deleteMonitoredItems($subId, $monIds);
+            $client->deleteSubscription($subId);
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
 })->group('integration');

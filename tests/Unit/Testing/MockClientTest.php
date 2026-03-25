@@ -269,6 +269,29 @@ describe('MockClient', function () {
         expect($results)->toBe([0]);
     });
 
+    it('modifyMonitoredItems returns default results', function () {
+        $mock = MockClient::create();
+        $results = $mock->modifyMonitoredItems(1, [
+            ['monitoredItemId' => 1, 'samplingInterval' => 1000.0],
+            ['monitoredItemId' => 2, 'queueSize' => 5],
+        ]);
+
+        expect($results)->toHaveCount(2);
+        expect($results[0])->toBeInstanceOf(Gianfriaur\OpcuaPhpClient\Types\MonitoredItemModifyResult::class);
+        expect($results[0]->statusCode)->toBe(0);
+        expect($results[0]->revisedSamplingInterval)->toBe(1000.0);
+        expect($results[1]->revisedQueueSize)->toBe(5);
+    });
+
+    it('setTriggering returns default results', function () {
+        $mock = MockClient::create();
+        $result = $mock->setTriggering(1, 1, [2, 3], [4]);
+
+        expect($result)->toBeInstanceOf(Gianfriaur\OpcuaPhpClient\Types\SetTriggeringResult::class);
+        expect($result->addResults)->toBe([0, 0]);
+        expect($result->removeResults)->toBe([0]);
+    });
+
     it('reconnect sets state to Connected', function () {
         $mock = MockClient::create();
         $mock->reconnect();

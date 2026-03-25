@@ -7,8 +7,10 @@ namespace Gianfriaur\OpcuaPhpClient\Protocol;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryDecoder;
 use Gianfriaur\OpcuaPhpClient\Encoding\BinaryEncoder;
 use Gianfriaur\OpcuaPhpClient\Types\AttributeId;
+use Gianfriaur\OpcuaPhpClient\Types\MonitoredItemModifyResult;
 use Gianfriaur\OpcuaPhpClient\Types\MonitoredItemResult;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
+use Gianfriaur\OpcuaPhpClient\Types\SetTriggeringResult;
 
 class MonitoredItemService extends AbstractProtocolService
 {
@@ -196,6 +198,133 @@ class MonitoredItemService extends AbstractProtocolService
         $filter->writeInt32(0);
 
         return $filter->getBuffer();
+    }
+
+    /**
+     * @param int $requestId
+     * @param NodeId $authToken
+     * @param int $subscriptionId
+     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool}> $itemsToModify
+     * @param int $timestampsToReturn
+     * @return string
+     */
+    public function encodeModifyMonitoredItemsRequest(
+        int $requestId,
+        NodeId $authToken,
+        int $subscriptionId,
+        array $itemsToModify,
+        int $timestampsToReturn = 2,
+    ): string {
+        $body = new BinaryEncoder();
+
+        $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::MODIFY_MONITORED_ITEMS_REQUEST));
+        $this->writeRequestHeader($body, $requestId, $authToken);
+
+        $body->writeUInt32($subscriptionId);
+        $body->writeUInt32($timestampsToReturn);
+
+        $body->writeInt32(count($itemsToModify));
+        foreach ($itemsToModify as $item) {
+            $body->writeUInt32($item['monitoredItemId']);
+
+            $body->writeUInt32($item['clientHandle'] ?? 0);
+            $body->writeDouble($item['samplingInterval'] ?? -1.0);
+            $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
+            $body->writeByte(0x00);
+            $body->writeUInt32($item['queueSize'] ?? 0);
+            $body->writeBoolean($item['discardOldest'] ?? true);
+        }
+
+        return $this->encodeRequestAuto($requestId, $body->getBuffer());
+    }
+
+    /**
+     * @param BinaryDecoder $decoder
+     * @return MonitoredItemModifyResult[]
+     */
+    public function decodeModifyMonitoredItemsResponse(BinaryDecoder $decoder): array
+    {
+        $this->readResponseMetadata($decoder);
+
+        $count = $decoder->readInt32();
+        $results = [];
+        for ($i = 0; $i < $count; $i++) {
+            $statusCode = $decoder->readUInt32();
+            $revisedSamplingInterval = $decoder->readDouble();
+            $revisedQueueSize = $decoder->readUInt32();
+            $decoder->readExtensionObject();
+
+            $results[] = new MonitoredItemModifyResult($statusCode, $revisedSamplingInterval, $revisedQueueSize);
+        }
+
+        $decoder->skipDiagnosticInfoArray();
+
+        return $results;
+    }
+
+    /**
+     * @param int $requestId
+     * @param NodeId $authToken
+     * @param int $subscriptionId
+     * @param int $triggeringItemId
+     * @param int[] $linksToAdd
+     * @param int[] $linksToRemove
+     * @return string
+     */
+    public function encodeSetTriggeringRequest(
+        int $requestId,
+        NodeId $authToken,
+        int $subscriptionId,
+        int $triggeringItemId,
+        array $linksToAdd = [],
+        array $linksToRemove = [],
+    ): string {
+        $body = new BinaryEncoder();
+
+        $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::SET_TRIGGERING_REQUEST));
+        $this->writeRequestHeader($body, $requestId, $authToken);
+
+        $body->writeUInt32($subscriptionId);
+        $body->writeUInt32($triggeringItemId);
+
+        $body->writeInt32(count($linksToAdd));
+        foreach ($linksToAdd as $id) {
+            $body->writeUInt32($id);
+        }
+
+        $body->writeInt32(count($linksToRemove));
+        foreach ($linksToRemove as $id) {
+            $body->writeUInt32($id);
+        }
+
+        return $this->encodeRequestAuto($requestId, $body->getBuffer());
+    }
+
+    /**
+     * @param BinaryDecoder $decoder
+     * @return SetTriggeringResult
+     */
+    public function decodeSetTriggeringResponse(BinaryDecoder $decoder): SetTriggeringResult
+    {
+        $this->readResponseMetadata($decoder);
+
+        $addCount = $decoder->readInt32();
+        $addResults = [];
+        for ($i = 0; $i < $addCount; $i++) {
+            $addResults[] = $decoder->readUInt32();
+        }
+
+        $decoder->skipDiagnosticInfoArray();
+
+        $removeCount = $decoder->readInt32();
+        $removeResults = [];
+        for ($i = 0; $i < $removeCount; $i++) {
+            $removeResults[] = $decoder->readUInt32();
+        }
+
+        $decoder->skipDiagnosticInfoArray();
+
+        return new SetTriggeringResult($addResults, $removeResults);
     }
 
     /**

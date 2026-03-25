@@ -22,10 +22,12 @@ use Gianfriaur\OpcuaPhpClient\Types\BuiltinType;
 use Gianfriaur\OpcuaPhpClient\Types\CallResult;
 use Gianfriaur\OpcuaPhpClient\Types\ConnectionState;
 use Gianfriaur\OpcuaPhpClient\Types\DataValue;
+use Gianfriaur\OpcuaPhpClient\Types\MonitoredItemModifyResult;
 use Gianfriaur\OpcuaPhpClient\Types\MonitoredItemResult;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\PublishResult;
 use Gianfriaur\OpcuaPhpClient\Types\ReferenceDescription;
+use Gianfriaur\OpcuaPhpClient\Types\SetTriggeringResult;
 use Gianfriaur\OpcuaPhpClient\Types\SubscriptionResult;
 use Gianfriaur\OpcuaPhpClient\Types\TransferResult;
 use Gianfriaur\OpcuaPhpClient\Types\Variant;
@@ -598,6 +600,26 @@ class MockClient implements OpcUaClientInterface
         $this->record('deleteMonitoredItems', [$subscriptionId, $monitoredItemIds]);
 
         return array_fill(0, count($monitoredItemIds), 0);
+    }
+
+    public function modifyMonitoredItems(int $subscriptionId, array $itemsToModify): array
+    {
+        $this->record('modifyMonitoredItems', [$subscriptionId, $itemsToModify]);
+
+        return array_map(
+            fn ($item) => new MonitoredItemModifyResult(0, $item['samplingInterval'] ?? 500.0, $item['queueSize'] ?? 1),
+            $itemsToModify,
+        );
+    }
+
+    public function setTriggering(int $subscriptionId, int $triggeringItemId, array $linksToAdd = [], array $linksToRemove = []): SetTriggeringResult
+    {
+        $this->record('setTriggering', [$subscriptionId, $triggeringItemId, $linksToAdd, $linksToRemove]);
+
+        return new SetTriggeringResult(
+            array_fill(0, count($linksToAdd), 0),
+            array_fill(0, count($linksToRemove), 0),
+        );
     }
 
     public function deleteSubscription(int $subscriptionId): int

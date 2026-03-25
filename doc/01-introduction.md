@@ -78,7 +78,7 @@ $client->disconnect();
 **Observability**
 - PSR-3 logging — pass any compatible logger (Monolog, Laravel, etc.) for structured diagnostics
 - NullLogger by default — zero overhead when logging is not needed
-- PSR-14 events — 45 granular events dispatched at lifecycle points (connection, session, subscription, data change, alarms, read/write, write type detection, browse, cache, retry, trust store)
+- PSR-14 events — 47 granular events dispatched at lifecycle points (connection, session, subscription, data change, alarms, read/write, write type detection, browse, cache, retry, trust store)
 - NullEventDispatcher by default — zero overhead when events are not needed
 
 **Testing**

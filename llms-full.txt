@@ -35,7 +35,7 @@ composer require gianfriaur/opcua-php-client
 - Authentication — anonymous, username/password, X.509 certificate
 - PSR-3 Logging — optional structured logging via any PSR-3 logger; NullLogger by default
 - PSR-16 Cache — browse/browseAll/resolveNodeId/getEndpoints/discoverDataTypes results cached by default (InMemoryCache, 300s TTL). Any PSR-16 driver works (FileCache, Laravel, Redis). Per-call bypass with useCache: false. discoverDataTypes replays cached type definitions without server round-trips. Metadata read cache opt-in via setReadMetadataCache(true): caches non-Value attributes (DisplayName, BrowseName, DataType, NodeClass, etc.). Value never cached. read($nodeId, $attr, refresh: true) to bypass.
-- PSR-14 Events — 45 granular events at lifecycle points (connection, session, subscription, data change, alarms, read/write, browse, cache, retry, trust store). NullEventDispatcher by default (zero overhead). Alarm events auto-deduced from notification fields. All events carry a $client reference.
+- PSR-14 Events — 47 granular events at lifecycle points (connection, session, subscription, data change, alarms, read/write, browse, cache, retry, trust store). NullEventDispatcher by default (zero overhead). Alarm events auto-deduced from notification fields. All events carry a $client reference.
 - Server Trust Store — persistent server certificate validation via FileTrustStore. Three policies (Fingerprint, FingerprintAndExpiry, Full). TOFU auto-accept. setTrustPolicy(null) disables (default). 5 trust-specific events. CLI trust/trust:list/trust:remove commands.
 - Auto-Retry — automatic reconnect on failure
 - Fluent Builder API — readMulti(), writeMulti(), createMonitoredItems(), and translateBrowsePaths() support a chainable builder when called without arguments
@@ -836,7 +836,7 @@ Alarm-specific events are deduced from event notification fields:
 - Gianfriaur\OpcuaPhpClient\Exception\WriteTypeMismatchException — thrown when explicit write type mismatches detected type (public readonly: nodeId, expectedType, givenType)
 - Gianfriaur\OpcuaPhpClient\Event\WriteTypeDetecting — dispatched before write type detection starts (public readonly: client, nodeId)
 - Gianfriaur\OpcuaPhpClient\Event\WriteTypeDetected — dispatched after write type detection (public readonly: client, nodeId, detectedType, fromCache)
-- Gianfriaur\OpcuaPhpClient\Event\* — 40 readonly event classes with $client property (ClientConnecting, ClientConnected, ConnectionFailed, SessionCreated, SessionActivated, SubscriptionCreated, DataChangeReceived, EventNotificationReceived, AlarmEventReceived, AlarmActivated, AlarmDeactivated, NodeValueRead, NodeValueWritten, NodeBrowsed, WriteTypeDetecting, WriteTypeDetected, CacheHit, CacheMiss, RetryAttempt, etc.)
+- Gianfriaur\OpcuaPhpClient\Event\* — 42 readonly event classes with $client property (ClientConnecting, ClientConnected, ConnectionFailed, SessionCreated, SessionActivated, SubscriptionCreated, DataChangeReceived, EventNotificationReceived, AlarmEventReceived, AlarmActivated, AlarmDeactivated, NodeValueRead, NodeValueWritten, NodeBrowsed, WriteTypeDetecting, WriteTypeDetected, CacheHit, CacheMiss, RetryAttempt, etc.)
 - Gianfriaur\OpcuaPhpClient\Testing\MockClient — in-memory test double (static create(), onRead/onWrite/onBrowse/onCall/onResolveNodeId, getCalls/getCallsFor/callCount/resetCalls)
 - Gianfriaur\OpcuaPhpClient\Repository\ExtensionObjectRepository — per-client codec registry (instance-level)
 - Gianfriaur\OpcuaPhpClient\Encoding\DynamicCodec — auto-generated codec from StructureDefinition

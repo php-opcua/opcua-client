@@ -68,7 +68,7 @@ src/
 ├── Security/                   # Secure channel, crypto, certificates
 ├── Cache/                      # PSR-16 cache drivers (InMemoryCache, FileCache)
 ├── TrustStore/                 # Server certificate trust management (FileTrustStore, TrustPolicy)
-├── Event/                      # PSR-14 events (45 event classes + NullEventDispatcher)
+├── Event/                      # PSR-14 events (47 event classes + NullEventDispatcher)
 ├── Builder/                    # Fluent builders for multi-operations
 ├── Repository/                 # Per-client codec registry
 ├── Testing/                    # MockClient for consumer testing

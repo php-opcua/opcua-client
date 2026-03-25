@@ -11,8 +11,7 @@
 - [x] CLI Tool — `bin/opcua-cli` with browse, read, write, endpoints, watch commands. Security, JSON, debug logging.
 - [ ] xml Code Generator
 - [x] Server Trust Management (also for cli) — FileTrustStore, TrustPolicy enum, autoAccept(force), CLI trust/trust:list/trust:remove, 3 events
-- [ ] Triggering / ModifyMonitoredItems
-- [ ] Symfony integration like Laravel ( `gianfriaur/opcua-symfony-client` )
+- [x] Triggering / ModifyMonitoredItems — `setTriggering()` for conditional sampling, `modifyMonitoredItems()` for changing parameters on existing items
 
 ### Refactoring
 - [x] Protocol service base class — extract the repeated encode/decode pattern (security check, token/sequence/requestId header, wrapInMessage vs buildMessage) into a shared base class or trait. Currently duplicated identically across all 15 Protocol service classes.
@@ -82,11 +81,6 @@ Verify that the server certificate has not been revoked before connecting. Requi
 ### Query Services
 `QueryFirst` / `QueryNext` — structured queries on the address space for servers where browse is too slow due to the size of the node tree.
 
-### Triggering / ModifyMonitoredItems
-- `SetTriggering` — configure a node that triggers sampling of other nodes
-- `ModifyMonitoredItems` — change sampling interval or queue size on existing monitored items without recreating them
-
-
 ## v5.x
 
 ### CLI Commands
@@ -110,6 +104,12 @@ Features that are ready to implement but blocked by external dependencies. This 
 `AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences` — for OPC UA servers that support dynamic address space modification at runtime.
 
 The test infrastructure ([opcua-test-server-suite](https://github.com/GianfriAur/opcua-test-server-suite)) uses [node-opcua](https://github.com/node-opcua/node-opcua), which does not implement NodeManagement services. All four handlers (`_on_AddNodes`, `_on_DeleteNodes`, `_on_AddReferences`, `_on_DeleteReferences`) return `BadServiceUnsupported`. The NodeManagement server profile is explicitly commented out as unimplemented in the node-opcua source.
+
+---
+
+## TODO — outside this repository
+
+- [ ] Symfony integration like Laravel — `gianfriaur/opcua-symfony-client` (right after v4.0.0 release)
 
 ---
 

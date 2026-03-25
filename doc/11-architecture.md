@@ -187,7 +187,7 @@ The library has three Composer dependencies (all interface-only, zero runtime co
 
 - **`psr/log`** — PSR-3 logger interface. The client accepts any `Psr\Log\LoggerInterface` implementation (Monolog, Laravel, etc.) and defaults to `NullLogger` when none is provided.
 - **`psr/simple-cache`** — PSR-16 cache interface. The client uses `CacheInterface` for browse result caching. Ships with `InMemoryCache` (default) and `FileCache`. Any PSR-16 compatible driver (Laravel Cache, Symfony Cache, etc.) can be plugged in.
-- **`psr/event-dispatcher`** — PSR-14 event dispatcher interface. The client dispatches 45 granular events at lifecycle points. Defaults to `NullEventDispatcher` (zero overhead). Any PSR-14 compatible dispatcher (Laravel, Symfony, etc.) can be injected.
+- **`psr/event-dispatcher`** — PSR-14 event dispatcher interface. The client dispatches 47 granular events at lifecycle points. Defaults to `NullEventDispatcher` (zero overhead). Any PSR-14 compatible dispatcher (Laravel, Symfony, etc.) can be injected.
 
 The only PHP extension required is `ext-openssl`.
 

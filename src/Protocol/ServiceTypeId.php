@@ -62,6 +62,10 @@ final class ServiceTypeId
     // ── Monitored Items ──
     public const CREATE_MONITORED_ITEMS_REQUEST = 751;
 
+    public const MODIFY_MONITORED_ITEMS_REQUEST = 763;
+
+    public const SET_TRIGGERING_REQUEST = 769;
+
     public const DELETE_MONITORED_ITEMS_REQUEST = 781;
 
     // ── Subscriptions ──

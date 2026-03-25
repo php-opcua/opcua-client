@@ -17,16 +17,20 @@ use Gianfriaur\OpcuaPhpClient\Event\EventNotificationReceived;
 use Gianfriaur\OpcuaPhpClient\Event\LimitAlarmExceeded;
 use Gianfriaur\OpcuaPhpClient\Event\MonitoredItemCreated;
 use Gianfriaur\OpcuaPhpClient\Event\MonitoredItemDeleted;
+use Gianfriaur\OpcuaPhpClient\Event\MonitoredItemModified;
 use Gianfriaur\OpcuaPhpClient\Event\OffNormalAlarmTriggered;
 use Gianfriaur\OpcuaPhpClient\Event\PublishResponseReceived;
 use Gianfriaur\OpcuaPhpClient\Event\SubscriptionCreated;
 use Gianfriaur\OpcuaPhpClient\Event\SubscriptionDeleted;
 use Gianfriaur\OpcuaPhpClient\Event\SubscriptionKeepAlive;
 use Gianfriaur\OpcuaPhpClient\Event\SubscriptionTransferred;
+use Gianfriaur\OpcuaPhpClient\Event\TriggeringConfigured;
 use Gianfriaur\OpcuaPhpClient\Protocol\ServiceTypeId;
+use Gianfriaur\OpcuaPhpClient\Types\MonitoredItemModifyResult;
 use Gianfriaur\OpcuaPhpClient\Types\MonitoredItemResult;
 use Gianfriaur\OpcuaPhpClient\Types\NodeId;
 use Gianfriaur\OpcuaPhpClient\Types\PublishResult;
+use Gianfriaur\OpcuaPhpClient\Types\SetTriggeringResult;
 use Gianfriaur\OpcuaPhpClient\Types\SubscriptionResult;
 use Gianfriaur\OpcuaPhpClient\Types\TransferResult;
 
@@ -233,6 +237,98 @@ trait ManagesSubscriptionsTrait
             }
 
             return $results;
+        });
+    }
+
+    /**
+     * Modify parameters of existing monitored items without recreating them.
+     *
+     * @param int $subscriptionId The subscription owning the monitored items.
+     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool}> $itemsToModify Items to modify.
+     * @return MonitoredItemModifyResult[]
+     *
+     * @throws \Gianfriaur\OpcuaPhpClient\Exception\ConnectionException If the connection is lost during the request.
+     * @throws \Gianfriaur\OpcuaPhpClient\Exception\ServiceException If the server returns an error response.
+     *
+     * @see MonitoredItemModifyResult
+     */
+    public function modifyMonitoredItems(int $subscriptionId, array $itemsToModify): array
+    {
+        return $this->executeWithRetry(function () use ($subscriptionId, $itemsToModify) {
+            $this->ensureConnected();
+
+            $requestId = $this->nextRequestId();
+            $request = $this->monitoredItemService->encodeModifyMonitoredItemsRequest(
+                $requestId,
+                $this->authenticationToken,
+                $subscriptionId,
+                $itemsToModify,
+            );
+            $this->transport->send($request);
+
+            $response = $this->transport->receive();
+            $responseBody = $this->unwrapResponse($response);
+            $decoder = $this->createDecoder($responseBody);
+
+            $results = $this->monitoredItemService->decodeModifyMonitoredItemsResponse($decoder);
+
+            foreach ($results as $i => $result) {
+                $monItemId = $itemsToModify[$i]['monitoredItemId'] ?? 0;
+                $this->dispatch(fn () => new MonitoredItemModified($this, $subscriptionId, $monItemId, $result->statusCode));
+            }
+
+            return $results;
+        });
+    }
+
+    /**
+     * Configure triggering links between monitored items.
+     *
+     * The triggering item controls when linked items are sampled and reported.
+     * Linked items only produce notifications when the triggering item changes.
+     *
+     * @param int $subscriptionId The subscription owning the items.
+     * @param int $triggeringItemId The monitored item that acts as the trigger.
+     * @param int[] $linksToAdd Monitored item IDs to link as triggered items.
+     * @param int[] $linksToRemove Monitored item IDs to unlink.
+     * @return SetTriggeringResult
+     *
+     * @throws \Gianfriaur\OpcuaPhpClient\Exception\ConnectionException If the connection is lost during the request.
+     * @throws \Gianfriaur\OpcuaPhpClient\Exception\ServiceException If the server returns an error response.
+     *
+     * @see SetTriggeringResult
+     */
+    public function setTriggering(int $subscriptionId, int $triggeringItemId, array $linksToAdd = [], array $linksToRemove = []): SetTriggeringResult
+    {
+        return $this->executeWithRetry(function () use ($subscriptionId, $triggeringItemId, $linksToAdd, $linksToRemove) {
+            $this->ensureConnected();
+
+            $requestId = $this->nextRequestId();
+            $request = $this->monitoredItemService->encodeSetTriggeringRequest(
+                $requestId,
+                $this->authenticationToken,
+                $subscriptionId,
+                $triggeringItemId,
+                $linksToAdd,
+                $linksToRemove,
+            );
+            $this->transport->send($request);
+
+            $response = $this->transport->receive();
+            $responseBody = $this->unwrapResponse($response);
+            $decoder = $this->createDecoder($responseBody);
+
+            $result = $this->monitoredItemService->decodeSetTriggeringResponse($decoder);
+
+            $this->dispatch(fn () => new TriggeringConfigured(
+                $this,
+                $subscriptionId,
+                $triggeringItemId,
+                $result->addResults,
+                $result->removeResults,
+            ));
+
+            return $result;
         });
     }
 

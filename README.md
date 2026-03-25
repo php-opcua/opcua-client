@@ -257,7 +257,7 @@ class HandleDataChange {
 }
 ```
 
-40 granular events covering connection, session, subscription, data change, alarms, read/write, browse, cache, and retry. Zero overhead with the default `NullEventDispatcher`. See [Events documentation](doc/14-events.md) for the full list.
+47 granular events covering connection, session, subscription, data change, alarms, read/write, browse, cache, and retry. Zero overhead with the default `NullEventDispatcher`. See [Events documentation](doc/14-events.md) for the full list.
 
 ### Monitor alarms in real time
 
@@ -373,7 +373,7 @@ $point = $client->read($pointNodeId)->getValue();
 | **Path Resolution** | Resolve `/Objects/MyPLC/Temperature` to a NodeId in one call |
 | **Read / Write** | Single and multi operations, all OPC UA data types, automatic type detection with caching |
 | **Method Call** | Invoke server methods with typed arguments and results |
-| **Subscriptions** | Data change and event monitoring with publish/acknowledge |
+| **Subscriptions** | Data change and event monitoring with publish/acknowledge, modify monitored items, conditional triggering |
 | **Transfer & Recovery** | Transfer subscriptions across sessions and republish unacknowledged notifications |
 | **History Read** | Raw, processed (aggregated), and at-time historical queries |
 | **Endpoint Discovery** | Discover available endpoints and security policies |

@@ -35,7 +35,7 @@ A PHP library for connecting to OPC UA servers (industrial automation protocol).
 - Automatic DataType Discovery: discoverDataTypes() auto-detects and decodes custom structures without manual codecs (OPC UA 1.04+)
 - PSR-3 Logging: optional structured logging via any PSR-3 logger (Monolog, Laravel, etc.); NullLogger by default
 - PSR-16 Cache: browse/browseAll/resolveNodeId/getEndpoints/discoverDataTypes results cached by default (InMemoryCache, 300s TTL). Any PSR-16 driver works (FileCache, Laravel Cache, Redis, etc.). Per-call bypass with useCache: false. Invalidate per-node or flush all. discoverDataTypes replays cached type definitions without server round-trips. Metadata read cache (DisplayName, BrowseName, DataType, etc.) opt-in via setReadMetadataCache(true), Value never cached, refresh: true to bypass.
-- PSR-14 Events: 45 granular events dispatched at lifecycle points (connection, session, subscription, data change, alarms, read/write, browse, cache, retry, trust store). NullEventDispatcher by default (zero overhead). Alarm-specific events auto-deduced from notification fields. All events carry a $client reference.
+- PSR-14 Events: 47 granular events dispatched at lifecycle points (connection, session, subscription, data change, alarms, read/write, browse, cache, retry, trust store). NullEventDispatcher by default (zero overhead). Alarm-specific events auto-deduced from notification fields. All events carry a $client reference.
 - Server Trust Store: persistent server certificate validation via FileTrustStore (~/.opcua/ default). Three policies: Fingerprint, FingerprintAndExpiry, Full (CA chain). TOFU auto-accept with force option. setTrustPolicy(null) disables (default). UntrustedCertificateException thrown on rejection. CLI: trust, trust:list, trust:remove.
 - Connection State: lifecycle tracking (Disconnected, Connected, Broken) with reconnect()
 - MockClient: in-memory test double implementing OpcUaClientInterface — register handlers, assert calls, no TCP connection
@@ -174,7 +174,7 @@ $client->connect('opc.tcp://192.168.1.100:4840');
 - Gianfriaur\OpcuaPhpClient\Exception\WriteTypeMismatchException — thrown when explicit write type mismatches detected type (public readonly: nodeId, expectedType, givenType)
 - Gianfriaur\OpcuaPhpClient\Event\WriteTypeDetecting — dispatched before write type detection starts (public readonly: client, nodeId)
 - Gianfriaur\OpcuaPhpClient\Event\WriteTypeDetected — dispatched after write type detection (public readonly: client, nodeId, detectedType, fromCache)
-- Gianfriaur\OpcuaPhpClient\Event\* — 40 readonly event classes (connection, session, subscription, alarms, read/write, write type detection, browse, cache, retry)
+- Gianfriaur\OpcuaPhpClient\Event\* — 42 readonly event classes (connection, session, subscription, alarms, read/write, write type detection, browse, cache, retry)
 
 ## Related packages
 
