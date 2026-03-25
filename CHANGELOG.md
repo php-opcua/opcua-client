@@ -4,8 +4,23 @@
 
 ### Added
 
-- **NodeSet2.xml Code Generator.** New `generate:nodeset` CLI command reads OPC UA NodeSet2.xml files and generates PHP classes: NodeId constants, PHP backed enums from OPC UA enumerations, readonly DTO classes for structured DataTypes, ExtensionObjectCodec classes, and a `GeneratedTypeRegistrar` for batch registration. Usage: `opcua-cli generate:nodeset path/to/File.NodeSet2.xml --output=src/Generated/ --namespace=App\\OpcUa`. No server connection required.
-- **Generated Type Loading.** `loadGeneratedTypes(GeneratedTypeRegistrar)` registers codecs and enum mappings with the client. After loading, `read()` on enum nodes returns PHP `BackedEnum` instances instead of raw `int`, and structured types return typed DTO objects with property access. Stackable — call multiple times for different NodeSet files. Zero impact if not used (full backward compatibility). See [Code Generation](doc/17-code-generation.md).
+- **NodeSet2.xml Code Generator.** New `generate:nodeset` CLI command reads OPC UA NodeSet2.xml files (companion specifications, PLC information models) and generates five types of PHP classes:
+  - **NodeId constants** — one class per file with all node IDs as string constants, usable with `read()`, `write()`, `browse()`.
+  - **PHP enums** — `BackedEnum` classes for every OPC UA enumeration type in the file.
+  - **Typed DTOs** — `readonly` classes with typed properties for structured DataTypes. Enum fields are typed with the generated enum class. Array fields (`ValueRank >= 0`) use `array`. Optional fields (`IsOptional`) are nullable.
+  - **Binary codecs** — `ExtensionObjectCodec` implementations that decode into DTOs and encode from DTOs. Array fields use `readArray`/`writeArray` helpers. Enum fields cast via `::from()`.
+  - **Registrar** — implements `GeneratedTypeRegistrar` with `registerCodecs()`, `getEnumMappings()`, and `dependencyRegistrars()`. Uses NodeId constants (not raw strings) for codec registration.
+  - Parses `<UAObject>`, `<UAVariable>`, `<UAMethod>`, `<UAObjectType>`, `<UAVariableType>`, `<UAReferenceType>`, `<UADataType>` with struct and enum `<Definition>`. Resolves `<Aliases>` and `HasEncoding` references. Sanitizes field names and class names (handles special characters and numeric prefixes).
+  - Usage: `opcua-cli generate:nodeset path/to/File.NodeSet2.xml --output=src/Generated/ --namespace=App\\OpcUa [--base-namespace=Gianfriaur\\OpcuaNodeset]`.
+  - No server connection required — works entirely from the local XML file.
+  - See [Code Generation](doc/17-code-generation.md) for full documentation.
+- **Generated Type Loading and Automatic Dependency Resolution.**
+  - `loadGeneratedTypes(GeneratedTypeRegistrar $registrar)` — registers codecs and enum mappings with the client. After loading, `read()` on enum nodes returns PHP `BackedEnum` instances instead of raw `int`, and structured types return typed DTO objects with property access (`$snapshot->Temperature_C` instead of `$data['Temperature_C']`).
+  - **Automatic dependency resolution**: each Registrar declares its NodeSet dependencies via `dependencyRegistrars()`. When loaded, dependencies are resolved recursively — e.g. loading `MachineToolRegistrar` automatically loads Machinery, DI, and IA.
+  - **`only: true`**: skip dependency loading when you need only the specification itself: `new MachineToolRegistrar(only: true)`.
+  - Stackable — call `loadGeneratedTypes()` multiple times for different NodeSet files. Duplicate registrations are handled gracefully.
+  - Zero impact if not used — full backward compatibility, no changes to existing behavior.
+  - Companion package [`gianfriaur/opcua-php-client-nodeset`](https://github.com/GianfriAur/opcua-php-client-nodeset) provides pre-generated types for all 51 OPC Foundation companion specifications (807 PHP files, 338 enums, 191 DTOs, 191 codecs).
 - **ModifyMonitoredItems.** Change sampling interval, queue size, and other parameters on existing monitored items without recreating them. `$client->modifyMonitoredItems($subId, [...])` returns `MonitoredItemModifyResult[]` with revised parameters. Dispatches `MonitoredItemModified` event per item.
 - **SetTriggering.** Configure a monitored item as a trigger for other items — linked items are only sampled when the trigger changes. `$client->setTriggering($subId, $triggerId, $linksToAdd, $linksToRemove)` returns `SetTriggeringResult` with per-link status codes. Dispatches `TriggeringConfigured` event.
 - **Read Metadata Cache.** Non-Value attributes (DisplayName, BrowseName, DataType, NodeClass, Description, etc.) can now be cached via PSR-16 to avoid redundant server reads. Opt-in via `setReadMetadataCache(true)`. The Value attribute (id 13) is never cached. Use `read($nodeId, $attributeId, refresh: true)` to bypass the cache and re-read from the server. `invalidateCache($nodeId)` clears all cached metadata for a node.

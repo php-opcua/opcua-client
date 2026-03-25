@@ -28,4 +28,11 @@ interface GeneratedTypeRegistrar
      * @return array<string, class-string<\BackedEnum>>
      */
     public function getEnumMappings(): array;
+
+    /**
+     * Return registrars for required NodeSet dependencies.
+     *
+     * @return GeneratedTypeRegistrar[]
+     */
+    public function dependencyRegistrars(): array;
 }

@@ -115,6 +115,21 @@ describe('CodeGenerator', function () {
         expect($code)->toContain("'ns=1;i=100' => Enums\\MyEnum::class");
     });
 
+    it('generates Registrar with dependency registrars', function () {
+        $gen = new CodeGenerator();
+        $deps = [
+            'Gianfriaur\\OpcuaNodeset\\DI\\DIRegistrar',
+            'Gianfriaur\\OpcuaNodeset\\Machinery\\MachineryRegistrar',
+        ];
+
+        $code = $gen->generateRegistrarClass('TestRegistrar', [], [], 'NodeIds', 'App', $deps);
+
+        expect($code)->toContain('function dependencyRegistrars()');
+        expect($code)->toContain('new \\Gianfriaur\\OpcuaNodeset\\DI\\DIRegistrar()');
+        expect($code)->toContain('new \\Gianfriaur\\OpcuaNodeset\\Machinery\\MachineryRegistrar()');
+        expect($code)->toContain('public bool $only = false');
+    });
+
     it('handles unknown data types with readExtensionObject', function () {
         $gen = new CodeGenerator();
         $fields = [
@@ -142,6 +157,44 @@ describe('CodeGenerator', function () {
         expect($code)->toContain('case IDLE = 0;');
         expect($code)->toContain('case RUNNING = 1;');
         expect($code)->toContain('case ERROR = 2;');
+    });
+
+    it('generates DTO with array field', function () {
+        $gen = new CodeGenerator();
+        $fields = [
+            ['name' => 'Name', 'dataType' => 'i=12', 'valueRank' => -1, 'isOptional' => false],
+            ['name' => 'Values', 'dataType' => 'i=11', 'valueRank' => 1, 'isOptional' => false],
+        ];
+
+        $code = $gen->generateDtoClass('DataSet', $fields, 'App');
+
+        expect($code)->toContain('public string $Name');
+        expect($code)->toContain('public array $Values');
+    });
+
+    it('generates DTO with optional field', function () {
+        $gen = new CodeGenerator();
+        $fields = [
+            ['name' => 'Name', 'dataType' => 'i=12', 'valueRank' => -1, 'isOptional' => false],
+            ['name' => 'Desc', 'dataType' => 'i=12', 'valueRank' => -1, 'isOptional' => true],
+        ];
+
+        $code = $gen->generateDtoClass('Item', $fields, 'App');
+
+        expect($code)->toContain('public string $Name');
+        expect($code)->toContain('public ?string $Desc');
+    });
+
+    it('generates Codec with array read/write helpers', function () {
+        $gen = new CodeGenerator();
+        $fields = [
+            ['name' => 'Items', 'dataType' => 'i=6', 'valueRank' => 1, 'isOptional' => false],
+        ];
+
+        $code = $gen->generateCodecClass('TestCodec', 'TestDto', $fields, 'App');
+
+        expect($code)->toContain('readArray');
+        expect($code)->toContain('writeArray');
     });
 
     it('sanitizes constant names', function () {

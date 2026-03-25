@@ -66,9 +66,25 @@ class GenerateNodesetCommand implements CommandInterface
 
         $outputDir = rtrim((string) ($options['output'] ?? './generated'), '/');
         $namespace = (string) ($options['namespace'] ?? 'Generated\\OpcUa');
+        $baseNamespace = (string) ($options['base-namespace'] ?? 'Gianfriaur\\OpcuaNodeset');
 
         $parser = new NodeSetParser();
         $parser->parse($xmlFile);
+
+        $requiredModels = $parser->getRequiredModels();
+        $dependencyClasses = [];
+        if (! empty($requiredModels)) {
+            $output->writeln('Dependencies:');
+            foreach ($requiredModels as $req) {
+                $ver = $req['version'] ? " v{$req['version']}" : '';
+                $output->writeln("  - {$req['modelUri']}{$ver}");
+                $depDir = $this->modelUriToDirName($req['modelUri']);
+                if ($depDir !== null) {
+                    $dependencyClasses[] = $baseNamespace . '\\' . $depDir . '\\' . $depDir . 'Registrar';
+                }
+            }
+            $output->writeln('');
+        }
 
         $generator = new CodeGenerator();
         $nodes = $parser->getNodes();
@@ -127,8 +143,8 @@ class GenerateNodesetCommand implements CommandInterface
                     continue;
                 }
 
-                $dtoName = $dt['name'];
-                $codecName = $dt['name'] . 'Codec';
+                $dtoName = $this->safeClassName($dt['name']);
+                $codecName = $dtoName . 'Codec';
                 $encodingId = $dt['encodingId'] ?? $dt['nodeId'];
 
                 $dtoCode = $generator->generateDtoClass($dtoName, $dt['fields'], $namespace, $enumFieldMap);
@@ -149,7 +165,7 @@ class GenerateNodesetCommand implements CommandInterface
             }
         }
 
-        $registrarCode = $generator->generateRegistrarClass($baseName . 'Registrar', $codecRegistrations, $enumNodeMappings, $nodeIdClassName, $namespace);
+        $registrarCode = $generator->generateRegistrarClass($baseName . 'Registrar', $codecRegistrations, $enumNodeMappings, $nodeIdClassName, $namespace, $dependencyClasses);
         $this->writeFile($outputDir . '/' . $baseName . 'Registrar.php', $registrarCode);
         $output->writeln("Generated: {$outputDir}/{$baseName}Registrar.php");
         $filesWritten++;
@@ -189,6 +205,37 @@ class GenerateNodesetCommand implements CommandInterface
      * @param string $xmlFile
      * @return string
      */
+    /**
+     * @param string $name
+     * @return string
+     */
+    /**
+     * @param string $modelUri
+     * @return ?string
+     */
+    private function modelUriToDirName(string $modelUri): ?string
+    {
+        if ($modelUri === 'http://opcfoundation.org/UA/') {
+            return null;
+        }
+
+        $path = rtrim(parse_url($modelUri, PHP_URL_PATH) ?? '', '/');
+        $name = basename($path);
+        $name = str_replace(['-', '.', ' '], '', $name);
+
+        return $name ?: null;
+    }
+
+    private function safeClassName(string $name): string
+    {
+        $name = preg_replace('/[^a-zA-Z0-9_]/', '_', $name) ?? $name;
+        if (is_numeric($name[0] ?? '')) {
+            $name = '_' . $name;
+        }
+
+        return $name;
+    }
+
     private function deriveBaseName(string $xmlFile): string
     {
         $filename = basename($xmlFile, '.xml');

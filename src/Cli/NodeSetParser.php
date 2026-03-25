@@ -33,6 +33,9 @@ class NodeSetParser
     /** @var array<string, array{nodeId: string, name: string, values: array<array{name: string, value: int}>}> */
     private array $enumerations = [];
 
+    /** @var array<array{modelUri: string, version: ?string}> */
+    private array $requiredModels = [];
+
     /**
      * Parse a NodeSet2.xml file.
      *
@@ -51,6 +54,7 @@ class NodeSetParser
         $this->parseAliases($xml);
         $this->parseNodes($xml);
         $this->parseDataTypes($xml);
+        $this->parseRequiredModels($xml);
 
         return $this;
     }
@@ -80,6 +84,14 @@ class NodeSetParser
     }
 
     /**
+     * @return array<array{modelUri: string, version: ?string}>
+     */
+    public function getRequiredModels(): array
+    {
+        return $this->requiredModels;
+    }
+
+    /**
      * @return array<string, string>
      */
     public function getAliases(): array
@@ -106,7 +118,7 @@ class NodeSetParser
      */
     private function parseNodes(SimpleXMLElement $xml): void
     {
-        $nodeTypes = ['UAObject', 'UAVariable', 'UAMethod'];
+        $nodeTypes = ['UAObject', 'UAVariable', 'UAMethod', 'UAObjectType', 'UAVariableType', 'UAReferenceType'];
 
         foreach ($nodeTypes as $nodeType) {
             foreach ($xml->xpath("//ua:{$nodeType}") ?: [] as $node) {
@@ -181,7 +193,7 @@ class NodeSetParser
 
     /**
      * @param SimpleXMLElement $definition
-     * @return array<array{name: string, dataType: string}>
+     * @return array<array{name: string, dataType: string, valueRank: int, isOptional: bool}>
      */
     private function parseFields(SimpleXMLElement $definition): array
     {
@@ -190,9 +202,14 @@ class NodeSetParser
             $dataTypeRef = (string) $field['DataType'];
             $resolvedType = $this->resolveDataType($dataTypeRef);
 
+            $rawName = (string) $field['Name'];
+            $safeName = preg_replace('/[^a-zA-Z0-9_]/', '_', $rawName) ?? $rawName;
+
             $fields[] = [
-                'name' => (string) $field['Name'],
+                'name' => $safeName,
                 'dataType' => $resolvedType,
+                'valueRank' => (int) ($field['ValueRank'] ?? -1),
+                'isOptional' => ((string) ($field['IsOptional'] ?? 'false')) === 'true',
             ];
         }
 
@@ -246,6 +263,20 @@ class NodeSetParser
         }
 
         return $browseName;
+    }
+
+    /**
+     * @param SimpleXMLElement $xml
+     * @return void
+     */
+    private function parseRequiredModels(SimpleXMLElement $xml): void
+    {
+        foreach ($xml->xpath('//ua:Models/ua:Model/ua:RequiredModel') ?: [] as $req) {
+            $this->requiredModels[] = [
+                'modelUri' => (string) $req['ModelUri'],
+                'version' => ((string) ($req['Version'] ?? '')) ?: null,
+            ];
+        }
     }
 
     /**

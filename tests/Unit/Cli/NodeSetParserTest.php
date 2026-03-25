@@ -122,6 +122,48 @@ describe('NodeSetParser', function () use ($fixturePath) {
         expect($enums)->not->toHaveKey('ns=1;i=3001');
     });
 
+    it('parses UAObjectType, UAVariableType, UAReferenceType as nodes', function () use ($fixturePath) {
+        $parser = new NodeSetParser();
+        $parser->parse($fixturePath);
+
+        $nodes = $parser->getNodes();
+        expect($nodes)->toHaveKey('ns=1;i=4001');
+        expect($nodes['ns=1;i=4001']['browseName'])->toBe('PumpType');
+        expect($nodes['ns=1;i=4001']['type'])->toBe('UAObjectType');
+
+        expect($nodes)->toHaveKey('ns=1;i=4002');
+        expect($nodes['ns=1;i=4002']['type'])->toBe('UAVariableType');
+
+        expect($nodes)->toHaveKey('ns=1;i=4003');
+        expect($nodes['ns=1;i=4003']['type'])->toBe('UAReferenceType');
+    });
+
+    it('parses ValueRank and IsOptional from fields', function () use ($fixturePath) {
+        $parser = new NodeSetParser();
+        $parser->parse($fixturePath);
+
+        $dataTypes = $parser->getDataTypes();
+        expect($dataTypes)->toHaveKey('ns=1;i=3020');
+
+        $ds = $dataTypes['ns=1;i=3020'];
+        expect($ds['fields'])->toHaveCount(3);
+        expect($ds['fields'][0]['valueRank'])->toBe(-1);
+        expect($ds['fields'][0]['isOptional'])->toBeFalse();
+        expect($ds['fields'][1]['valueRank'])->toBe(1);
+        expect($ds['fields'][2]['isOptional'])->toBeTrue();
+    });
+
+    it('parses RequiredModel dependencies', function () use ($fixturePath) {
+        $parser = new NodeSetParser();
+        $parser->parse($fixturePath);
+
+        $required = $parser->getRequiredModels();
+        expect($required)->toHaveCount(2);
+        expect($required[0]['modelUri'])->toBe('http://opcfoundation.org/UA/');
+        expect($required[0]['version'])->toBe('1.05.02');
+        expect($required[1]['modelUri'])->toBe('http://opcfoundation.org/UA/DI/');
+    });
+
     it('throws on invalid file', function () {
         $parser = new NodeSetParser();
 

@@ -850,6 +850,7 @@ Alarm-specific events are deduced from event notification fields:
 
 ## Related Packages
 
+- gianfriaur/opcua-php-client-nodeset: pre-generated PHP types from 51 OPC Foundation companion specifications — 807 files, 338 enums, 191 DTOs, 191 codecs, registrars with automatic dependency resolution
 - gianfriaur/opcua-php-client-session-manager: session persistence across PHP requests
 - gianfriaur/opcua-laravel-client: Laravel integration (service provider, facade, config)
 - GianfriAur/opcua-test-server-suite: Docker-based OPC UA test servers

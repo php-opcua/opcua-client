@@ -85,6 +85,14 @@ class CodeGenerator
         $properties = '';
         foreach ($fields as $field) {
             $phpType = $this->resolvePhpType($field['dataType'], $enumFieldMap);
+            $isArray = ($field['valueRank'] ?? -1) >= 0;
+            $isOptional = $field['isOptional'] ?? false;
+
+            if ($isArray) {
+                $phpType = 'array';
+            } elseif ($isOptional && $phpType !== 'mixed') {
+                $phpType = '?' . $phpType;
+            }
             $properties .= "        public {$phpType} \${$field['name']},\n";
         }
 
@@ -127,17 +135,58 @@ class CodeGenerator
         foreach ($fields as $field) {
             $mapping = self::DATATYPE_TO_METHOD[$field['dataType']] ?? null;
             $enumClass = $enumFieldMap[$field['dataType']] ?? null;
+            $isArray = ($field['valueRank'] ?? -1) >= 0;
+            $fieldName = $field['name'];
 
-            if ($enumClass !== null) {
+            if ($isArray) {
+                $readExpr = $mapping !== null ? "\$decoder->{$mapping['read']}()" : '$decoder->readExtensionObject()';
+                $writeExpr = $mapping !== null ? "\$encoder->{$mapping['write']}(\$item)" : '$encoder->writeExtensionObject($item)';
+                $decodeArgs .= "            \$this->readArray(\$decoder, fn () => {$readExpr}),\n";
+                $encodeLines .= "        \$this->writeArray(\$encoder, \$value->{$fieldName}, fn (\$item) => {$writeExpr});\n";
+            } elseif ($enumClass !== null) {
                 $decodeArgs .= "            Enums\\{$enumClass}::from(\$decoder->readInt32()),\n";
-                $encodeLines .= "        \$encoder->writeInt32(\$value->{$field['name']}->value);\n";
+                $encodeLines .= "        \$encoder->writeInt32(\$value->{$fieldName}->value);\n";
             } elseif ($mapping === null) {
                 $decodeArgs .= "            \$decoder->readExtensionObject(),\n";
-                $encodeLines .= "        \$encoder->writeExtensionObject(\$value->{$field['name']});\n";
+                $encodeLines .= "        \$encoder->writeExtensionObject(\$value->{$fieldName});\n";
             } else {
                 $decodeArgs .= "            \$decoder->{$mapping['read']}(),\n";
-                $encodeLines .= "        \$encoder->{$mapping['write']}(\$value->{$field['name']});\n";
+                $encodeLines .= "        \$encoder->{$mapping['write']}(\$value->{$fieldName});\n";
             }
+        }
+
+        $hasArrayFields = false;
+        foreach ($fields as $f) {
+            if (($f['valueRank'] ?? -1) >= 0) {
+                $hasArrayFields = true;
+                break;
+            }
+        }
+
+        $arrayHelpers = '';
+        if ($hasArrayFields) {
+            $arrayHelpers = <<<'HELPERS'
+
+                private function readArray(BinaryDecoder $decoder, callable $readItem): array
+                {
+                    $count = $decoder->readInt32();
+                    $items = [];
+                    for ($i = 0; $i < $count; $i++) {
+                        $items[] = $readItem();
+                    }
+
+                    return $items;
+                }
+
+                private function writeArray(BinaryEncoder $encoder, array $items, callable $writeItem): void
+                {
+                    $encoder->writeInt32(count($items));
+                    foreach ($items as $item) {
+                        $writeItem($item);
+                    }
+                }
+
+            HELPERS;
         }
 
         return <<<PHP
@@ -177,7 +226,7 @@ class CodeGenerator
             public function encode(BinaryEncoder \$encoder, mixed \$value): void
             {
         {$encodeLines}    }
-        }
+        {$arrayHelpers}}
         PHP;
     }
 
@@ -189,9 +238,10 @@ class CodeGenerator
      * @param array<string, array{enumClass: string, constName: ?string}> $enumMappings NodeId → enum info.
      * @param string $nodeIdClassName The NodeIds class name for constant references.
      * @param string $namespace The PHP namespace.
+     * @param array<string> $dependencyClasses Fully qualified class names of dependency registrars.
      * @return string The generated PHP code.
      */
-    public function generateRegistrarClass(string $className, array $codecs, array $enumMappings, string $nodeIdClassName, string $namespace): string
+    public function generateRegistrarClass(string $className, array $codecs, array $enumMappings, string $nodeIdClassName, string $namespace, array $dependencyClasses = []): string
     {
         $codecRegistrations = '';
         foreach ($codecs as $codec) {
@@ -207,6 +257,11 @@ class CodeGenerator
                 ? "{$nodeIdClassName}::{$info['constName']}"
                 : "'{$nodeId}'";
             $enumEntries .= "            {$nodeIdRef} => Enums\\{$info['enumClass']}::class,\n";
+        }
+
+        $depEntries = '';
+        foreach ($dependencyClasses as $depClass) {
+            $depEntries .= "            new \\{$depClass}(),\n";
         }
 
         return <<<PHP
@@ -227,6 +282,13 @@ class CodeGenerator
         class {$className} implements GeneratedTypeRegistrar
         {
             /**
+             * @param bool \$only If true, skip loading dependency registrars.
+             */
+            public function __construct(public bool \$only = false)
+            {
+            }
+
+            /**
              * @param ExtensionObjectRepository \$repository
              * @return void
              */
@@ -241,6 +303,15 @@ class CodeGenerator
             {
                 return [
         {$enumEntries}        ];
+            }
+
+            /**
+             * @return GeneratedTypeRegistrar[]
+             */
+            public function dependencyRegistrars(): array
+            {
+                return [
+        {$depEntries}        ];
             }
         }
         PHP;

@@ -303,6 +303,11 @@ describe('MockClient', function () {
             {
                 return [];
             }
+
+            public function dependencyRegistrars(): array
+            {
+                return [];
+            }
         };
         $result = $mock->loadGeneratedTypes($registrar);
         expect($result)->toBe($mock);

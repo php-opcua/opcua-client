@@ -351,6 +351,37 @@ $point = $client->read($pointNodeId)->getValue();
 // ['x' => 1.5, 'y' => 2.5, 'z' => 3.5] — no codec needed
 ```
 
+### Use pre-built OPC UA companion types
+
+Instead of writing codecs by hand or relying on runtime discovery, install [`opcua-php-client-nodeset`](https://github.com/GianfriAur/opcua-php-client-nodeset) to get pre-generated PHP types for 51 OPC Foundation companion specifications — DI, Robotics, Machinery, MachineTool, ISA-95, CNC, MTConnect, and many more:
+
+```bash
+composer require gianfriaur/opcua-php-client-nodeset
+```
+
+```php
+use Gianfriaur\OpcuaNodeset\Robotics\RoboticsRegistrar;
+use Gianfriaur\OpcuaNodeset\Robotics\RoboticsNodeIds;
+use Gianfriaur\OpcuaNodeset\Robotics\Enums\OperationalModeEnumeration;
+
+$client = new Client();
+$client->loadGeneratedTypes(new RoboticsRegistrar());  // loads DI + IA dependencies automatically
+$client->connect('opc.tcp://192.168.1.100:4840');
+
+// Enum values are auto-cast to PHP BackedEnum
+$mode = $client->read(RoboticsNodeIds::OperationalMode)->getValue();
+// OperationalModeEnumeration::MANUAL_REDUCED_SPEED (not int 1)
+
+// Structured types return typed DTOs with property access
+$data = $client->read(RoboticsNodeIds::SomeStructuredNode)->getValue();
+$data->Manufacturer;   // string — IDE autocomplete works
+$data->Status;         // OperatingStateEnum — not a raw int
+```
+
+Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to skip dependency loading if you manage them yourself.
+
+> **Tip:** You can also generate types from your own custom NodeSet2.xml files using `opcua-cli generate:nodeset`. See [Code Generation](doc/17-code-generation.md).
+
 ## Why This Library?
 
 - **Zero runtime dependencies** — only `ext-openssl`. Optional PSR-3 logging, PSR-16 caching, and PSR-14 events via any compatible implementation.
@@ -442,6 +473,7 @@ CI runs on PHP 8.2, 8.3, 8.4, and 8.5 via GitHub Actions.
 |---------|-------------|
 | [opcua-php-client](https://github.com/GianfriAur/opcua-php-client) | Pure PHP OPC UA client (this package) |
 | [opcua-php-client-session-manager](https://github.com/GianfriAur/opcua-php-client-session-manager) | Daemon-based session persistence across PHP requests. Keeps OPC UA connections alive between short-lived PHP processes via a ReactPHP daemon and Unix sockets. Separate package by design — see [ROADMAP.md](ROADMAP.md#session-manager-integration-here) for rationale. |
+| [opcua-php-client-nodeset](https://github.com/GianfriAur/opcua-php-client-nodeset) | Pre-generated PHP types from 51 OPC Foundation companion specifications (DI, Robotics, Machinery, MachineTool, ISA-95, CNC, MTConnect, and more). 807 PHP files — NodeId constants, enums, typed DTOs, codecs, registrars with automatic dependency resolution. Just `composer require` and `loadGeneratedTypes()`. |
 | [opcua-laravel-client](https://github.com/GianfriAur/opcua-laravel-client) | Laravel integration — service provider, facade, config |
 | [opcua-test-server-suite](https://github.com/GianfriAur/opcua-test-server-suite) | Docker-based OPC UA test servers for integration testing |
 

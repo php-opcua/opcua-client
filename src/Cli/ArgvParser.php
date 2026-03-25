@@ -137,6 +137,7 @@ class ArgvParser
             'type',
             'output',
             'namespace',
+            'base-namespace',
         ], true);
     }
 }

@@ -378,6 +378,12 @@ class MockClient implements OpcUaClientInterface
 
     public function loadGeneratedTypes(GeneratedTypeRegistrar $registrar): self
     {
+        if (! property_exists($registrar, 'only') || ! $registrar->only) {
+            foreach ($registrar->dependencyRegistrars() as $dependency) {
+                $this->loadGeneratedTypes($dependency);
+            }
+        }
+
         $registrar->registerCodecs($this->repository);
         $this->record('loadGeneratedTypes', [$registrar]);
 
