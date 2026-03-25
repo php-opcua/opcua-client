@@ -151,9 +151,9 @@ trait ManagesReadWriteTrait
     /**
      * Write a value to a node attribute.
      *
-     * When auto-detect is enabled and no type is provided, the client reads the node first
+     * When no type is provided and auto-detect is enabled, the client reads the node first
      * to determine the correct BuiltinType (cached via PSR-16). When a type is provided
-     * explicitly, it is validated against the detected type.
+     * explicitly, it is used directly without any read.
      *
      * @param NodeId|string $nodeId The node to write to.
      * @param mixed $value The value to write.
@@ -164,7 +164,6 @@ trait ManagesReadWriteTrait
      * @throws \Gianfriaur\OpcuaPhpClient\Exception\ConnectionException If the connection is lost during the request.
      * @throws \Gianfriaur\OpcuaPhpClient\Exception\ServiceException If the server returns an error response.
      * @throws WriteTypeDetectionException If the type cannot be determined.
-     * @throws WriteTypeMismatchException If the explicit type does not match the detected node type.
      */
     public function write(NodeId|string $nodeId, mixed $value, ?BuiltinType $type = null): int
     {
@@ -212,7 +211,6 @@ trait ManagesReadWriteTrait
      * @throws \Gianfriaur\OpcuaPhpClient\Exception\ConnectionException If the connection is lost during the request.
      * @throws \Gianfriaur\OpcuaPhpClient\Exception\ServiceException If the server returns an error response.
      * @throws WriteTypeDetectionException If a type cannot be determined for an item.
-     * @throws WriteTypeMismatchException If an explicit type does not match the detected node type.
      */
     public function writeMulti(?array $writeItems = null): array|\Gianfriaur\OpcuaPhpClient\Builder\WriteMultiBuilder
     {
@@ -332,6 +330,7 @@ trait ManagesReadWriteTrait
             return;
         }
 
+        $this->logger->info('Prefetching write types for {count} node(s) via readMulti', ['count' => count($uncachedNodes)]);
         $readItems = array_map(fn ($n) => ['nodeId' => $n['nodeId']], $uncachedNodes);
         $dataValues = $this->readMulti($readItems);
 
@@ -346,28 +345,35 @@ trait ManagesReadWriteTrait
     /**
      * Resolve the BuiltinType for a write operation.
      *
-     * When auto-detect is enabled, reads the node (with caching) to determine the type.
-     * When a type is provided explicitly and auto-detect is enabled, validates it against the node.
+     * When a type is provided explicitly, it is returned immediately.
+     * When no type is provided and auto-detect is enabled, reads the node (with caching).
      *
      * @param NodeId $nodeId The node being written to.
      * @param ?BuiltinType $type The explicit type, or null for auto-detection.
      * @return BuiltinType The resolved type.
      *
      * @throws WriteTypeDetectionException If the type cannot be determined.
-     * @throws WriteTypeMismatchException If the explicit type does not match the detected node type.
      */
     private function resolveWriteType(NodeId $nodeId, ?BuiltinType $type): BuiltinType
     {
-        if (! $this->autoDetectWriteType) {
-            if ($type === null) {
-                throw new WriteTypeDetectionException(
-                    "Write type auto-detection is disabled and no explicit type was provided for node {$nodeId}",
-                );
-            }
+        if ($type !== null) {
+            $this->logger->debug('Using explicit write type {type} for node {nodeId}', [
+                'nodeId' => (string) $nodeId,
+                'type' => $type->name,
+            ]);
 
             return $type;
         }
 
+        if (! $this->autoDetectWriteType) {
+            $this->logger->warning('Write type auto-detection is disabled and no type provided for node {nodeId}', ['nodeId' => (string) $nodeId]);
+
+            throw new WriteTypeDetectionException(
+                "Write type auto-detection is disabled and no explicit type was provided for node {$nodeId}",
+            );
+        }
+
+        $this->logger->debug('Detecting write type for node {nodeId}', ['nodeId' => (string) $nodeId]);
         $this->dispatch(fn () => new WriteTypeDetecting($this, $nodeId));
 
         $cacheKey = $this->buildCacheKey('writeType', $nodeId);
@@ -376,10 +382,13 @@ trait ManagesReadWriteTrait
         $fromCache = $this->cache !== null && $this->cache->get($cacheKey) !== null;
 
         $detectedType = $this->cachedFetch($cacheKey, function () use ($nodeId) {
+            $this->logger->debug('Reading node {nodeId} for write type detection', ['nodeId' => (string) $nodeId]);
             $dataValue = $this->read($nodeId);
             $variant = $dataValue->getVariant();
 
             if ($variant === null) {
+                $this->logger->warning('Cannot auto-detect write type for node {nodeId}: no value', ['nodeId' => (string) $nodeId]);
+
                 throw new WriteTypeDetectionException(
                     "Cannot auto-detect write type for node {$nodeId}: node has no value",
                 );
@@ -388,16 +397,12 @@ trait ManagesReadWriteTrait
             return $variant->type;
         }, true);
 
+        $this->logger->debug('Write type for node {nodeId}: {type} (fromCache={fromCache})', [
+            'nodeId' => (string) $nodeId,
+            'type' => $detectedType->name,
+            'fromCache' => $fromCache ? 'true' : 'false',
+        ]);
         $this->dispatch(fn () => new WriteTypeDetected($this, $nodeId, $detectedType, $fromCache));
-
-        if ($type !== null && $type !== $detectedType) {
-            throw new WriteTypeMismatchException(
-                $nodeId,
-                $detectedType,
-                $type,
-                "Write type mismatch for node {$nodeId}: expected {$detectedType->name}, got {$type->name}",
-            );
-        }
 
         return $detectedType;
     }

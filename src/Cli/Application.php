@@ -12,6 +12,7 @@ use Gianfriaur\OpcuaPhpClient\Cli\Commands\TrustCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\TrustListCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\TrustRemoveCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\WatchCommand;
+use Gianfriaur\OpcuaPhpClient\Cli\Commands\WriteCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Output\ConsoleOutput;
 use Gianfriaur\OpcuaPhpClient\Cli\Output\JsonOutput;
 use Gianfriaur\OpcuaPhpClient\Cli\Output\OutputInterface;
@@ -32,6 +33,7 @@ class Application
     {
         $this->registerCommand(new BrowseCommand());
         $this->registerCommand(new ReadCommand());
+        $this->registerCommand(new WriteCommand());
         $this->registerCommand(new EndpointsCommand());
         $this->registerCommand(new WatchCommand());
         $this->registerCommand(new TrustCommand());

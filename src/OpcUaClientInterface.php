@@ -503,9 +503,9 @@ interface OpcUaClientInterface
     /**
      * Write a value to a node attribute.
      *
-     * When auto-detect is enabled and no type is provided, the client reads the node first
+     * When no type is provided and auto-detect is enabled, the client reads the node first
      * to determine the correct BuiltinType (cached via PSR-16). When a type is provided
-     * explicitly, it is validated against the detected type.
+     * explicitly, it is used directly without any read.
      *
      * @param NodeId|string $nodeId The node to write to.
      * @param mixed $value The value to write.
@@ -516,7 +516,6 @@ interface OpcUaClientInterface
      * @throws ConnectionException If the connection is lost during the request.
      * @throws ServiceException If the server returns an error response.
      * @throws WriteTypeDetectionException If the type cannot be determined (no value on node, or auto-detect disabled without explicit type).
-     * @throws WriteTypeMismatchException If the explicit type does not match the detected node type.
      */
     public function write(NodeId|string $nodeId, mixed $value, ?BuiltinType $type = null): int;
 
@@ -533,7 +532,6 @@ interface OpcUaClientInterface
      * @throws ConnectionException If the connection is lost during the request.
      * @throws ServiceException If the server returns an error response.
      * @throws WriteTypeDetectionException If a type cannot be determined for an item.
-     * @throws WriteTypeMismatchException If an explicit type does not match the detected node type.
      */
     public function writeMulti(?array $writeItems = null): array|Builder\WriteMultiBuilder;
 

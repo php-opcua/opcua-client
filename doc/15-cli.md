@@ -83,6 +83,39 @@ Server:     2026-03-24T15:30:00+00:00
 |--------|-------------|
 | `--attribute=NAME` | Attribute to read: Value (default), DisplayName, BrowseName, DataType, NodeClass, Description, AccessLevel, NodeId |
 
+### `write` — Write a value to a node
+
+```bash
+# Auto-detect type (reads the node first)
+php vendor/bin/opcua-cli write opc.tcp://localhost:4840 "ns=2;i=1001" 42
+
+# Explicit type
+php vendor/bin/opcua-cli write opc.tcp://localhost:4840 "ns=2;i=1001" 42 --type=Int32
+
+# Write a boolean
+php vendor/bin/opcua-cli write opc.tcp://localhost:4840 "ns=2;i=2000" true --type=Boolean
+
+# JSON output
+php vendor/bin/opcua-cli write opc.tcp://localhost:4840 "ns=2;i=1001" 42 --json
+```
+
+Output:
+
+```
+NodeId:  ns=2;i=1001
+Value:   42
+Type:    Int32
+Status:  Good (0x00000000)
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--type=TYPE` | Explicit OPC UA type. If omitted, auto-detected from the node. Valid types: Boolean, SByte, Byte, Int16, UInt16, Int32, UInt32, Int64, UInt64, Float, Double, String |
+
+**Value casting:** When `--type` is specified, the value is cast accordingly (`"true"` → `bool`, `"42"` → `int`, `"3.14"` → `float`). Without `--type`, the CLI infers from the string format.
+
 ### `endpoints` — Discover server endpoints
 
 ```bash

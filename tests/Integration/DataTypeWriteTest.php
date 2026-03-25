@@ -315,7 +315,7 @@ describe('DataType Write', function () {
             }
         })->group('integration');
 
-        it('validates explicit type matches node type', function () {
+        it('uses explicit type directly without auto-detection', function () {
             $client = null;
             try {
                 $client = TestHelper::connectNoSecurity();
@@ -323,19 +323,6 @@ describe('DataType Write', function () {
 
                 $statusCode = $client->write($nodeId, 42, BuiltinType::Int32);
                 expect(StatusCode::isGood($statusCode))->toBeTrue();
-            } finally {
-                TestHelper::safeDisconnect($client);
-            }
-        })->group('integration');
-
-        it('throws WriteTypeMismatchException for wrong explicit type', function () {
-            $client = null;
-            try {
-                $client = TestHelper::connectNoSecurity();
-                $nodeId = TestHelper::browseToNode($client, ['TestServer', 'DataTypes', 'Scalar', 'Int32Value']);
-
-                expect(fn () => $client->write($nodeId, 42, BuiltinType::Double))
-                    ->toThrow(Gianfriaur\OpcuaPhpClient\Exception\WriteTypeMismatchException::class);
             } finally {
                 TestHelper::safeDisconnect($client);
             }

@@ -6,6 +6,7 @@ use Gianfriaur\OpcuaPhpClient\Cli\Commands\BrowseCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\EndpointsCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\ReadCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Commands\WatchCommand;
+use Gianfriaur\OpcuaPhpClient\Cli\Commands\WriteCommand;
 use Gianfriaur\OpcuaPhpClient\Cli\Output\ConsoleOutput;
 use Gianfriaur\OpcuaPhpClient\Cli\Output\JsonOutput;
 use Gianfriaur\OpcuaPhpClient\Testing\MockClient;
@@ -486,4 +487,144 @@ describe('WatchCommand', function () {
         expect($content)->toContain('null');
     });
 
+});
+
+describe('WriteCommand', function () {
+
+    it('returns name and description', function () {
+        $cmd = new WriteCommand();
+        expect($cmd->getName())->toBe('write');
+        expect($cmd->getDescription())->toBeString();
+        expect($cmd->getUsage())->toContain('write');
+        expect($cmd->requiresConnection())->toBeTrue();
+    });
+
+    it('returns 1 when insufficient arguments', function () {
+        $cmd = new WriteCommand();
+        $client = MockClient::create();
+        [$stdout, $stderr] = createOutputStream();
+        $output = new ConsoleOutput($stdout, $stderr);
+        $code = $cmd->execute($client, ['opc.tcp://localhost', 'i=1001'], [], $output);
+        expect($code)->toBe(1);
+    });
+
+    it('writes with explicit type', function () {
+        $cmd = new WriteCommand();
+        $client = MockClient::create()
+            ->onRead('ns=2;i=1001', fn () => DataValue::ofInt32(0))
+            ->onWrite('ns=2;i=1001', fn () => 0);
+
+        [$stdout, $stderr] = createOutputStream();
+        $output = new ConsoleOutput($stdout, $stderr);
+        $code = $cmd->execute($client, ['opc.tcp://localhost', 'ns=2;i=1001', '42'], ['type' => 'Int32'], $output);
+        expect($code)->toBe(0);
+        $content = getStreamContent($stdout);
+        expect($content)->toContain('ns=2;i=1001');
+        expect($content)->toContain('42');
+        expect($content)->toContain('Int32');
+        expect($content)->toContain('Good');
+    });
+
+    it('writes without type (auto-detect)', function () {
+        $cmd = new WriteCommand();
+        $client = MockClient::create()
+            ->onRead('ns=2;i=1001', fn () => DataValue::ofInt32(0))
+            ->onWrite('ns=2;i=1001', fn () => 0);
+
+        [$stdout, $stderr] = createOutputStream();
+        $output = new ConsoleOutput($stdout, $stderr);
+        $code = $cmd->execute($client, ['opc.tcp://localhost', 'ns=2;i=1001', '42'], [], $output);
+        expect($code)->toBe(0);
+        $content = getStreamContent($stdout);
+        expect($content)->toContain('Int32');
+    });
+
+    it('returns 1 for unknown type', function () {
+        $cmd = new WriteCommand();
+        $client = MockClient::create();
+        [$stdout, $stderr] = createOutputStream();
+        $output = new ConsoleOutput($stdout, $stderr);
+        $code = $cmd->execute($client, ['opc.tcp://localhost', 'i=1001', '42'], ['type' => 'FakeType'], $output);
+        expect($code)->toBe(1);
+        expect(getStreamContent($stderr))->toContain('Unknown type');
+    });
+
+    it('casts boolean values correctly', function () {
+        $cmd = new WriteCommand();
+        $writtenValue = null;
+        $client = MockClient::create()
+            ->onRead('ns=2;i=1001', fn () => DataValue::ofBoolean(false))
+            ->onWrite('ns=2;i=1001', function ($v) use (&$writtenValue) {
+                $writtenValue = $v;
+
+                return 0;
+            });
+
+        [$stdout, $stderr] = createOutputStream();
+        $output = new ConsoleOutput($stdout, $stderr);
+        $cmd->execute($client, ['opc.tcp://localhost', 'ns=2;i=1001', 'true'], ['type' => 'Boolean'], $output);
+        expect($writtenValue)->toBeTrue();
+    });
+
+    it('casts double values correctly', function () {
+        $cmd = new WriteCommand();
+        $writtenValue = null;
+        $client = MockClient::create()
+            ->onRead('ns=2;i=1001', fn () => DataValue::ofDouble(0.0))
+            ->onWrite('ns=2;i=1001', function ($v) use (&$writtenValue) {
+                $writtenValue = $v;
+
+                return 0;
+            });
+
+        [$stdout, $stderr] = createOutputStream();
+        $output = new ConsoleOutput($stdout, $stderr);
+        $cmd->execute($client, ['opc.tcp://localhost', 'ns=2;i=1001', '3.14'], ['type' => 'Double'], $output);
+        expect($writtenValue)->toBe(3.14);
+    });
+
+    it('auto-casts numeric string to int without type', function () {
+        $cmd = new WriteCommand();
+        $writtenValue = null;
+        $client = MockClient::create()
+            ->onRead('ns=2;i=1001', fn () => DataValue::ofInt32(0))
+            ->onWrite('ns=2;i=1001', function ($v) use (&$writtenValue) {
+                $writtenValue = $v;
+
+                return 0;
+            });
+
+        [$stdout, $stderr] = createOutputStream();
+        $output = new ConsoleOutput($stdout, $stderr);
+        $cmd->execute($client, ['opc.tcp://localhost', 'ns=2;i=1001', '42'], [], $output);
+        expect($writtenValue)->toBe(42);
+        expect($writtenValue)->toBeInt();
+    });
+
+    it('returns 1 on bad status code', function () {
+        $cmd = new WriteCommand();
+        $client = MockClient::create()
+            ->onRead('ns=2;i=1001', fn () => DataValue::ofInt32(0))
+            ->onWrite('ns=2;i=1001', fn () => 0x803B0000);
+
+        [$stdout, $stderr] = createOutputStream();
+        $output = new ConsoleOutput($stdout, $stderr);
+        $code = $cmd->execute($client, ['opc.tcp://localhost', 'ns=2;i=1001', '42'], [], $output);
+        expect($code)->toBe(1);
+    });
+
+    it('outputs as JSON', function () {
+        $cmd = new WriteCommand();
+        $client = MockClient::create()
+            ->onRead('ns=2;i=1001', fn () => DataValue::ofInt32(0))
+            ->onWrite('ns=2;i=1001', fn () => 0);
+
+        [$stdout, $stderr] = createOutputStream();
+        $output = new JsonOutput($stdout, $stderr);
+        $code = $cmd->execute($client, ['opc.tcp://localhost', 'ns=2;i=1001', '42'], ['type' => 'Int32'], $output);
+        expect($code)->toBe(0);
+        $decoded = json_decode(getStreamContent($stdout), true);
+        expect($decoded['NodeId'])->toBe('ns=2;i=1001');
+        expect($decoded['Value'])->toBe('42');
+    });
 });

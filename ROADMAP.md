@@ -8,7 +8,7 @@
 - [x] PSR-14 Event Dispatcher — 38 granular events (connection, session, subscription, data change, alarms, read/write, browse, cache, retry). NullEventDispatcher by default, zero overhead. Alarm deduction from event fields (ActiveState, AckedState, ConfirmedState, ShelvingState, LimitAlarm, OffNormalAlarm).
 - [x] Write Type Auto-Detection — automatic type resolution via read-before-write with PSR-16 caching, type mismatch validation, configurable via `setAutoDetectWriteType()`
 - [ ] Cache for metadata `read()` (DisplayName, BrowseName, DataType, NodeClass, Description), **`not Value`**
-- [x] CLI Tool — `bin/opcua-cli` with browse, read, endpoints, watch commands. Security, JSON, debug logging.
+- [x] CLI Tool — `bin/opcua-cli` with browse, read, write, endpoints, watch commands. Security, JSON, debug logging.
 - [ ] xml Code Generator
 - [ ] `TBD` Telemetry
 - [x] Server Trust Management (also for cli) — FileTrustStore, TrustPolicy enum, autoAccept(force), CLI trust/trust:list/trust:remove, 3 events
@@ -95,7 +95,6 @@ Verify that the server certificate has not been revoked before connecting. Requi
 ## v5.x
 
 ### CLI Commands
-- [ ] `write` — write a value to a node (`opcua-cli write <endpoint> <nodeId> <value> --type=Int32`)
 - [ ] `call` — invoke a method (`opcua-cli call <endpoint> <objectId> <methodId> [args...]`)
 - [ ] `history` — read historical data (`opcua-cli history <endpoint> <nodeId> --from="1 hour ago" --to=now`)
 - [ ] `tree` — dump the full address space as tree/JSON

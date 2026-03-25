@@ -57,7 +57,7 @@ All Type classes and result DTOs use public readonly properties. Access is $ref-
 - Repository (src/Repository/): per-client ExtensionObject codec registry
 - Cache (src/Cache/): PSR-16 cache drivers (InMemoryCache, FileCache)
 - Event (src/Event/): 40 PSR-14 event classes + NullEventDispatcher
-- Cli (src/Cli/): CLI tool — browse, read, endpoints, watch, trust, trust:list, trust:remove commands
+- Cli (src/Cli/): CLI tool — browse, read, write, endpoints, watch, trust, trust:list, trust:remove commands
 - TrustStore (src/TrustStore/): server certificate trust management (FileTrustStore, TrustPolicy, TrustResult)
 - Testing (src/Testing/): MockClient — in-memory test double
 - Exception (src/Exception/): exception hierarchy

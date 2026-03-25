@@ -288,6 +288,10 @@ php vendor/bin/opcua-cli browse opc.tcp://192.168.1.10:4840 /Objects
 # Read a value
 php vendor/bin/opcua-cli read opc.tcp://192.168.1.10:4840 "ns=2;i=1001"
 
+# Write a value
+php vendor/bin/opcua-cli write opc.tcp://192.168.1.10:4840 "ns=2;i=1001" 42 # auto-detected
+php vendor/bin/opcua-cli write opc.tcp://192.168.1.10:4840 "ns=2;i=1001" 42 --type=Int32 # with type
+
 # Watch a value in real time (subscription mode)
 php vendor/bin/opcua-cli watch opc.tcp://192.168.1.10:4840 "ns=2;i=1001"
 
@@ -385,7 +389,7 @@ $point = $client->read($pointNodeId)->getValue();
 | **Cache** | Browse and resolve results cached by default (InMemoryCache, 300s TTL). Plug in any PSR-16 driver (FileCache, Laravel, Redis) |
 | **Events** | 38 granular PSR-14 events — connection, session, subscription, data change, alarms, read/write, browse, cache, retry. Zero overhead when unused |
 | **Trust Store** | Persistent server certificate validation — file-based trust store, 3 policies (fingerprint/expiry/full CA chain), TOFU auto-accept, CLI management |
-| **CLI Tool** | `opcua-cli` — browse, read, watch, discover endpoints, and manage trusted certificates. Security, JSON output, and debug logging |
+| **CLI Tool** | `opcua-cli` — browse, read, write, watch, discover endpoints, and manage trusted certificates. Security, JSON output, and debug logging |
 
 ## Documentation
 

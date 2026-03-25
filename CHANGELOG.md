@@ -32,7 +32,8 @@
 - Unit tests for the event system: NullEventDispatcher, custom dispatcher, event properties, alarm event classes.
 - Documentation: [Events](doc/14-events.md) chapter with full event reference, Laravel integration, and practical examples.
 - **Code style enforcement.** Added `friendsofphp/php-cs-fixer` with Laravel-style rules (PSR-12 + opinionated). Run `composer format` before committing. `.editorconfig` included for IDE support.
-- **CLI Tool** (`bin/opcua-cli`). Four commands: `browse` (flat + recursive tree), `read` (any attribute), `endpoints` (discover security), `watch` (subscription or polling). Full security, JSON output, debug logging. Zero additional dependencies. Documentation: [CLI Tool](doc/15-cli.md).
+- **CLI `write` command.** Write a value to a node from the terminal: `opcua-cli write <endpoint> <nodeId> <value> [--type=Int32]`. The `--type` flag is optional — when omitted, the type is auto-detected from the node. Supports all scalar types (Boolean, Int32, Double, String, etc.) with automatic value casting.
+- **CLI Tool** (`bin/opcua-cli`). Five commands: `browse` (flat + recursive tree), `read` (any attribute), `endpoints` (discover security), `watch` (subscription or polling). Full security, JSON output, debug logging. Zero additional dependencies. Documentation: [CLI Tool](doc/15-cli.md).
 - `MockClient::onGetEndpoints()` handler for mocking endpoint discovery results.
 - **Server Trust Store.** Persistent server certificate validation for industrial-grade deployments.
   - `FileTrustStore` — file-based trust store (`~/.opcua/trusted/` default, configurable path). Stores trusted and rejected certificates as DER files.

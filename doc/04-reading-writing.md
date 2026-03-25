@@ -117,7 +117,7 @@ The detected type is cached (PSR-16) so subsequent writes to the same node skip 
 | Auto-detect | `$type` passed | What happens |
 |---|---|---|
 | ON (default) | No | Reads node, caches type, writes |
-| ON | Yes | Reads node, validates type matches, writes |
+| ON | Yes | Uses the type directly, no read |
 | OFF | No | Throws `WriteTypeDetectionException` |
 | OFF | Yes | Uses the type directly, no read |
 
@@ -130,7 +130,6 @@ $client->setAutoDetectWriteType(false);
 **Exceptions:**
 
 - `WriteTypeDetectionException` — node has no readable value, or auto-detect is off and no type provided
-- `WriteTypeMismatchException` — explicit type does not match the detected node type. Carries `$nodeId`, `$expectedType`, `$givenType`
 
 **Events:**
 

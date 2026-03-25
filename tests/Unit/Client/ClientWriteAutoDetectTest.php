@@ -90,41 +90,15 @@ describe('Write auto-detect type', function () {
         expect(StatusCode::isGood($statusCode))->toBeTrue();
     });
 
-    it('validates explicit type against detected type', function () {
+    it('uses explicit type directly without read', function () {
         $mock = new MockTransport();
-        $mock->addResponse(readResponseMsgTyped(BuiltinType::Int32, 0));
         $mock->addResponse(writeResponseMsg());
 
         $client = setupConnectedClient($mock);
         $statusCode = $client->write('i=1001', 42, BuiltinType::Int32);
 
         expect(StatusCode::isGood($statusCode))->toBeTrue();
-    });
-
-    it('throws WriteTypeMismatchException when explicit type differs from detected', function () {
-        $mock = new MockTransport();
-        $mock->addResponse(readResponseMsgTyped(BuiltinType::Int32, 0));
-
-        $client = setupConnectedClient($mock);
-
-        expect(fn () => $client->write('i=1001', 42, BuiltinType::Double))
-            ->toThrow(WriteTypeMismatchException::class);
-    });
-
-    it('WriteTypeMismatchException carries correct properties', function () {
-        $mock = new MockTransport();
-        $mock->addResponse(readResponseMsgTyped(BuiltinType::Int32, 0));
-
-        $client = setupConnectedClient($mock);
-
-        try {
-            $client->write('i=1001', 42, BuiltinType::Double);
-            test()->fail('Expected WriteTypeMismatchException');
-        } catch (WriteTypeMismatchException $e) {
-            expect($e->expectedType)->toBe(BuiltinType::Int32);
-            expect($e->givenType)->toBe(BuiltinType::Double);
-            expect($e->nodeId)->toBeInstanceOf(NodeId::class);
-        }
+        expect(count($mock->sent))->toBe(1);
     });
 
     it('throws WriteTypeDetectionException when node has no value', function () {
