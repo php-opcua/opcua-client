@@ -383,8 +383,8 @@ interface OpcUaClientInterface
     /**
      * Read multiple attributes from one or more nodes in a single request.
      *
-     * @param array<array{nodeId: NodeId|string, attributeId?: int}> $items Items to read.
-     * @return DataValue[]
+     * @param ?array<array{nodeId: NodeId|string, attributeId?: int}> $readItems Items to read, or null to get a fluent builder.
+     * @return ($readItems is null ? Builder\ReadMultiBuilder : DataValue[])
      *
      * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
      * @throws ConnectionException If the connection is lost during the request.
@@ -410,8 +410,8 @@ interface OpcUaClientInterface
     /**
      * Write multiple values to one or more nodes in a single request.
      *
-     * @param ?array<array{nodeId: NodeId|string, value: mixed, type?: ?BuiltinType, attributeId?: int}> $items Items to write, or null to get a fluent builder.
-     * @return ($items is null ? Builder\WriteMultiBuilder : int[])
+     * @param ?array<array{nodeId: NodeId|string, value: mixed, type?: ?BuiltinType, attributeId?: int}> $writeItems Items to write, or null to get a fluent builder.
+     * @return ($writeItems is null ? Builder\WriteMultiBuilder : int[])
      *
      * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
      * @throws ConnectionException If the connection is lost during the request.

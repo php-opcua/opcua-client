@@ -40,9 +40,6 @@ All of this with zero external dependencies beyond `ext-openssl`, and full suppo
 
 ----
 
-> **A note on versioning:** We're aware of the rapid major releases in a short time frame. This library is under active, full-time development right now — the goal is to reach a production-stable state as quickly as possible. Breaking changes are being bundled and shipped deliberately to avoid dragging them out across many minor releases. Once the API surface settles, major version bumps will become rare. Thanks for your patience.
-
-
 ## Quick Start
 
 ```bash

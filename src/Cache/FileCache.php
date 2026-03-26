@@ -11,7 +11,7 @@ use Psr\SimpleCache\CacheInterface;
  *
  * Each cache entry is stored as a serialized file in the specified directory.
  *
- * @implements CacheInterface
+ * @implements CacheInterface<mixed>
  */
 class FileCache implements CacheInterface
 {

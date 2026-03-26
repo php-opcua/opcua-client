@@ -51,6 +51,10 @@
     "psr/simple-cache": "^3.0",
     "psr/event-dispatcher": "^1.0"
   },
+  "suggest": {
+    "php-opcua/opcua-client-nodeset": "Code generator for NodeSet2.xml — typed DTOs, PHP enums, and ExtensionObject codecs",
+    "php-opcua/opcua-session-manager": "Persist OPC UA sessions across PHP requests via a ReactPHP daemon"
+  },
   "require-dev": {
     "pestphp/pest": "^3.0",
     "friendsofphp/php-cs-fixer": "^3.0"

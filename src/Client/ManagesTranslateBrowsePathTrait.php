@@ -75,7 +75,7 @@ trait ManagesTranslateBrowsePathTrait
 
         return $this->cachedFetch(
             $cacheKey,
-            function () use ($normalizedPath, $startingNodeId, $path) {
+            function () use ($normalizedPath, $startingNodeId) {
                 $segments = explode('/', $normalizedPath);
 
                 $elements = [];

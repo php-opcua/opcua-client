@@ -29,6 +29,10 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist
 
+      - name: Check code style
+        if: matrix.php-version == '8.5'
+        run: composer format:check
+
       - name: Start OPC UA test servers
         id: opcua
         uses: php-opcua/opcua-test-suite@v1.1.5

@@ -131,7 +131,7 @@ trait ManagesReadWriteTrait
             $enumValue = $enumClass::from($rawValue);
 
             return new DataValue(
-                new Variant($dataValue->getVariant()?->type ?? BuiltinType::Int32, $enumValue),
+                new Variant($dataValue->getVariant()->type ?? BuiltinType::Int32, $enumValue),
                 $dataValue->statusCode,
                 $dataValue->sourceTimestamp,
                 $dataValue->serverTimestamp,

@@ -1,8 +1,6 @@
 # Roadmap
 
-> **A note on versioning:** We're aware of the rapid major releases in a short time frame. This library is under active, full-time development right now — the goal is to reach a production-stable state as quickly as possible. Breaking changes are being bundled and shipped deliberately to avoid dragging them out across many minor releases. Once the API surface settles, major version bumps will become rare. Thanks for your patience.
-
-## v4.0.0 - 2026-03-29
+## v4.0.0 - 2026-03-26
 
 ### Features
 - [x] Rebranding :) to `php-opcua/opcua-client`
@@ -30,6 +28,12 @@
 
 
 > **Note:** The CLI tool has been extracted to a separate package: [`php-opcua/opcua-cli`](https://github.com/php-opcua/opcua-cli). CLI-related roadmap items are tracked there.
+
+---
+
+## v5.0.0
+
+- [ ] **PHPStan level 5** — static analysis with `phpstan/phpstan` as dev dependency, CI integration, and `composer analyse` script
 
 ---
 

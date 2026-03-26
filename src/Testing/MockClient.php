@@ -74,6 +74,7 @@ class MockClient implements OpcUaClientInterface
 
     private ConnectionState $state = ConnectionState::Disconnected;
 
+    /** @phpstan-ignore property.onlyWritten */
     private ?string $endpointUrl = null;
 
     private float $timeout = 5.0;
@@ -177,7 +178,7 @@ class MockClient implements OpcUaClientInterface
     }
 
     /**
-     * @param callable(string $endpointUrl): EndpointDescription[] $handler
+     * @param callable(string $endpointUrl): \PhpOpcua\Client\Types\EndpointDescription[] $handler
      * @return $this
      */
     public function onGetEndpoints(callable $handler): self

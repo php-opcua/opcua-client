@@ -101,6 +101,7 @@ class BinaryDecoder
         return $value;
     }
 
+    /** @phpstan-impure */
     public function readUInt32(): int
     {
         $this->ensureAvailable(4);
@@ -110,6 +111,7 @@ class BinaryDecoder
         return $data[1];
     }
 
+    /** @phpstan-impure */
     public function readInt32(): int
     {
         $this->ensureAvailable(4);
