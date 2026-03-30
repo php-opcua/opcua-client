@@ -368,6 +368,20 @@ class Client implements OpcUaClientInterface
     }
 
     /**
+     * Build a log context array with endpoint and session_id prepended.
+     *
+     * @param array<string, mixed> $context Additional context data.
+     * @return array<string, mixed>
+     */
+    private function logContext(array $context = []): array
+    {
+        return array_merge([
+            'endpoint' => $this->lastEndpointUrl,
+            'session_id' => $this->authenticationToken !== null ? (string) $this->authenticationToken : null,
+        ], $context);
+    }
+
+    /**
      * Generate and return the next sequential request ID.
      *
      * @return int

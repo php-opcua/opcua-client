@@ -37,7 +37,7 @@ trait ManagesConnectionTrait
     public function reconnect(): void
     {
         $this->dispatch(fn () => new ClientReconnecting($this, $this->lastEndpointUrl));
-        $this->logger->info('Reconnecting to {endpoint}', ['endpoint' => $this->lastEndpointUrl]);
+        $this->logger->info('Reconnecting to {endpoint}', $this->logContext(['endpoint' => $this->lastEndpointUrl]));
         $this->transport->close();
         $this->resetConnectionState();
 
@@ -52,7 +52,7 @@ trait ManagesConnectionTrait
     public function disconnect(): void
     {
         $this->dispatch(fn () => new ClientDisconnecting($this, $this->lastEndpointUrl));
-        $this->logger->info('Disconnecting');
+        $this->logger->info('Disconnecting', $this->logContext());
         if ($this->session !== null && $this->authenticationToken !== null) {
             try {
                 $this->closeSession();
@@ -138,18 +138,18 @@ trait ManagesConnectionTrait
 
                 if ($attempt >= $maxRetries || $this->lastEndpointUrl === null) {
                     $this->dispatch(fn () => new RetryExhausted($this, $attempt + 1, $e));
-                    $this->logger->error('Operation failed after {attempts} attempt(s): {message}', [
+                    $this->logger->error('Operation failed after {attempts} attempt(s): {message}', $this->logContext([
                         'attempts' => $attempt + 1,
                         'message' => $e->getMessage(),
-                    ]);
+                    ]));
                     throw $e;
                 }
 
                 $this->dispatch(fn () => new RetryAttempt($this, $attempt + 1, $maxRetries, $e));
-                $this->logger->warning('Connection lost, retrying ({attempt}/{max})', [
+                $this->logger->warning('Connection lost, retrying ({attempt}/{max})', $this->logContext([
                     'attempt' => $attempt + 1,
                     'max' => $maxRetries,
-                ]);
+                ]));
                 $this->reconnect();
             }
         }
@@ -186,25 +186,25 @@ trait ManagesConnectionTrait
         }
 
         $this->dispatch(fn () => new ClientConnecting($this, $endpointUrl));
-        $this->logger->info('Connecting to {endpoint}', ['endpoint' => $endpointUrl]);
+        $this->logger->info('Connecting to {endpoint}', $this->logContext(['endpoint' => $endpointUrl]));
 
         try {
             $this->transport->connect($host, $port, $this->timeout);
-            $this->logger->debug('TCP connection established to {host}:{port}', ['host' => $host, 'port' => $port]);
+            $this->logger->debug('TCP connection established to {host}:{port}', $this->logContext(['host' => $host, 'port' => $port]));
 
             $this->doHandshake($endpointUrl);
-            $this->logger->debug('HEL/ACK handshake complete');
+            $this->logger->debug('HEL/ACK handshake complete', $this->logContext());
 
             $this->openSecureChannel();
-            $this->logger->debug('Secure channel opened (channelId={channelId})', ['channelId' => $this->secureChannelId]);
+            $this->logger->debug('Secure channel opened (channelId={channelId})', $this->logContext(['channelId' => $this->secureChannelId]));
 
             $this->createAndActivateSession($endpointUrl);
-            $this->logger->debug('Session created and activated');
+            $this->logger->debug('Session created and activated', $this->logContext());
         } catch (ConnectionException $e) {
             $this->connectionState = ConnectionState::Broken;
             $this->lastEndpointUrl = $endpointUrl;
             $this->dispatch(fn () => new ConnectionFailed($this, $endpointUrl, $e));
-            $this->logger->error('Connection failed: {message}', ['message' => $e->getMessage(), 'endpoint' => $endpointUrl]);
+            $this->logger->error('Connection failed: {message}', $this->logContext(['message' => $e->getMessage(), 'endpoint' => $endpointUrl]));
             throw $e;
         }
 
@@ -212,7 +212,7 @@ trait ManagesConnectionTrait
         $this->connectionState = ConnectionState::Connected;
 
         $this->discoverServerOperationLimits();
-        $this->logger->info('Connected to {endpoint}', ['endpoint' => $endpointUrl]);
+        $this->logger->info('Connected to {endpoint}', $this->logContext(['endpoint' => $endpointUrl]));
         $this->dispatch(fn () => new ClientConnected($this, $endpointUrl));
     }
 

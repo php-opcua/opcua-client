@@ -49,7 +49,7 @@ trait ManagesHistoryTrait
                 $numValuesPerNode,
                 $returnBounds,
             );
-            $this->logger->debug('HistoryReadRaw request for node {nodeId}', ['nodeId' => (string) $nodeId]);
+            $this->logger->debug('HistoryReadRaw request for node {nodeId}', $this->logContext(['nodeId' => (string) $nodeId]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -57,10 +57,10 @@ trait ManagesHistoryTrait
             $decoder = $this->createDecoder($responseBody);
 
             $results = $this->historyReadService->decodeHistoryReadResponse($decoder);
-            $this->logger->debug('HistoryReadRaw response for node {nodeId}: {count} value(s)', [
+            $this->logger->debug('HistoryReadRaw response for node {nodeId}: {count} value(s)', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'count' => count($results),
-            ]);
+            ]));
 
             return $results;
         });
@@ -102,10 +102,10 @@ trait ManagesHistoryTrait
                 $processingInterval,
                 $aggregateType,
             );
-            $this->logger->debug('HistoryReadProcessed request for node {nodeId} (interval={interval}ms)', [
+            $this->logger->debug('HistoryReadProcessed request for node {nodeId} (interval={interval}ms)', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'interval' => $processingInterval,
-            ]);
+            ]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -113,10 +113,10 @@ trait ManagesHistoryTrait
             $decoder = $this->createDecoder($responseBody);
 
             $results = $this->historyReadService->decodeHistoryReadResponse($decoder);
-            $this->logger->debug('HistoryReadProcessed response for node {nodeId}: {count} value(s)', [
+            $this->logger->debug('HistoryReadProcessed response for node {nodeId}: {count} value(s)', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'count' => count($results),
-            ]);
+            ]));
 
             return $results;
         });
@@ -149,10 +149,10 @@ trait ManagesHistoryTrait
                 $nodeId,
                 $timestamps,
             );
-            $this->logger->debug('HistoryReadAtTime request for node {nodeId} ({count} timestamp(s))', [
+            $this->logger->debug('HistoryReadAtTime request for node {nodeId} ({count} timestamp(s))', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'count' => count($timestamps),
-            ]);
+            ]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -160,10 +160,10 @@ trait ManagesHistoryTrait
             $decoder = $this->createDecoder($responseBody);
 
             $results = $this->historyReadService->decodeHistoryReadResponse($decoder);
-            $this->logger->debug('HistoryReadAtTime response for node {nodeId}: {count} value(s)', [
+            $this->logger->debug('HistoryReadAtTime response for node {nodeId}: {count} value(s)', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'count' => count($results),
-            ]);
+            ]));
 
             return $results;
         });

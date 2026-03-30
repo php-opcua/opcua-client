@@ -41,7 +41,7 @@ trait ManagesSessionTrait
     {
         $requestId = $this->nextRequestId();
         $request = $this->session->encodeCreateSessionRequest($requestId, $endpointUrl);
-        $this->logger->debug('CreateSession request for {url}', ['url' => $endpointUrl]);
+        $this->logger->debug('CreateSession request for {url}', $this->logContext(['url' => $endpointUrl]));
         $this->transport->send($request);
 
         $response = $this->transport->receive();
@@ -49,7 +49,7 @@ trait ManagesSessionTrait
         $decoder = $this->createDecoder($responseBody);
         $sessionResult = $this->session->decodeCreateSessionResponse($decoder);
         $this->authenticationToken = $sessionResult['authenticationToken'];
-        $this->logger->debug('CreateSession response: authToken={token}', ['token' => (string) $this->authenticationToken]);
+        $this->logger->debug('CreateSession response: authToken={token}', $this->logContext(['token' => (string) $this->authenticationToken]));
         $this->dispatch(fn () => new SessionCreated($this, $endpointUrl, $this->authenticationToken));
 
         if (isset($sessionResult['serverNonce'])) {
@@ -83,14 +83,14 @@ trait ManagesSessionTrait
             $userPrivateKey,
             $this->serverNonce,
         );
-        $this->logger->debug('ActivateSession request');
+        $this->logger->debug('ActivateSession request', $this->logContext());
         $this->transport->send($request);
 
         $response = $this->transport->receive();
         $responseBody = $this->unwrapResponse($response);
         $decoder = $this->createDecoder($responseBody);
         $this->session->decodeActivateSessionResponse($decoder);
-        $this->logger->debug('ActivateSession response received');
+        $this->logger->debug('ActivateSession response received', $this->logContext());
         $this->dispatch(fn () => new SessionActivated($this, $endpointUrl));
     }
 
@@ -125,7 +125,7 @@ trait ManagesSessionTrait
      */
     private function closeSession(): void
     {
-        $this->logger->debug('CloseSession request');
+        $this->logger->debug('CloseSession request', $this->logContext());
         $this->dispatch(fn () => new SessionClosed($this));
 
         if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {

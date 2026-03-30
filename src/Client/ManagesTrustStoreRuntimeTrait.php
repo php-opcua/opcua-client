@@ -55,7 +55,7 @@ trait ManagesTrustStoreRuntimeTrait
 
         $this->trustStore->trust($certDer);
         $fingerprint = implode(':', str_split(sha1($certDer), 2));
-        $this->logger->info('Server certificate manually trusted (fingerprint={fingerprint})', ['fingerprint' => $fingerprint]);
+        $this->logger->info('Server certificate manually trusted (fingerprint={fingerprint})', $this->logContext(['fingerprint' => $fingerprint]));
         $this->dispatch(fn () => new ServerCertificateManuallyTrusted($this, $fingerprint));
     }
 
@@ -72,7 +72,7 @@ trait ManagesTrustStoreRuntimeTrait
         }
 
         $this->trustStore->untrust($fingerprint);
-        $this->logger->info('Server certificate removed (fingerprint={fingerprint})', ['fingerprint' => $fingerprint]);
+        $this->logger->info('Server certificate removed (fingerprint={fingerprint})', $this->logContext(['fingerprint' => $fingerprint]));
         $this->dispatch(fn () => new ServerCertificateRemoved($this, $fingerprint));
     }
 
@@ -93,7 +93,7 @@ trait ManagesTrustStoreRuntimeTrait
         $result = $this->trustStore->validate($this->serverCertDer, $this->trustPolicy, $caCertPem);
 
         if ($result->trusted) {
-            $this->logger->debug('Server certificate trusted (fingerprint={fingerprint})', ['fingerprint' => $result->fingerprint]);
+            $this->logger->debug('Server certificate trusted (fingerprint={fingerprint})', $this->logContext(['fingerprint' => $result->fingerprint]));
             $this->dispatch(fn () => new ServerCertificateTrusted($this, $result->fingerprint, $result->subject));
 
             return;
@@ -102,7 +102,7 @@ trait ManagesTrustStoreRuntimeTrait
         if ($this->autoAcceptEnabled) {
             if ($this->autoAcceptForce) {
                 $this->trustStore->trust($this->serverCertDer);
-                $this->logger->info('Server certificate force-accepted (fingerprint={fingerprint})', ['fingerprint' => $result->fingerprint]);
+                $this->logger->info('Server certificate force-accepted (fingerprint={fingerprint})', $this->logContext(['fingerprint' => $result->fingerprint]));
                 $this->dispatch(fn () => new ServerCertificateAutoAccepted($this, $result->fingerprint, $result->subject));
 
                 return;
@@ -110,7 +110,7 @@ trait ManagesTrustStoreRuntimeTrait
 
             if (empty($this->trustStore->getTrustedCertificates())) {
                 $this->trustStore->trust($this->serverCertDer);
-                $this->logger->info('Server certificate auto-accepted (fingerprint={fingerprint})', ['fingerprint' => $result->fingerprint]);
+                $this->logger->info('Server certificate auto-accepted (fingerprint={fingerprint})', $this->logContext(['fingerprint' => $result->fingerprint]));
                 $this->dispatch(fn () => new ServerCertificateAutoAccepted($this, $result->fingerprint, $result->subject));
 
                 return;
@@ -118,10 +118,10 @@ trait ManagesTrustStoreRuntimeTrait
         }
 
         $this->trustStore->reject($this->serverCertDer);
-        $this->logger->warning('Server certificate rejected: {reason} (fingerprint={fingerprint})', [
+        $this->logger->warning('Server certificate rejected: {reason} (fingerprint={fingerprint})', $this->logContext([
             'reason' => $result->reason,
             'fingerprint' => $result->fingerprint,
-        ]);
+        ]));
         $this->dispatch(fn () => new ServerCertificateRejected($this, $result->fingerprint, $result->reason, $result->subject));
 
         throw new UntrustedCertificateException(

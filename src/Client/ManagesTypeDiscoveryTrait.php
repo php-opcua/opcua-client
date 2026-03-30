@@ -38,7 +38,7 @@ trait ManagesTypeDiscoveryTrait
     public function discoverDataTypes(?int $namespaceIndex = null, bool $useCache = true): int
     {
         $this->ensureConnected();
-        $this->logger->info('Discovering data types' . ($namespaceIndex !== null ? " for namespace {$namespaceIndex}" : ''));
+        $this->logger->info('Discovering data types' . ($namespaceIndex !== null ? " for namespace {$namespaceIndex}" : ''), $this->logContext());
 
         $cacheKey = $this->buildSimpleCacheKey('dataTypes', (string) ($namespaceIndex ?? 'all'));
 
@@ -54,7 +54,7 @@ trait ManagesTypeDiscoveryTrait
                 $this->extensionObjectRepository->register($entry['encodingId'], new DynamicCodec($entry['definition']));
                 $registered++;
             }
-            $this->logger->info('Restored {count} data type(s) from cache', ['count' => $registered]);
+            $this->logger->info('Restored {count} data type(s) from cache', $this->logContext(['count' => $registered]));
 
             return $registered;
         }
@@ -75,7 +75,7 @@ trait ManagesTypeDiscoveryTrait
             $this->cache->set($cacheKey, $discoveredEntries);
         }
 
-        $this->logger->info('Discovered {count} data type(s)', ['count' => $registered]);
+        $this->logger->info('Discovered {count} data type(s)', $this->logContext(['count' => $registered]));
         $this->dispatch(fn () => new DataTypesDiscovered($this, $namespaceIndex, $registered));
 
         return $registered;

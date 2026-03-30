@@ -14,6 +14,7 @@
   - **ManagesTranslateBrowsePathTrait** — `TranslateBrowsePaths`.
   - **ManagesReadWriteTrait** — `Read`, `ReadMulti`, `Write`, `WriteMulti` (including batched), `Call`.
 - Each log entry includes contextual data (NodeId, subscription ID, item count, status codes, channel ID, etc.) for effective filtering and debugging.
+- **`endpoint` and `session_id` in every log context.** All log messages now include `endpoint` (the connected OPC UA endpoint URL) and `session_id` (the authentication token) in the PSR-3 context array. These fields are not part of the log message text, but are available for structured logging pipelines (e.g. Monolog processors for Graylog/ELK). A new `logContext()` helper method in `Client` centralizes this enrichment.
 
 ## [v4.0.0] - 2026-03-26
 

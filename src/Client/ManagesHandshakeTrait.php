@@ -34,7 +34,7 @@ trait ManagesHandshakeTrait
     private function doHandshake(string $endpointUrl): void
     {
         $hello = new HelloMessage(endpointUrl: $endpointUrl);
-        $this->logger->debug('Sending HEL message to {url}', ['url' => $endpointUrl]);
+        $this->logger->debug('Sending HEL message to {url}', $this->logContext(['url' => $endpointUrl]));
         $this->transport->send($hello->encode());
 
         $response = $this->transport->receive();
@@ -52,7 +52,7 @@ trait ManagesHandshakeTrait
         }
 
         $ack = AcknowledgeMessage::decode($decoder);
-        $this->logger->debug('ACK received (receiveBufferSize={bufferSize})', ['bufferSize' => $ack->getReceiveBufferSize()]);
+        $this->logger->debug('ACK received (receiveBufferSize={bufferSize})', $this->logContext(['bufferSize' => $ack->getReceiveBufferSize()]));
         $this->transport->setReceiveBufferSize($ack->getReceiveBufferSize());
     }
 
@@ -69,7 +69,7 @@ trait ManagesHandshakeTrait
      */
     private function discoverServerCertificate(string $host, int $port, string $endpointUrl): void
     {
-        $this->logger->debug('Discovering server certificate from {host}:{port}', ['host' => $host, 'port' => $port]);
+        $this->logger->debug('Discovering server certificate from {host}:{port}', $this->logContext(['host' => $host, 'port' => $port]));
         $discoveryTransport = new TcpTransport();
         $discoveryTransport->connect($host, $port, $this->timeout);
 
@@ -77,11 +77,11 @@ trait ManagesHandshakeTrait
 
         $getEndpointsService = new GetEndpointsService($session);
         $request = $getEndpointsService->encodeGetEndpointsRequest(1, $endpointUrl, NodeId::numeric(0, ServiceTypeId::NULL));
-        $this->logger->debug('Discovery GetEndpoints request for {url}', ['url' => $endpointUrl]);
+        $this->logger->debug('Discovery GetEndpoints request for {url}', $this->logContext(['url' => $endpointUrl]));
         $discoveryTransport->send($request);
 
         $response = $discoveryTransport->receive();
-        $this->logger->debug('Discovery GetEndpoints response received');
+        $this->logger->debug('Discovery GetEndpoints response received', $this->logContext());
         $responseBody = substr($response, MessageHeader::HEADER_SIZE + 4);
         $decoder = new BinaryDecoder($responseBody);
         $endpoints = $getEndpointsService->decodeGetEndpointsResponse($decoder);
@@ -106,7 +106,7 @@ trait ManagesHandshakeTrait
      */
     private function performDiscoveryHandshake(TcpTransport $transport, string $endpointUrl): SessionService
     {
-        $this->logger->debug('Discovery HEL for {url}', ['url' => $endpointUrl]);
+        $this->logger->debug('Discovery HEL for {url}', $this->logContext(['url' => $endpointUrl]));
         $helloMessage = new HelloMessage(endpointUrl: $endpointUrl);
         $transport->send($helloMessage->encode());
         $helloResponse = $transport->receive();
@@ -117,11 +117,11 @@ trait ManagesHandshakeTrait
         }
         AcknowledgeMessage::decode($helloDecoder);
 
-        $this->logger->debug('Discovery ACK received, sending OPN request');
+        $this->logger->debug('Discovery ACK received, sending OPN request', $this->logContext());
         $opnRequest = new SecureChannelRequest();
         $transport->send($opnRequest->encode());
         $opnResponse = $transport->receive();
-        $this->logger->debug('Discovery OPN response received');
+        $this->logger->debug('Discovery OPN response received', $this->logContext());
         $opnDecoder = new BinaryDecoder($opnResponse);
         $opnHeader = MessageHeader::decode($opnDecoder);
         if ($opnHeader->getMessageType() !== 'OPN') {

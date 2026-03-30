@@ -71,7 +71,7 @@ trait ManagesSubscriptionsTrait
                 $publishingEnabled,
                 $priority,
             );
-            $this->logger->debug('CreateSubscription request (interval={interval}ms)', ['interval' => $publishingInterval]);
+            $this->logger->debug('CreateSubscription request (interval={interval}ms)', $this->logContext(['interval' => $publishingInterval]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -79,10 +79,10 @@ trait ManagesSubscriptionsTrait
             $decoder = $this->createDecoder($responseBody);
 
             $result = $this->subscriptionService->decodeCreateSubscriptionResponse($decoder);
-            $this->logger->debug('CreateSubscription response: subscriptionId={subId}, revisedInterval={interval}ms', [
+            $this->logger->debug('CreateSubscription response: subscriptionId={subId}, revisedInterval={interval}ms', $this->logContext([
                 'subId' => $result->subscriptionId,
                 'interval' => $result->revisedPublishingInterval,
-            ]);
+            ]));
 
             $this->dispatch(fn () => new SubscriptionCreated(
                 $this,
@@ -127,10 +127,10 @@ trait ManagesSubscriptionsTrait
                 $subscriptionId,
                 $monitoredItems,
             );
-            $this->logger->debug('CreateMonitoredItems request: {count} item(s) for subscription {subId}', [
+            $this->logger->debug('CreateMonitoredItems request: {count} item(s) for subscription {subId}', $this->logContext([
                 'count' => count($monitoredItems),
                 'subId' => $subscriptionId,
-            ]);
+            ]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -138,7 +138,7 @@ trait ManagesSubscriptionsTrait
             $decoder = $this->createDecoder($responseBody);
 
             $results = $this->monitoredItemService->decodeCreateMonitoredItemsResponse($decoder);
-            $this->logger->debug('CreateMonitoredItems response: {count} result(s)', ['count' => count($results)]);
+            $this->logger->debug('CreateMonitoredItems response: {count} result(s)', $this->logContext(['count' => count($results)]));
 
             foreach ($results as $i => $result) {
                 $itemNodeId = $monitoredItems[$i]['nodeId'] ?? NodeId::numeric(0, ServiceTypeId::NULL);
@@ -190,10 +190,10 @@ trait ManagesSubscriptionsTrait
                 $selectFields,
                 $clientHandle,
             );
-            $this->logger->debug('CreateEventMonitoredItem request for node {nodeId} on subscription {subId}', [
+            $this->logger->debug('CreateEventMonitoredItem request for node {nodeId} on subscription {subId}', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'subId' => $subscriptionId,
-            ]);
+            ]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -201,7 +201,7 @@ trait ManagesSubscriptionsTrait
             $decoder = $this->createDecoder($responseBody);
 
             $results = $this->monitoredItemService->decodeCreateMonitoredItemsResponse($decoder);
-            $this->logger->debug('CreateEventMonitoredItem response received');
+            $this->logger->debug('CreateEventMonitoredItem response received', $this->logContext());
             $result = $results[0] ?? new MonitoredItemResult(0, 0, 0.0, 0);
 
             $this->dispatch(fn () => new MonitoredItemCreated(
@@ -238,10 +238,10 @@ trait ManagesSubscriptionsTrait
                 $subscriptionId,
                 $monitoredItemIds,
             );
-            $this->logger->debug('DeleteMonitoredItems request: {count} item(s) from subscription {subId}', [
+            $this->logger->debug('DeleteMonitoredItems request: {count} item(s) from subscription {subId}', $this->logContext([
                 'count' => count($monitoredItemIds),
                 'subId' => $subscriptionId,
-            ]);
+            ]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -249,7 +249,7 @@ trait ManagesSubscriptionsTrait
             $decoder = $this->createDecoder($responseBody);
 
             $results = $this->monitoredItemService->decodeDeleteMonitoredItemsResponse($decoder);
-            $this->logger->debug('DeleteMonitoredItems response: {count} result(s)', ['count' => count($results)]);
+            $this->logger->debug('DeleteMonitoredItems response: {count} result(s)', $this->logContext(['count' => count($results)]));
 
             foreach ($results as $i => $statusCode) {
                 $monItemId = $monitoredItemIds[$i] ?? 0;
@@ -284,10 +284,10 @@ trait ManagesSubscriptionsTrait
                 $subscriptionId,
                 $itemsToModify,
             );
-            $this->logger->debug('ModifyMonitoredItems request: {count} item(s) on subscription {subId}', [
+            $this->logger->debug('ModifyMonitoredItems request: {count} item(s) on subscription {subId}', $this->logContext([
                 'count' => count($itemsToModify),
                 'subId' => $subscriptionId,
-            ]);
+            ]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -295,7 +295,7 @@ trait ManagesSubscriptionsTrait
             $decoder = $this->createDecoder($responseBody);
 
             $results = $this->monitoredItemService->decodeModifyMonitoredItemsResponse($decoder);
-            $this->logger->debug('ModifyMonitoredItems response: {count} result(s)', ['count' => count($results)]);
+            $this->logger->debug('ModifyMonitoredItems response: {count} result(s)', $this->logContext(['count' => count($results)]));
 
             foreach ($results as $i => $result) {
                 $monItemId = $itemsToModify[$i]['monitoredItemId'] ?? 0;
@@ -337,10 +337,10 @@ trait ManagesSubscriptionsTrait
                 $linksToAdd,
                 $linksToRemove,
             );
-            $this->logger->debug('SetTriggering request: triggerItem={triggerId} on subscription {subId}', [
+            $this->logger->debug('SetTriggering request: triggerItem={triggerId} on subscription {subId}', $this->logContext([
                 'triggerId' => $triggeringItemId,
                 'subId' => $subscriptionId,
-            ]);
+            ]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -348,7 +348,7 @@ trait ManagesSubscriptionsTrait
             $decoder = $this->createDecoder($responseBody);
 
             $result = $this->monitoredItemService->decodeSetTriggeringResponse($decoder);
-            $this->logger->debug('SetTriggering response received');
+            $this->logger->debug('SetTriggering response received', $this->logContext());
 
             $this->dispatch(fn () => new TriggeringConfigured(
                 $this,
@@ -382,7 +382,7 @@ trait ManagesSubscriptionsTrait
                 $this->authenticationToken,
                 [$subscriptionId],
             );
-            $this->logger->debug('DeleteSubscription request: subscriptionId={subId}', ['subId' => $subscriptionId]);
+            $this->logger->debug('DeleteSubscription request: subscriptionId={subId}', $this->logContext(['subId' => $subscriptionId]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -390,7 +390,7 @@ trait ManagesSubscriptionsTrait
             $decoder = $this->createDecoder($responseBody);
 
             $results = $this->subscriptionService->decodeDeleteSubscriptionsResponse($decoder);
-            $this->logger->debug('DeleteSubscription response received');
+            $this->logger->debug('DeleteSubscription response received', $this->logContext());
             $statusCode = $results[0] ?? 0;
 
             $this->dispatch(fn () => new SubscriptionDeleted($this, $subscriptionId, $statusCode));
@@ -421,7 +421,7 @@ trait ManagesSubscriptionsTrait
                 $this->authenticationToken,
                 $acknowledgements,
             );
-            $this->logger->debug('Publish request ({ackCount} acknowledgement(s))', ['ackCount' => count($acknowledgements)]);
+            $this->logger->debug('Publish request ({ackCount} acknowledgement(s))', $this->logContext(['ackCount' => count($acknowledgements)]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -429,10 +429,10 @@ trait ManagesSubscriptionsTrait
             $decoder = $this->createDecoder($responseBody);
 
             $result = $this->publishService->decodePublishResponse($decoder);
-            $this->logger->debug('Publish response: subscriptionId={subId}, {count} notification(s)', [
+            $this->logger->debug('Publish response: subscriptionId={subId}, {count} notification(s)', $this->logContext([
                 'subId' => $result->subscriptionId,
                 'count' => count($result->notifications),
-            ]);
+            ]));
 
             $this->dispatchPublishEvents($result);
 
@@ -464,7 +464,7 @@ trait ManagesSubscriptionsTrait
                 $subscriptionIds,
                 $sendInitialValues,
             );
-            $this->logger->debug('TransferSubscriptions request: {count} subscription(s)', ['count' => count($subscriptionIds)]);
+            $this->logger->debug('TransferSubscriptions request: {count} subscription(s)', $this->logContext(['count' => count($subscriptionIds)]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -472,7 +472,7 @@ trait ManagesSubscriptionsTrait
             $decoder = $this->createDecoder($responseBody);
 
             $results = $this->subscriptionService->decodeTransferSubscriptionsResponse($decoder);
-            $this->logger->debug('TransferSubscriptions response: {count} result(s)', ['count' => count($results)]);
+            $this->logger->debug('TransferSubscriptions response: {count} result(s)', $this->logContext(['count' => count($results)]));
 
             foreach ($results as $i => $transferResult) {
                 $subId = $subscriptionIds[$i] ?? 0;
@@ -505,10 +505,10 @@ trait ManagesSubscriptionsTrait
                 $subscriptionId,
                 $retransmitSequenceNumber,
             );
-            $this->logger->debug('Republish request: subscriptionId={subId}, sequenceNumber={seqNum}', [
+            $this->logger->debug('Republish request: subscriptionId={subId}, sequenceNumber={seqNum}', $this->logContext([
                 'subId' => $subscriptionId,
                 'seqNum' => $retransmitSequenceNumber,
-            ]);
+            ]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -516,7 +516,7 @@ trait ManagesSubscriptionsTrait
             $decoder = $this->createDecoder($responseBody);
 
             $result = $this->subscriptionService->decodeRepublishResponse($decoder);
-            $this->logger->debug('Republish response received');
+            $this->logger->debug('Republish response received', $this->logContext());
 
             return $result;
         });

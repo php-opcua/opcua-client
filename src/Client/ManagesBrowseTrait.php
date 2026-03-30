@@ -42,7 +42,7 @@ trait ManagesBrowseTrait
                 $requestId = $this->nextRequestId();
                 $authToken = $this->authenticationToken ?? NodeId::numeric(0, ServiceTypeId::NULL);
                 $request = $this->getEndpointsService->encodeGetEndpointsRequest($requestId, $endpointUrl, $authToken);
-                $this->logger->debug('GetEndpoints request for {url}', ['url' => $endpointUrl]);
+                $this->logger->debug('GetEndpoints request for {url}', $this->logContext(['url' => $endpointUrl]));
                 $this->transport->send($request);
 
                 $response = $this->transport->receive();
@@ -50,7 +50,7 @@ trait ManagesBrowseTrait
                 $decoder = $this->createDecoder($responseBody);
 
                 $endpoints = $this->getEndpointsService->decodeGetEndpointsResponse($decoder);
-                $this->logger->debug('GetEndpoints response: {count} endpoint(s)', ['count' => count($endpoints)]);
+                $this->logger->debug('GetEndpoints response: {count} endpoint(s)', $this->logContext(['count' => count($endpoints)]));
 
                 return $endpoints;
             }),
@@ -136,11 +136,11 @@ trait ManagesBrowseTrait
 
             $requestId = $this->nextRequestId();
             $request = $this->browseService->encodeBrowseNextRequest($requestId, $continuationPoint, $this->authenticationToken);
-            $this->logger->debug('BrowseNext request (continuationPoint present)');
+            $this->logger->debug('BrowseNext request (continuationPoint present)', $this->logContext());
             $this->transport->send($request);
 
             $response = $this->transport->receive();
-            $this->logger->debug('BrowseNext response received');
+            $this->logger->debug('BrowseNext response received', $this->logContext());
             $responseBody = $this->unwrapResponse($response);
             $decoder = $this->createDecoder($responseBody);
 
@@ -311,14 +311,14 @@ trait ManagesBrowseTrait
             $includeSubtypes,
             $nodeClassMask,
         );
-        $this->logger->debug('Browse request for node {nodeId} (direction={direction})', [
+        $this->logger->debug('Browse request for node {nodeId} (direction={direction})', $this->logContext([
             'nodeId' => (string) $nodeId,
             'direction' => $direction->name,
-        ]);
+        ]));
         $this->transport->send($request);
 
         $response = $this->transport->receive();
-        $this->logger->debug('Browse response received for node {nodeId}', ['nodeId' => (string) $nodeId]);
+        $this->logger->debug('Browse response received for node {nodeId}', $this->logContext(['nodeId' => (string) $nodeId]));
         $responseBody = $this->unwrapResponse($response);
 
         return $this->createDecoder($responseBody);

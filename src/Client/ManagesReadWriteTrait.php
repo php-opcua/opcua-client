@@ -49,19 +49,19 @@ trait ManagesReadWriteTrait
 
         if ($useMetadataCache) {
             $cacheKey = $this->buildCacheKey('readMeta:' . $attributeId, $nodeId);
-            $this->logger->debug('Reading metadata attribute {attr} for node {nodeId} (cache enabled)', [
+            $this->logger->debug('Reading metadata attribute {attr} for node {nodeId} (cache enabled)', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'attr' => $attributeId,
-            ]);
+            ]));
 
             return $this->cachedFetch($cacheKey, fn () => $this->readFromServer($nodeId, $attributeId), true);
         }
 
         if ($refresh && $this->readMetadataCache && $attributeId !== AttributeId::Value) {
-            $this->logger->debug('Refreshing metadata attribute {attr} for node {nodeId}', [
+            $this->logger->debug('Refreshing metadata attribute {attr} for node {nodeId}', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'attr' => $attributeId,
-            ]);
+            ]));
             $cacheKey = $this->buildCacheKey('readMeta:' . $attributeId, $nodeId);
             $dataValue = $this->readFromServer($nodeId, $attributeId);
 
@@ -90,10 +90,10 @@ trait ManagesReadWriteTrait
 
             $requestId = $this->nextRequestId();
             $request = $this->readService->encodeReadRequest($requestId, $nodeId, $this->authenticationToken, $attributeId);
-            $this->logger->debug('Read request for node {nodeId} (attributeId={attr})', [
+            $this->logger->debug('Read request for node {nodeId} (attributeId={attr})', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'attr' => $attributeId,
-            ]);
+            ]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -101,10 +101,10 @@ trait ManagesReadWriteTrait
             $decoder = $this->createDecoder($responseBody);
 
             $dataValue = $this->readService->decodeReadResponse($decoder);
-            $this->logger->debug('Read response for node {nodeId}: statusCode={status}', [
+            $this->logger->debug('Read response for node {nodeId}: statusCode={status}', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'status' => $dataValue->statusCode,
-            ]);
+            ]));
 
             $this->dispatch(fn () => new NodeValueRead($this, $nodeId, $attributeId, $dataValue));
 
@@ -190,7 +190,7 @@ trait ManagesReadWriteTrait
 
             $requestId = $this->nextRequestId();
             $request = $this->readService->encodeReadMultiRequest($requestId, $items, $this->authenticationToken);
-            $this->logger->debug('ReadMulti request: {count} item(s)', ['count' => count($items)]);
+            $this->logger->debug('ReadMulti request: {count} item(s)', $this->logContext(['count' => count($items)]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -198,7 +198,7 @@ trait ManagesReadWriteTrait
             $decoder = $this->createDecoder($responseBody);
 
             $results = $this->readService->decodeReadMultiResponse($decoder);
-            $this->logger->debug('ReadMulti response: {count} value(s)', ['count' => count($results)]);
+            $this->logger->debug('ReadMulti response: {count} value(s)', $this->logContext(['count' => count($results)]));
 
             return $results;
         });
@@ -214,7 +214,7 @@ trait ManagesReadWriteTrait
     private function readMultiBatched(array $items, int $batchSize): array
     {
         $batches = (int) ceil(count($items) / $batchSize);
-        $this->logger->info('Splitting readMulti into {batches} batches of {size}', ['batches' => $batches, 'size' => $batchSize, 'total' => count($items)]);
+        $this->logger->info('Splitting readMulti into {batches} batches of {size}', $this->logContext(['batches' => $batches, 'size' => $batchSize, 'total' => count($items)]));
         $results = [];
         foreach (array_chunk($items, $batchSize) as $batch) {
             $batchResults = $this->readMultiRaw($batch);
@@ -254,10 +254,10 @@ trait ManagesReadWriteTrait
 
             $requestId = $this->nextRequestId();
             $request = $this->writeService->encodeWriteRequest($requestId, $nodeId, $dataValue, $this->authenticationToken);
-            $this->logger->debug('Write request for node {nodeId} (type={type})', [
+            $this->logger->debug('Write request for node {nodeId} (type={type})', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'type' => $type->name,
-            ]);
+            ]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -266,10 +266,10 @@ trait ManagesReadWriteTrait
 
             $results = $this->writeService->decodeWriteResponse($decoder);
             $statusCode = $results[0] ?? 0;
-            $this->logger->debug('Write response for node {nodeId}: statusCode={status}', [
+            $this->logger->debug('Write response for node {nodeId}: statusCode={status}', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'status' => $statusCode,
-            ]);
+            ]));
 
             if (StatusCode::isGood($statusCode)) {
                 $this->dispatch(fn () => new NodeValueWritten($this, $nodeId, $value, $type, $statusCode));
@@ -316,7 +316,7 @@ trait ManagesReadWriteTrait
 
             $requestId = $this->nextRequestId();
             $request = $this->writeService->encodeWriteMultiRequest($requestId, $writeItems, $this->authenticationToken);
-            $this->logger->debug('WriteMulti request: {count} item(s)', ['count' => count($writeItems)]);
+            $this->logger->debug('WriteMulti request: {count} item(s)', $this->logContext(['count' => count($writeItems)]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -324,7 +324,7 @@ trait ManagesReadWriteTrait
             $decoder = $this->createDecoder($responseBody);
 
             $results = $this->writeService->decodeWriteResponse($decoder);
-            $this->logger->debug('WriteMulti response: {count} result(s)', ['count' => count($results)]);
+            $this->logger->debug('WriteMulti response: {count} result(s)', $this->logContext(['count' => count($results)]));
 
             return $results;
         });
@@ -348,7 +348,7 @@ trait ManagesReadWriteTrait
 
                 $requestId = $this->nextRequestId();
                 $request = $this->writeService->encodeWriteMultiRequest($requestId, $writeItems, $this->authenticationToken);
-                $this->logger->debug('WriteMulti batch request: {count} item(s)', ['count' => count($writeItems)]);
+                $this->logger->debug('WriteMulti batch request: {count} item(s)', $this->logContext(['count' => count($writeItems)]));
                 $this->transport->send($request);
 
                 $response = $this->transport->receive();
@@ -356,7 +356,7 @@ trait ManagesReadWriteTrait
                 $decoder = $this->createDecoder($responseBody);
 
                 $batchResult = $this->writeService->decodeWriteResponse($decoder);
-                $this->logger->debug('WriteMulti batch response: {count} result(s)', ['count' => count($batchResult)]);
+                $this->logger->debug('WriteMulti batch response: {count} result(s)', $this->logContext(['count' => count($batchResult)]));
 
                 return $batchResult;
             });
@@ -426,7 +426,7 @@ trait ManagesReadWriteTrait
             return;
         }
 
-        $this->logger->info('Prefetching write types for {count} node(s) via readMulti', ['count' => count($uncachedNodes)]);
+        $this->logger->info('Prefetching write types for {count} node(s) via readMulti', $this->logContext(['count' => count($uncachedNodes)]));
         $readItems = array_map(fn ($n) => ['nodeId' => $n['nodeId']], $uncachedNodes);
         $dataValues = $this->readMulti($readItems);
 
@@ -453,23 +453,23 @@ trait ManagesReadWriteTrait
     private function resolveWriteType(NodeId $nodeId, ?BuiltinType $type): BuiltinType
     {
         if ($type !== null) {
-            $this->logger->debug('Using explicit write type {type} for node {nodeId}', [
+            $this->logger->debug('Using explicit write type {type} for node {nodeId}', $this->logContext([
                 'nodeId' => (string) $nodeId,
                 'type' => $type->name,
-            ]);
+            ]));
 
             return $type;
         }
 
         if (! $this->autoDetectWriteType) {
-            $this->logger->warning('Write type auto-detection is disabled and no type provided for node {nodeId}', ['nodeId' => (string) $nodeId]);
+            $this->logger->warning('Write type auto-detection is disabled and no type provided for node {nodeId}', $this->logContext(['nodeId' => (string) $nodeId]));
 
             throw new WriteTypeDetectionException(
                 "Write type auto-detection is disabled and no explicit type was provided for node {$nodeId}",
             );
         }
 
-        $this->logger->debug('Detecting write type for node {nodeId}', ['nodeId' => (string) $nodeId]);
+        $this->logger->debug('Detecting write type for node {nodeId}', $this->logContext(['nodeId' => (string) $nodeId]));
         $this->dispatch(fn () => new WriteTypeDetecting($this, $nodeId));
 
         $cacheKey = $this->buildCacheKey('writeType', $nodeId);
@@ -478,12 +478,12 @@ trait ManagesReadWriteTrait
         $fromCache = $this->cache !== null && $this->cache->get($cacheKey) !== null;
 
         $detectedType = $this->cachedFetch($cacheKey, function () use ($nodeId) {
-            $this->logger->debug('Reading node {nodeId} for write type detection', ['nodeId' => (string) $nodeId]);
+            $this->logger->debug('Reading node {nodeId} for write type detection', $this->logContext(['nodeId' => (string) $nodeId]));
             $dataValue = $this->read($nodeId);
             $variant = $dataValue->getVariant();
 
             if ($variant === null) {
-                $this->logger->warning('Cannot auto-detect write type for node {nodeId}: no value', ['nodeId' => (string) $nodeId]);
+                $this->logger->warning('Cannot auto-detect write type for node {nodeId}: no value', $this->logContext(['nodeId' => (string) $nodeId]));
 
                 throw new WriteTypeDetectionException(
                     "Cannot auto-detect write type for node {$nodeId}: node has no value",
@@ -493,11 +493,11 @@ trait ManagesReadWriteTrait
             return $variant->type;
         }, true);
 
-        $this->logger->debug('Write type for node {nodeId}: {type} (fromCache={fromCache})', [
+        $this->logger->debug('Write type for node {nodeId}: {type} (fromCache={fromCache})', $this->logContext([
             'nodeId' => (string) $nodeId,
             'type' => $detectedType->name,
             'fromCache' => $fromCache ? 'true' : 'false',
-        ]);
+        ]));
         $this->dispatch(fn () => new WriteTypeDetected($this, $nodeId, $detectedType, $fromCache));
 
         return $detectedType;
@@ -533,11 +533,11 @@ trait ManagesReadWriteTrait
                 $inputArguments,
                 $this->authenticationToken,
             );
-            $this->logger->debug('Call request: objectId={objectId}, methodId={methodId}, {argCount} argument(s)', [
+            $this->logger->debug('Call request: objectId={objectId}, methodId={methodId}, {argCount} argument(s)', $this->logContext([
                 'objectId' => (string) $objectId,
                 'methodId' => (string) $methodId,
                 'argCount' => count($inputArguments),
-            ]);
+            ]));
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -545,7 +545,7 @@ trait ManagesReadWriteTrait
             $decoder = $this->createDecoder($responseBody);
 
             $result = $this->callService->decodeCallResponse($decoder);
-            $this->logger->debug('Call response: statusCode={status}', ['status' => $result->statusCode]);
+            $this->logger->debug('Call response: statusCode={status}', $this->logContext(['status' => $result->statusCode]));
 
             return $result;
         });
