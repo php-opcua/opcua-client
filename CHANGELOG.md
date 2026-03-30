@@ -1,6 +1,21 @@
 # Changelog
 
-## [v4.0.0] - 2026-03-29
+## [v4.0.1] - 2026-03-30
+
+### Added
+
+- **Comprehensive debug logging for all OPC UA service calls.** Every request sent to and response received from the server is now logged at `DEBUG` level via PSR-3, enabling full observability of the client–server communication. Previously, only a few operations (connection lifecycle, type discovery, retry logic) were logged. The following traits now include request/response logging:
+  - **ManagesBrowseTrait** — `GetEndpoints`, `Browse`, `BrowseNext`.
+  - **ManagesHandshakeTrait** — `HEL/ACK` handshake, discovery `GetEndpoints`, discovery `OPN`.
+  - **ManagesHistoryTrait** — `HistoryReadRaw`, `HistoryReadProcessed`, `HistoryReadAtTime`.
+  - **ManagesSecureChannelTrait** — `OpenSecureChannel` (with and without security), `CloseSecureChannel`.
+  - **ManagesSessionTrait** — `CreateSession`, `ActivateSession`, `CloseSession`.
+  - **ManagesSubscriptionsTrait** — `CreateSubscription`, `CreateMonitoredItems`, `CreateEventMonitoredItem`, `DeleteMonitoredItems`, `ModifyMonitoredItems`, `SetTriggering`, `DeleteSubscription`, `Publish`, `TransferSubscriptions`, `Republish`.
+  - **ManagesTranslateBrowsePathTrait** — `TranslateBrowsePaths`.
+  - **ManagesReadWriteTrait** — `Read`, `ReadMulti`, `Write`, `WriteMulti` (including batched), `Call`.
+- Each log entry includes contextual data (NodeId, subscription ID, item count, status codes, channel ID, etc.) for effective filtering and debugging.
+
+## [v4.0.0] - 2026-03-26
 
 ### Removed
 

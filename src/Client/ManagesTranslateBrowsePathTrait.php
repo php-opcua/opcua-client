@@ -41,13 +41,17 @@ trait ManagesTranslateBrowsePathTrait
 
             $requestId = $this->nextRequestId();
             $request = $this->translateBrowsePathService->encodeTranslateRequest($requestId, $browsePaths, $this->authenticationToken);
+            $this->logger->debug('TranslateBrowsePaths request: {count} path(s)', ['count' => count($browsePaths)]);
             $this->transport->send($request);
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
             $decoder = $this->createDecoder($responseBody);
 
-            return $this->translateBrowsePathService->decodeTranslateResponse($decoder);
+            $results = $this->translateBrowsePathService->decodeTranslateResponse($decoder);
+            $this->logger->debug('TranslateBrowsePaths response: {count} result(s)', ['count' => count($results)]);
+
+            return $results;
         });
     }
 

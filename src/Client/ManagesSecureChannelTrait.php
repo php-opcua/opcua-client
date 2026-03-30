@@ -73,6 +73,7 @@ trait ManagesSecureChannelTrait
         );
 
         $request = new SecureChannelRequest();
+        $this->logger->debug('OpenSecureChannel request (no security)');
         $this->transport->send($request->encode());
 
         $response = $this->transport->receive();
@@ -87,6 +88,7 @@ trait ManagesSecureChannelTrait
 
         $scResponse = SecureChannelResponse::decode($decoder);
         $this->secureChannelId = $scResponse->getSecureChannelId();
+        $this->logger->debug('OpenSecureChannel response: channelId={channelId}', ['channelId' => $this->secureChannelId]);
 
         $this->session = new SessionService($this->secureChannelId, $scResponse->getTokenId());
         $this->session->setUserTokenPolicyIds(
@@ -121,12 +123,17 @@ trait ManagesSecureChannelTrait
         );
 
         $opnMessage = $this->secureChannel->createOpenSecureChannelMessage();
+        $this->logger->debug('OpenSecureChannel request (policy={policy}, mode={mode})', [
+            'policy' => $this->securityPolicy->name,
+            'mode' => $this->securityMode->name,
+        ]);
         $this->transport->send($opnMessage);
 
         $response = $this->transport->receive();
         $result = $this->secureChannel->processOpenSecureChannelResponse($response);
 
         $this->secureChannelId = $result['secureChannelId'];
+        $this->logger->debug('OpenSecureChannel response: channelId={channelId}', ['channelId' => $this->secureChannelId]);
         $this->serverNonce = $result['serverNonce'];
 
         $this->session = new SessionService(
@@ -204,6 +211,7 @@ trait ManagesSecureChannelTrait
      */
     private function closeSecureChannel(): void
     {
+        $this->logger->debug('CloseSecureChannel request (channelId={channelId})', ['channelId' => $this->secureChannelId]);
         $this->dispatch(fn () => new SecureChannelClosed($this, $this->secureChannelId));
 
         if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {

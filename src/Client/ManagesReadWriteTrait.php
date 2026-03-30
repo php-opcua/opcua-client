@@ -90,6 +90,10 @@ trait ManagesReadWriteTrait
 
             $requestId = $this->nextRequestId();
             $request = $this->readService->encodeReadRequest($requestId, $nodeId, $this->authenticationToken, $attributeId);
+            $this->logger->debug('Read request for node {nodeId} (attributeId={attr})', [
+                'nodeId' => (string) $nodeId,
+                'attr' => $attributeId,
+            ]);
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -97,6 +101,10 @@ trait ManagesReadWriteTrait
             $decoder = $this->createDecoder($responseBody);
 
             $dataValue = $this->readService->decodeReadResponse($decoder);
+            $this->logger->debug('Read response for node {nodeId}: statusCode={status}', [
+                'nodeId' => (string) $nodeId,
+                'status' => $dataValue->statusCode,
+            ]);
 
             $this->dispatch(fn () => new NodeValueRead($this, $nodeId, $attributeId, $dataValue));
 
@@ -182,13 +190,17 @@ trait ManagesReadWriteTrait
 
             $requestId = $this->nextRequestId();
             $request = $this->readService->encodeReadMultiRequest($requestId, $items, $this->authenticationToken);
+            $this->logger->debug('ReadMulti request: {count} item(s)', ['count' => count($items)]);
             $this->transport->send($request);
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
             $decoder = $this->createDecoder($responseBody);
 
-            return $this->readService->decodeReadMultiResponse($decoder);
+            $results = $this->readService->decodeReadMultiResponse($decoder);
+            $this->logger->debug('ReadMulti response: {count} value(s)', ['count' => count($results)]);
+
+            return $results;
         });
     }
 
@@ -242,6 +254,10 @@ trait ManagesReadWriteTrait
 
             $requestId = $this->nextRequestId();
             $request = $this->writeService->encodeWriteRequest($requestId, $nodeId, $dataValue, $this->authenticationToken);
+            $this->logger->debug('Write request for node {nodeId} (type={type})', [
+                'nodeId' => (string) $nodeId,
+                'type' => $type->name,
+            ]);
             $this->transport->send($request);
 
             $response = $this->transport->receive();
@@ -250,6 +266,10 @@ trait ManagesReadWriteTrait
 
             $results = $this->writeService->decodeWriteResponse($decoder);
             $statusCode = $results[0] ?? 0;
+            $this->logger->debug('Write response for node {nodeId}: statusCode={status}', [
+                'nodeId' => (string) $nodeId,
+                'status' => $statusCode,
+            ]);
 
             if (StatusCode::isGood($statusCode)) {
                 $this->dispatch(fn () => new NodeValueWritten($this, $nodeId, $value, $type, $statusCode));
@@ -296,13 +316,17 @@ trait ManagesReadWriteTrait
 
             $requestId = $this->nextRequestId();
             $request = $this->writeService->encodeWriteMultiRequest($requestId, $writeItems, $this->authenticationToken);
+            $this->logger->debug('WriteMulti request: {count} item(s)', ['count' => count($writeItems)]);
             $this->transport->send($request);
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
             $decoder = $this->createDecoder($responseBody);
 
-            return $this->writeService->decodeWriteResponse($decoder);
+            $results = $this->writeService->decodeWriteResponse($decoder);
+            $this->logger->debug('WriteMulti response: {count} result(s)', ['count' => count($results)]);
+
+            return $results;
         });
     }
 
@@ -324,13 +348,17 @@ trait ManagesReadWriteTrait
 
                 $requestId = $this->nextRequestId();
                 $request = $this->writeService->encodeWriteMultiRequest($requestId, $writeItems, $this->authenticationToken);
+                $this->logger->debug('WriteMulti batch request: {count} item(s)', ['count' => count($writeItems)]);
                 $this->transport->send($request);
 
                 $response = $this->transport->receive();
                 $responseBody = $this->unwrapResponse($response);
                 $decoder = $this->createDecoder($responseBody);
 
-                return $this->writeService->decodeWriteResponse($decoder);
+                $batchResult = $this->writeService->decodeWriteResponse($decoder);
+                $this->logger->debug('WriteMulti batch response: {count} result(s)', ['count' => count($batchResult)]);
+
+                return $batchResult;
             });
             array_push($results, ...$batchResults);
         }
@@ -505,13 +533,21 @@ trait ManagesReadWriteTrait
                 $inputArguments,
                 $this->authenticationToken,
             );
+            $this->logger->debug('Call request: objectId={objectId}, methodId={methodId}, {argCount} argument(s)', [
+                'objectId' => (string) $objectId,
+                'methodId' => (string) $methodId,
+                'argCount' => count($inputArguments),
+            ]);
             $this->transport->send($request);
 
             $response = $this->transport->receive();
             $responseBody = $this->unwrapResponse($response);
             $decoder = $this->createDecoder($responseBody);
 
-            return $this->callService->decodeCallResponse($decoder);
+            $result = $this->callService->decodeCallResponse($decoder);
+            $this->logger->debug('Call response: statusCode={status}', ['status' => $result->statusCode]);
+
+            return $result;
         });
     }
 }
