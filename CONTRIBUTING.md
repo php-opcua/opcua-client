@@ -13,7 +13,7 @@ If you have any questions or need help getting started, don't hesitate to open a
 - PHP >= 8.2
 - `ext-openssl`
 - Composer
-- [opcua-test-suite](https://github.com/php-opcua/opcua-test-suite) (for integration tests)
+- [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) (for integration tests)
 
 ### Installation
 
@@ -28,8 +28,8 @@ composer install
 Integration tests require the OPC UA test server suite running locally:
 
 ```bash
-git clone https://github.com/php-opcua/opcua-test-suite.git
-cd opcua-test-suite
+git clone https://github.com/php-opcua/uanetstandard-test-suite.git
+cd uanetstandard-test-suite
 docker compose up -d
 ```
 

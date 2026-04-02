@@ -1,31 +1,12 @@
 # Roadmap
 
-## v4.0.0 - 2026-03-26
-
-### Features
-- [x] Rebranding :) to `php-opcua/opcua-client`
-- [x] PSR-14 Event Dispatcher — 38 granular events (connection, session, subscription, data change, alarms, read/write, browse, cache, retry). NullEventDispatcher by default, zero overhead. Alarm deduction from event fields (ActiveState, AckedState, ConfirmedState, ShelvingState, LimitAlarm, OffNormalAlarm).
-- [x] Write Type Auto-Detection — automatic type resolution via read-before-write with PSR-16 caching, type mismatch validation, configurable via `setAutoDetectWriteType()`
-- [x] Cache for metadata `read()` (DisplayName, BrowseName, DataType, NodeClass, Description), **`not Value`** — opt-in via `setReadMetadataCache(true)`, `refresh: true` to bypass
-- [x] CLI Tool — `bin/opcua-cli` with browse, read, write, endpoints, watch commands. Security, JSON, debug logging.
-- [x] NodeSet2.xml Code Generator — `generate:nodeset` CLI command with typed DTOs, PHP enums, codecs, and `GeneratedTypeRegistrar` for auto-cast integration
-- [x] Server Trust Management (also for cli) — FileTrustStore, TrustPolicy enum, autoAccept(force), CLI trust/trust:list/trust:remove, 3 events
-- [x] Triggering / ModifyMonitoredItems — `setTriggering()` for conditional sampling, `modifyMonitoredItems()` for changing parameters on existing items
-
-### Refactoring
-- [x] **CLI tool extracted to [`php-opcua/opcua-cli`](https://github.com/php-opcua/opcua-cli).**
-- [x] ClientBuilder/Client split — two-phase architecture: `ClientBuilder` (configuration, entry point) and `Client` (connected operations). `ClientBuilder::create()` is the preferred entry point. Config setters on builder, operations on connected client. `connect()` returns `Client`. Traits split into `src/ClientBuilder/` (8 config traits) and `src/Client/` (14 operation/runtime traits). New interfaces: `ClientBuilderInterface`, updated `OpcUaClientInterface`.
-- [x] Protocol service base class — extract the repeated encode/decode pattern (security check, token/sequence/requestId header, wrapInMessage vs buildMessage) into a shared base class or trait. Currently duplicated identically across all 15 Protocol service classes.
-- [x] Service NodeId constants — replace hard-coded OPC UA service type NodeIds (461, 462, 467, 631, 673, 635, 712, etc.) with named constants in a dedicated `ServiceTypeId` class for readability.
-- [x] Diagnostic info skip helper — extract the repeated `readInt32` + loop + `skipDiagnosticInfo` pattern into a single `skipDiagnosticInfoArray()` method. Currently duplicated in 8+ Protocol service decode methods.
-- [x] Response metadata helper — extract the repeated 5-line response header reading boilerplate (token, sequence, requestId, typeNodeId, readResponseHeader) into a single `readResponseMetadata()` method in SessionService.
-- [x] Break down long methods — split `discoverServerCertificate()` (72 lines), `openSecureChannelWithSecurity()` (68 lines), and `createAndActivateSession()` (56 lines) into smaller focused methods.
-- [x] ExtensionObject class — replace the raw `array|object` return from `BinaryDecoder::readExtensionObject()` with a typed `ExtensionObject` DTO for type safety.
-
+## v4.1.0 - 2026-03-X
 
 ### Query Services
 `QueryFirst` / `QueryNext` — structured queries on the address space for servers where browse is too slow due to the size of the node tree.
 
+### NodeManagement Services
+`AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences` — for OPC UA servers that support dynamic address space modification at runtime. Requires adding a custom `HistoryReadRawModified`-style override in the test suite to support these services.
 
 > **Note:** The CLI tool has been extracted to a separate package: [`php-opcua/opcua-cli`](https://github.com/php-opcua/opcua-cli). CLI-related roadmap items are tracked there.
 
@@ -34,21 +15,6 @@
 ## v5.0.0
 
 - [ ] **PHPStan level 5** — static analysis with `phpstan/phpstan` as dev dependency, CI integration, and `composer analyse` script
-
----
-
-## Blocked
-
-Features that are ready to implement but blocked by external dependencies. This library requires integration test coverage for every service before shipping — unit tests on encoding/decoding alone are not sufficient.
-
-| Feature | OPC UA | Blocked by | Unblocks when |
-|---------|--------|-----------|---------------|
-| NodeManagement Services | 1.01+ | node-opcua returns `BadServiceUnsupported` | node-opcua implements it |
-
-### NodeManagement Services
-`AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences` — for OPC UA servers that support dynamic address space modification at runtime.
-
-The test infrastructure ([opcua-test-suite](https://github.com/php-opcua/opcua-test-suite)) uses [node-opcua](https://github.com/node-opcua/node-opcua), which does not implement NodeManagement services. All four handlers (`_on_AddNodes`, `_on_DeleteNodes`, `_on_AddReferences`, `_on_DeleteReferences`) return `BadServiceUnsupported`. The NodeManagement server profile is explicitly commented out as unimplemented in the node-opcua source.
 
 ---
 

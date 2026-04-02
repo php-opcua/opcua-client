@@ -38,6 +38,22 @@ All of this with zero external dependencies beyond `ext-openssl`, and full suppo
 >
 > The session manager is a **separate package by design** — it runs as a daemon process using ReactPHP and Unix sockets, which would break this library's zero-dependency, cross-platform philosophy if bundled here. See the [Ecosystem](#ecosystem) section for details.
 
+<table>
+<tr>
+<td>
+
+### Tested against the OPC UA reference implementation
+
+This library is integration-tested against **[UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard)** — the **reference implementation** maintained by the OPC Foundation, the organization that defines the OPC UA specification. This is the same stack used by major industrial vendors to certify their products.
+
+1150+ integration tests run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec.
+
+**This library is already used in production with real industrial equipment** in factory automation and process control environments.
+
+</td>
+</tr>
+</table>
+
 ----
 
 ## Quick Start
@@ -449,7 +465,7 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 
 ## Testing
 
-1290+ tests with **99%+ code coverage**. Unit tests cover encoding, crypto, protocol services, and error paths. Integration tests run against [opcua-test-suite](https://github.com/php-opcua/opcua-test-suite) — a Docker-based OPC UA environment with multiple security configs, custom types, and real-world scenarios.
+1290+ tests with **99%+ code coverage**. Unit tests cover encoding, crypto, protocol services, and error paths. Integration tests run against [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) — a Docker-based OPC UA environment built on the OPC Foundation's UA-.NETStandard reference implementation, with multiple security configs, custom types, and real-world scenarios.
 
 ```bash
 ./vendor/bin/pest                                          # everything
@@ -479,7 +495,7 @@ CI runs on PHP 8.2, 8.3, 8.4, and 8.5 via GitHub Actions.
 | [opcua-session-manager](https://github.com/php-opcua/opcua-session-manager) | Daemon-based session persistence across PHP requests. Keeps OPC UA connections alive between short-lived PHP processes via a ReactPHP daemon and Unix sockets. Separate package by design — see [ROADMAP.md](ROADMAP.md#session-manager-integration-here) for rationale. |
 | [opcua-client-nodeset](https://github.com/php-opcua/opcua-client-nodeset) | Pre-generated PHP types from 51 OPC Foundation companion specifications (DI, Robotics, Machinery, MachineTool, ISA-95, CNC, MTConnect, and more). 807 PHP files — NodeId constants, enums, typed DTOs, codecs, registrars with automatic dependency resolution. Just `composer require` and `loadGeneratedTypes()`. |
 | [laravel-opcua](https://github.com/php-opcua/laravel-opcua) | Laravel integration — service provider, facade, config |
-| [opcua-test-suite](https://github.com/php-opcua/opcua-test-suite) | Docker-based OPC UA test servers for integration testing |
+| [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) | Docker-based OPC UA test servers (UA-.NETStandard) for integration testing |
 
 ## Roadmap
 

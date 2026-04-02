@@ -882,7 +882,7 @@ Alarm-specific events are deduced from event notification fields:
 - php-opcua/opcua-client-nodeset: pre-generated PHP types from 51 OPC Foundation companion specifications — 807 files, 338 enums, 191 DTOs, 191 codecs, registrars with automatic dependency resolution
 - php-opcua/opcua-session-manager: session persistence across PHP requests
 - php-opcua/laravel-opcua: Laravel integration (service provider, facade, config)
-- php-opcua/opcua-test-suite: Docker-based OPC UA test servers
+- php-opcua/uanetstandard-test-suite: Docker-based OPC UA test servers (UA-.NETStandard)
 
 ## Alternatives
 

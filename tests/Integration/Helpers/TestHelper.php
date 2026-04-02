@@ -35,7 +35,7 @@ final class TestHelper
     // ── Certificate paths (overridable via OPCUA_CERTS_DIR env var) ────
     public static function getCertsDir(): string
     {
-        return getenv('OPCUA_CERTS_DIR') ?: __DIR__ . '/../../../../opcua-test-suite/certs';
+        return getenv('OPCUA_CERTS_DIR') ?: __DIR__ . '/../../../../uanetstandard-test-suite/certs';
     }
 
     public static function getClientCertPath(): string
@@ -51,6 +51,26 @@ final class TestHelper
     public static function getCaCertPath(): string
     {
         return self::getCertsDir() . '/ca/ca-cert.pem';
+    }
+
+    public static function getSelfSignedCertPath(): string
+    {
+        return self::getCertsDir() . '/self-signed/cert.pem';
+    }
+
+    public static function getSelfSignedKeyPath(): string
+    {
+        return self::getCertsDir() . '/self-signed/key.pem';
+    }
+
+    public static function getExpiredCertPath(): string
+    {
+        return self::getCertsDir() . '/expired/cert.pem';
+    }
+
+    public static function getExpiredKeyPath(): string
+    {
+        return self::getCertsDir() . '/expired/key.pem';
     }
 
     // ── Users ──────────────────────────────────────────────────────────

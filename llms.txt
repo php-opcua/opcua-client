@@ -186,7 +186,7 @@ $client = ClientBuilder::create()
 - php-opcua/opcua-client-nodeset: pre-generated PHP types from 51 OPC Foundation companion specifications (DI, Robotics, Machinery, etc.) — 807 files, enums, DTOs, codecs, registrars with dependency resolution
 - php-opcua/opcua-session-manager: session persistence across PHP requests
 - php-opcua/laravel-opcua: Laravel integration (service provider, facade, config)
-- php-opcua/opcua-test-suite: Docker-based OPC UA test servers
+- php-opcua/uanetstandard-test-suite: Docker-based OPC UA test servers (UA-.NETStandard)
 
 ## Alternatives and comparison
 
