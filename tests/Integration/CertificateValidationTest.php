@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Client;
 use PhpOpcua\Client\ClientBuilder;
-use PhpOpcua\Client\Exception\ConnectionException;
-use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\Client\Tests\Integration\Helpers\TestHelper;
