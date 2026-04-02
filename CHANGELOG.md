@@ -1,5 +1,25 @@
 # Changelog
 
+## [v4.0.2] - 2026-04-02
+
+### Changed
+
+- **Migrated test infrastructure from `opcua-test-suite` to `uanetstandard-test-suite`.** Integration tests now run against the [OPC Foundation UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) reference implementation instead of node-opcua. This is the de facto standard OPC UA stack, maintained by the same organization that defines the specification.
+- Updated GitHub Actions workflow to use `php-opcua/uanetstandard-test-suite@v1.0.0`.
+- Updated certificate paths in `TestHelper.php` to point to the new test suite.
+
+### Added
+
+- **Certificate validation integration tests (`CertificateValidationTest.php`).** New tests that verify real certificate validation against the strict server (port 4842, no auto-accept):
+  - Trusted client certificate connects successfully.
+  - Untrusted self-signed certificate is rejected.
+  - Anonymous connection without credentials is rejected.
+  - Self-signed certificate without OPC UA SAN is rejected even on auto-accept server.
+
+### Fixed
+
+- Fixed `TrustedCertsDir` path in the test server — client certificates were not being loaded into the server's trust store, meaning certificate validation on port 4842 was never actually enforced.
+
 ## [v4.0.1] - 2026-03-30
 
 ### Added
