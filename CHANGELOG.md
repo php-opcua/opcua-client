@@ -1,5 +1,12 @@
 # Changelog
 
+## [v4.0.3] - 2026-04-07
+
+### Added
+
+- **AI-Ready documentation.** Added `llms-skills.md` with 15 task-oriented recipes for AI coding assistants (connect, read, write, browse, subscribe, security, session manager, Laravel, testing, history, methods, types, logging, events, troubleshooting). Designed to be fed to Claude, Cursor, Copilot, ChatGPT, and other AI tools so they can generate correct code for the php-opcua ecosystem.
+- Added AI-Ready section to README with instructions for integrating with Claude Code, Cursor, GitHub Copilot, and other AI tools.
+
 ## [v4.0.2] - 2026-04-02
 
 ### Changed
