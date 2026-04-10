@@ -556,7 +556,7 @@ describe('FileTrustStore validation', function () {
         };
 
         expect(fn () => $store->callThrowIfNull(null, 'Missing field'))
-            ->toThrow(\PhpOpcua\Client\Exception\CertificateParseException::class, 'Missing field');
+            ->toThrow(PhpOpcua\Client\Exception\CertificateParseException::class, 'Missing field');
 
         cleanupTrustStore($store);
     });

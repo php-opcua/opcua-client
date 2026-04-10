@@ -72,7 +72,7 @@ src/
 ├── Repository/                 # Per-client codec registry
 ├── Testing/                    # MockClient for consumer testing
 ├── Types/                      # OPC UA data types, enums, and DTOs
-└── Exception/                  # Exception hierarchy
+└── Exception/                  # Exception hierarchy (12 classes, granular subclasses)
 
 tests/
 ├── Unit/                       # Unit tests (no server required)

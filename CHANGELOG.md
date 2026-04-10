@@ -21,11 +21,23 @@
 - **7 new NIST ECC integration tests** against the `uanetstandard-test-suite` ECC server (port 4848): P-256 Sign, P-256 SignAndEncrypt (anonymous + admin + read), P-384 SignAndEncrypt (anonymous + admin), P-384 Sign.
 - **7 new Brainpool ECC integration tests** against the `uanetstandard-test-suite` Brainpool server (port 4849): brainpoolP256r1 Sign, brainpoolP256r1 SignAndEncrypt (anonymous + admin + read), brainpoolP384r1 SignAndEncrypt (anonymous + admin), brainpoolP384r1 Sign.
 
+- **5 new granular exception classes** for more precise error handling (all backward-compatible — extend existing exceptions):
+  - `OpenSslException` (extends `SecurityException`) — thrown when an OpenSSL function returns false.
+  - `SignatureVerificationException` (extends `SecurityException`) — thrown when OPN or MSG signature verification fails.
+  - `UnsupportedCurveException` (extends `SecurityException`) — thrown for unsupported ECC curves, with `$curveName` property.
+  - `MessageTypeException` (extends `ProtocolException`) — thrown when the server responds with an unexpected message type, with `$expected` and `$actual` properties.
+  - `HandshakeException` (extends `ProtocolException`) — thrown when the HEL/ACK handshake fails with a server error, with `$errorCode` property.
+- **`CertificateParseException`** (extends `SecurityException`) — thrown for missing fields in parsed certificates.
+- **ECC disclaimer** in README and Security documentation noting that no commercial OPC UA vendor supports ECC endpoints yet, and the implementation is tested exclusively against UA-.NETStandard.
+- **ECC 1.05.4 compliance section** in ROADMAP with detailed analysis of `LegacySequenceNumbers` and per-message IV requirements.
+- **`todo/ecc-1054-compliance.md`** — implementation guide with exact code changes needed for full 1.05.6 alignment.
+
 ### Changed
 
 - **Unit test coverage raised to 99%+.** Added 200+ unit tests across all source files. Every `src/` class and trait now has dedicated coverage — Client traits, Security (SecureChannel, MessageSecurity, CertificateManager), Protocol (SessionService, MonitoredItemService), TrustStore (FileTrustStore), Cache (FileCache), and Types (DataValue).
 - **Test infrastructure reorganized.** Eliminated `*BoostTest.php` files. Extracted shared test helpers into `tests/Unit/Helpers/ClientTestHelpers.php`. Each source class now has its tests in the matching path (`src/Foo/Bar.php` → `tests/Unit/Foo/BarTest.php`).
-- **`EnsuresOpenSslSuccess` trait.** Extracted the duplicated `ensureNotFalse()` method from `CertificateManager` and `MessageSecurity` into a shared trait in `src/Security/EnsuresOpenSslSuccess.php`.
+- **Exception hierarchy granularized.** Generic `SecurityException` and `ProtocolException` throws replaced with specific subclasses (`OpenSslException`, `SignatureVerificationException`, `UnsupportedCurveException`, `MessageTypeException`, `HandshakeException`). All existing `catch (SecurityException)` and `catch (ProtocolException)` code continues to work unchanged.
+- **`EnsuresOpenSslSuccess` trait.** Extracted the duplicated `ensureNotFalse()` method from `CertificateManager` and `MessageSecurity` into a shared trait in `src/Security/EnsuresOpenSslSuccess.php`. Now throws `OpenSslException` instead of generic `SecurityException`.
 - **`MessageSecurity::getCoordinateSize()`.** Extracted duplicated EC coordinate size match expression into a reusable private method.
 - **Diagnostic info parsing in `BrowseService` and `WriteService`.** Replaced manual byte-reading loops with `$decoder->skipDiagnosticInfoArray()` for correct OPC UA DiagnosticInfo format parsing.
 - **Removed all inline comments from function bodies** per CONTRIBUTING.md guidelines. Extracted `SessionService::readEccServerEphemeralKey()` to replace commented ECC key parsing logic.

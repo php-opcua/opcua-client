@@ -14,6 +14,7 @@ use PhpOpcua\Client\Exception\SecurityException;
 class CertificateManager
 {
     use EnsuresOpenSslSuccess;
+
     /**
      * @param string $path
      * @return string DER-encoded certificate bytes.
@@ -254,5 +255,4 @@ class CertificateManager
             . chunk_split(base64_encode($der), 64, "\n")
             . "-----END CERTIFICATE-----\n";
     }
-
 }

@@ -6,7 +6,6 @@ require_once __DIR__ . '/../Helpers/ClientTestHelpers.php';
 
 use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Exception\ConnectionException;
-use PhpOpcua\Client\Exception\ProtocolException;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Security\SecurityMode;
@@ -50,7 +49,7 @@ describe('ManagesSecureChannelTrait error paths', function () {
         setClientProperty($client, 'connectionState', ConnectionState::Connected);
 
         expect(fn () => callClientMethod($client, 'openSecureChannelNoSecurity'))
-            ->toThrow(ProtocolException::class, 'Expected OPN response');
+            ->toThrow(PhpOpcua\Client\Exception\MessageTypeException::class, 'Expected OPN response, got: MSG');
     });
 
     it('loads DER certificate in openSecureChannelWithSecurity (line 94)', function () {

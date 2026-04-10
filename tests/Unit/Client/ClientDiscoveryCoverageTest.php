@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use PhpOpcua\Client\Encoding\BinaryEncoder;
-use PhpOpcua\Client\Exception\ProtocolException;
 use PhpOpcua\Client\Exception\SecurityException;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Security\SecurityMode;
@@ -193,25 +192,25 @@ function discClient(): PhpOpcua\Client\ClientBuilder
 
 describe('discoverServerCertificate error paths', function () {
 
-    it('throws ProtocolException when discovery ACK is not ACK (line 64)', function () {
+    it('throws MessageTypeException when discovery ACK is not ACK (line 64)', function () {
         [$host, $port, $pid] = discRunServer([discMsgInstead()]);
 
         $builder = discClient();
         try {
             expect(fn () => $builder->connect("opc.tcp://$host:$port"))
-                ->toThrow(ProtocolException::class, 'Discovery: Expected ACK');
+                ->toThrow(PhpOpcua\Client\Exception\MessageTypeException::class, 'Expected ACK response, got: MSG');
         } finally {
             pcntl_waitpid($pid, $status);
         }
     });
 
-    it('throws ProtocolException when discovery OPN is not OPN (line 74)', function () {
+    it('throws MessageTypeException when discovery OPN is not OPN (line 74)', function () {
         [$host, $port, $pid] = discRunServer([discAck(), discMsgInstead()]);
 
         $builder = discClient();
         try {
             expect(fn () => $builder->connect("opc.tcp://$host:$port"))
-                ->toThrow(ProtocolException::class, 'Discovery: Expected OPN');
+                ->toThrow(PhpOpcua\Client\Exception\MessageTypeException::class, 'Expected OPN response, got: MSG');
         } finally {
             pcntl_waitpid($pid, $status);
         }

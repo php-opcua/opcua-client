@@ -6,6 +6,7 @@ namespace PhpOpcua\Client\Security;
 
 use OpenSSLAsymmetricKey;
 use PhpOpcua\Client\Exception\SecurityException;
+use PhpOpcua\Client\Exception\UnsupportedCurveException;
 
 /**
  * Low-level cryptographic operations for OPC UA message security.
@@ -464,7 +465,7 @@ class MessageSecurity
         return match ($curveName) {
             'prime256v1', 'brainpoolP256r1' => 32,
             'secp384r1', 'brainpoolP384r1' => 48,
-            default => throw new SecurityException("Unsupported curve: {$curveName}"),
+            default => throw new UnsupportedCurveException($curveName),
         };
     }
 
@@ -487,5 +488,4 @@ class MessageSecurity
 
         return chr(0x80 | strlen($bytes)) . $bytes;
     }
-
 }

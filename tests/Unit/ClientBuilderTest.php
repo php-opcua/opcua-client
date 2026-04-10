@@ -45,9 +45,21 @@ describe('ClientBuilder: ManagesReadWriteConfigTrait', function () {
 
         $registrar = new class() implements GeneratedTypeRegistrar {
             public bool $registered = false;
-            public function registerCodecs(ExtensionObjectRepository $repository): void { $this->registered = true; }
-            public function getEnumMappings(): array { return ['ns=2;i=100' => BuiltinType::class]; }
-            public function dependencyRegistrars(): array { return []; }
+
+            public function registerCodecs(ExtensionObjectRepository $repository): void
+            {
+                $this->registered = true;
+            }
+
+            public function getEnumMappings(): array
+            {
+                return ['ns=2;i=100' => BuiltinType::class];
+            }
+
+            public function dependencyRegistrars(): array
+            {
+                return [];
+            }
         };
 
         expect($builder->loadGeneratedTypes($registrar))->toBe($builder);
@@ -59,17 +71,44 @@ describe('ClientBuilder: ManagesReadWriteConfigTrait', function () {
 
         $depRegistrar = new class() implements GeneratedTypeRegistrar {
             public bool $registered = false;
-            public function registerCodecs(ExtensionObjectRepository $repository): void { $this->registered = true; }
-            public function getEnumMappings(): array { return []; }
-            public function dependencyRegistrars(): array { return []; }
+
+            public function registerCodecs(ExtensionObjectRepository $repository): void
+            {
+                $this->registered = true;
+            }
+
+            public function getEnumMappings(): array
+            {
+                return [];
+            }
+
+            public function dependencyRegistrars(): array
+            {
+                return [];
+            }
         };
 
         $mainRegistrar = new class($depRegistrar) implements GeneratedTypeRegistrar {
             public bool $registered = false;
-            public function __construct(private GeneratedTypeRegistrar $dep) {}
-            public function registerCodecs(ExtensionObjectRepository $repository): void { $this->registered = true; }
-            public function getEnumMappings(): array { return []; }
-            public function dependencyRegistrars(): array { return [$this->dep]; }
+
+            public function __construct(private GeneratedTypeRegistrar $dep)
+            {
+            }
+
+            public function registerCodecs(ExtensionObjectRepository $repository): void
+            {
+                $this->registered = true;
+            }
+
+            public function getEnumMappings(): array
+            {
+                return [];
+            }
+
+            public function dependencyRegistrars(): array
+            {
+                return [$this->dep];
+            }
         };
 
         $builder->loadGeneratedTypes($mainRegistrar);

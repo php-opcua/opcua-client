@@ -605,10 +605,19 @@ RuntimeException
         ├── ConfigurationException
         ├── ConnectionException
         ├── EncodingException
+        ├── InvalidNodeIdException
         ├── ProtocolException
+        │     ├── HandshakeException ($errorCode)
+        │     └── MessageTypeException ($expected, $actual)
         ├── SecurityException
+        │     ├── CertificateParseException
+        │     ├── OpenSslException
+        │     ├── SignatureVerificationException
+        │     └── UnsupportedCurveException ($curveName)
         ├── ServiceException (carries getStatusCode())
-        └── InvalidNodeIdException
+        ├── UntrustedCertificateException ($fingerprint, $certDer)
+        ├── WriteTypeDetectionException
+        └── WriteTypeMismatchException ($nodeId, $expectedType, $givenType)
 ```
 
 Status codes vs exceptions:

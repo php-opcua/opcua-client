@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
-use PhpOpcua\Client\Exception\ProtocolException;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Security\CertificateManager;
 use PhpOpcua\Client\Security\MessageSecurity;
@@ -185,7 +184,7 @@ describe('SecureChannel OPN (no security)', function () {
         $encoder->writeUInt32(0);
 
         expect(fn () => $sc->processOpenSecureChannelResponse($encoder->getBuffer()))
-            ->toThrow(ProtocolException::class, 'Expected OPN response');
+            ->toThrow(PhpOpcua\Client\Exception\MessageTypeException::class, 'Expected OPN response, got: MSG');
     });
 });
 

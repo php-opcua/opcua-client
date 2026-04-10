@@ -448,12 +448,29 @@ describe('ManagesConnectionTrait', function () {
     });
 
     it('disconnect catches closeSession OpcUaException and continues', function () {
-        $transport = new class extends PhpOpcua\Client\Transport\TcpTransport {
-            public function connect(string $host, int $port, null|float $timeout = null): void {}
-            public function send(string $data): void { throw new ConnectionException('send failed'); }
-            public function receive(): string { throw new ConnectionException('no data'); }
-            public function close(): void {}
-            public function isConnected(): bool { return true; }
+        $transport = new class() extends PhpOpcua\Client\Transport\TcpTransport {
+            public function connect(string $host, int $port, null|float $timeout = null): void
+            {
+            }
+
+            public function send(string $data): void
+            {
+                throw new ConnectionException('send failed');
+            }
+
+            public function receive(): string
+            {
+                throw new ConnectionException('no data');
+            }
+
+            public function close(): void
+            {
+            }
+
+            public function isConnected(): bool
+            {
+                return true;
+            }
         };
 
         $client = createClientWithoutConnect();
@@ -861,12 +878,26 @@ describe('ManagesSecureChannelTrait', function () {
 
         $interceptTransport = new class($certDer, $privKey, $policy) extends PhpOpcua\Client\Transport\TcpTransport {
             private int $sendCount = 0;
+
             private int $receiveCount = 0;
-            public function __construct(private string $certDer, private OpenSSLAsymmetricKey $privKey, private PhpOpcua\Client\Security\SecurityPolicy $pol) {}
-            public function connect(string $host, int $port, null|float $timeout = null): void {}
-            public function send(string $data): void { $this->sendCount++; }
-            public function receive(): string {
+
+            public function __construct(private string $certDer, private OpenSSLAsymmetricKey $privKey, private PhpOpcua\Client\Security\SecurityPolicy $pol)
+            {
+            }
+
+            public function connect(string $host, int $port, null|float $timeout = null): void
+            {
+            }
+
+            public function send(string $data): void
+            {
+                $this->sendCount++;
+            }
+
+            public function receive(): string
+            {
                 $this->receiveCount++;
+
                 return match ($this->receiveCount) {
                     1 => buildAckResponse(),
                     2 => buildTestOPNResponse($this->certDer, $this->privKey, $this->certDer, $this->privKey, random_bytes(32), random_bytes(32), 100, 200, $this->pol),
@@ -876,8 +907,15 @@ describe('ManagesSecureChannelTrait', function () {
                     default => throw new ConnectionException('No more responses'),
                 };
             }
-            public function close(): void {}
-            public function isConnected(): bool { return true; }
+
+            public function close(): void
+            {
+            }
+
+            public function isConnected(): bool
+            {
+                return true;
+            }
         };
 
         $client = createClientWithoutConnect();
@@ -890,7 +928,7 @@ describe('ManagesSecureChannelTrait', function () {
 
         try {
             callClientMethod($client, 'performConnect', ['opc.tcp://localhost:4840']);
-        } catch (\Throwable) {
+        } catch (Throwable) {
         }
 
         @unlink($certFile);
@@ -1107,10 +1145,13 @@ describe('ManagesTypeDiscoveryTrait', function () {
         $client = setupConnectedClient($mock);
 
         $ref = new PhpOpcua\Client\Types\ReferenceDescription(
-            NodeId::numeric(0, 35), true, NodeId::numeric(2, 999),
-            new PhpOpcua\Client\Types\QualifiedName(2, 'CustomType'),
+            NodeId::numeric(0, 35),
+            true,
+            NodeId::numeric(2, 999),
+            new QualifiedName(2, 'CustomType'),
             new PhpOpcua\Client\Types\LocalizedText(null, 'CustomType'),
-            PhpOpcua\Client\Types\NodeClass::DataType, NodeId::numeric(0, 0),
+            PhpOpcua\Client\Types\NodeClass::DataType,
+            NodeId::numeric(0, 0),
         );
         $node = new PhpOpcua\Client\Types\BrowseNode($ref);
 
@@ -1125,18 +1166,24 @@ describe('ManagesTypeDiscoveryTrait', function () {
         $client = setupConnectedClient($mock);
 
         $childRef = new PhpOpcua\Client\Types\ReferenceDescription(
-            NodeId::numeric(0, 35), true, NodeId::numeric(0, 100),
-            new PhpOpcua\Client\Types\QualifiedName(0, 'ChildType'),
+            NodeId::numeric(0, 35),
+            true,
+            NodeId::numeric(0, 100),
+            new QualifiedName(0, 'ChildType'),
             new PhpOpcua\Client\Types\LocalizedText(null, 'ChildType'),
-            PhpOpcua\Client\Types\NodeClass::DataType, NodeId::numeric(0, 0),
+            PhpOpcua\Client\Types\NodeClass::DataType,
+            NodeId::numeric(0, 0),
         );
         $childNode = new PhpOpcua\Client\Types\BrowseNode($childRef);
 
         $parentRef = new PhpOpcua\Client\Types\ReferenceDescription(
-            NodeId::numeric(0, 35), true, NodeId::numeric(0, 50),
-            new PhpOpcua\Client\Types\QualifiedName(0, 'ParentType'),
+            NodeId::numeric(0, 35),
+            true,
+            NodeId::numeric(0, 50),
+            new QualifiedName(0, 'ParentType'),
             new PhpOpcua\Client\Types\LocalizedText(null, 'ParentType'),
-            PhpOpcua\Client\Types\NodeClass::DataType, NodeId::numeric(0, 0),
+            PhpOpcua\Client\Types\NodeClass::DataType,
+            NodeId::numeric(0, 0),
         );
         $parentNode = new PhpOpcua\Client\Types\BrowseNode($parentRef);
         $parentNode->addChild($childNode);

@@ -7,8 +7,10 @@ namespace PhpOpcua\Client\Security;
 use OpenSSLAsymmetricKey;
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
+use PhpOpcua\Client\Exception\MessageTypeException;
 use PhpOpcua\Client\Exception\ProtocolException;
 use PhpOpcua\Client\Exception\SecurityException;
+use PhpOpcua\Client\Exception\SignatureVerificationException;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Types\NodeId;
 
@@ -285,7 +287,7 @@ class SecureChannel
         }
 
         if ($header->getMessageType() !== 'OPN') {
-            throw new ProtocolException("Expected OPN response, got: {$header->getMessageType()}");
+            throw new MessageTypeException('OPN', $header->getMessageType());
         }
 
         $channelId = $decoder->readUInt32();
@@ -325,7 +327,7 @@ class SecureChannel
                 $signedContent = $headerBytes . $secHeaderEncoder->getBuffer() . $dataWithoutSig;
 
                 if (! $this->messageSecurity->asymmetricVerify($signedContent, $signature, $this->serverCertDer, $this->policy)) {
-                    throw new SecurityException('OPN response signature verification failed');
+                    throw new SignatureVerificationException('OPN response signature verification failed');
                 }
 
                 $strippedData = $this->stripAsymmetricPadding($dataWithoutSig);
@@ -509,7 +511,7 @@ class SecureChannel
 
             $dataToVerify = $headerBytes . $tokenIdBytes . $dataWithoutSig;
             if (! $this->messageSecurity->symmetricVerify($dataToVerify, $signature, $this->serverSigningKey, $this->policy)) {
-                throw new SecurityException('MSG response symmetric signature verification failed');
+                throw new SignatureVerificationException('MSG response symmetric signature verification failed');
             }
 
             $plainData = $this->stripSymmetricPadding($dataWithoutSig);
@@ -770,7 +772,7 @@ class SecureChannel
 
         $verified = $this->messageSecurity->asymmetricVerify($signedContent, $signature, $this->serverCertDer, $this->policy);
         if (! $verified) {
-            throw new SecurityException('OPN response ECC signature verification failed');
+            throw new SignatureVerificationException('OPN response ECC signature verification failed');
         }
 
         return new BinaryDecoder($dataWithoutSig);

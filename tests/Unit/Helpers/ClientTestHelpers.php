@@ -21,7 +21,7 @@ use PhpOpcua\Client\Types\NodeId;
 // Mock transport classes
 // ──────────────────────────────────────────────
 
-if (!class_exists('MockTransport')) {
+if (! class_exists('MockTransport')) {
     class MockTransport extends TcpTransport
     {
         private array $responses = [];
@@ -64,7 +64,7 @@ if (!class_exists('MockTransport')) {
     }
 }
 
-if (!class_exists('FailingMockTransport')) {
+if (! class_exists('FailingMockTransport')) {
     class FailingMockTransport extends TcpTransport
     {
         private int $sendCount = 0;
@@ -113,7 +113,7 @@ if (!class_exists('FailingMockTransport')) {
     }
 }
 
-if (!class_exists('SecureMockTransport')) {
+if (! class_exists('SecureMockTransport')) {
     /**
      * A MockTransport that captures the OPN request to build a valid encrypted response.
      * Also provides CreateSession, ActivateSession, and readMulti responses.
@@ -121,19 +121,26 @@ if (!class_exists('SecureMockTransport')) {
     class SecureMockTransport extends TcpTransport
     {
         private array $responses = [];
+
         private int $index = 0;
+
         public array $sent = [];
+
         private string $clientDer;
-        private \OpenSSLAsymmetricKey $clientKey;
+
+        private OpenSSLAsymmetricKey $clientKey;
+
         private string $serverDer;
-        private \OpenSSLAsymmetricKey $serverKey;
+
+        private OpenSSLAsymmetricKey $serverKey;
+
         private SecurityPolicy $policy;
 
         public function __construct(
             string $clientDer,
-            \OpenSSLAsymmetricKey $clientKey,
+            OpenSSLAsymmetricKey $clientKey,
             string $serverDer,
-            \OpenSSLAsymmetricKey $serverKey,
+            OpenSSLAsymmetricKey $serverKey,
             SecurityPolicy $policy,
         ) {
             $this->clientDer = $clientDer;
@@ -151,7 +158,9 @@ if (!class_exists('SecureMockTransport')) {
             $this->responses[] = buildDiscoverLimitsResponse();
         }
 
-        public function connect(string $host, int $port, null|float $timeout = null): void {}
+        public function connect(string $host, int $port, null|float $timeout = null): void
+        {
+        }
 
         public function send(string $data): void
         {
@@ -194,11 +203,18 @@ if (!class_exists('SecureMockTransport')) {
             if ($this->index >= count($this->responses)) {
                 throw new ConnectionException('No more mock responses');
             }
+
             return $this->responses[$this->index++];
         }
 
-        public function close(): void {}
-        public function isConnected(): bool { return true; }
+        public function close(): void
+        {
+        }
+
+        public function isConnected(): bool
+        {
+            return true;
+        }
     }
 }
 
@@ -206,7 +222,7 @@ if (!class_exists('SecureMockTransport')) {
 // Reflection helpers
 // ──────────────────────────────────────────────
 
-if (!function_exists('setClientProperty')) {
+if (! function_exists('setClientProperty')) {
     function setClientProperty(Client $client, string $name, mixed $value): void
     {
         $ref = new ReflectionProperty($client, $name);
@@ -214,7 +230,7 @@ if (!function_exists('setClientProperty')) {
     }
 }
 
-if (!function_exists('callClientMethod')) {
+if (! function_exists('callClientMethod')) {
     function callClientMethod(Client $client, string $name, array $args = []): mixed
     {
         $ref = new ReflectionMethod($client, $name);
@@ -227,7 +243,7 @@ if (!function_exists('callClientMethod')) {
 // Message builder helpers
 // ──────────────────────────────────────────────
 
-if (!function_exists('buildMsgResponse')) {
+if (! function_exists('buildMsgResponse')) {
     function buildMsgResponse(int $typeId, Closure $writeBody): string
     {
         $e = new BinaryEncoder();
@@ -251,7 +267,7 @@ if (!function_exists('buildMsgResponse')) {
     }
 }
 
-if (!function_exists('buildErrMsg')) {
+if (! function_exists('buildErrMsg')) {
     function buildErrMsg(int $code = 0x80010000, string $reason = 'Server error'): string
     {
         $e = new BinaryEncoder();
@@ -264,7 +280,7 @@ if (!function_exists('buildErrMsg')) {
     }
 }
 
-if (!function_exists('readResponseMsg')) {
+if (! function_exists('readResponseMsg')) {
     function readResponseMsg(int $value = 42): string
     {
         return buildMsgResponse(634, function (BinaryEncoder $e) use ($value) {
@@ -277,7 +293,7 @@ if (!function_exists('readResponseMsg')) {
     }
 }
 
-if (!function_exists('browseResponseMsg')) {
+if (! function_exists('browseResponseMsg')) {
     function browseResponseMsg(): string
     {
         return buildMsgResponse(530, function (BinaryEncoder $e) {
@@ -299,7 +315,7 @@ if (!function_exists('browseResponseMsg')) {
     }
 }
 
-if (!function_exists('browseResponseWithContinuationMsg')) {
+if (! function_exists('browseResponseWithContinuationMsg')) {
     function browseResponseWithContinuationMsg(): string
     {
         return buildMsgResponse(530, function (BinaryEncoder $e) {
@@ -321,7 +337,7 @@ if (!function_exists('browseResponseWithContinuationMsg')) {
     }
 }
 
-if (!function_exists('browseNextResponseMsg')) {
+if (! function_exists('browseNextResponseMsg')) {
     function browseNextResponseMsg(): string
     {
         return buildMsgResponse(536, function (BinaryEncoder $e) {
@@ -347,11 +363,11 @@ if (!function_exists('browseNextResponseMsg')) {
 // Connection / handshake response builders
 // ──────────────────────────────────────────────
 
-if (!function_exists('buildAckResponse')) {
+if (! function_exists('buildAckResponse')) {
     function buildAckResponse(): string
     {
         $e = new BinaryEncoder();
-        $e->writeRawBytes("ACKF");
+        $e->writeRawBytes('ACKF');
         $e->writeUInt32(28);
         $e->writeUInt32(0);
         $e->writeUInt32(65535);
@@ -363,7 +379,7 @@ if (!function_exists('buildAckResponse')) {
     }
 }
 
-if (!function_exists('buildOpnResponse')) {
+if (! function_exists('buildOpnResponse')) {
     function buildOpnResponse(int $channelId = 1, int $tokenId = 1): string
     {
         $e = new BinaryEncoder();
@@ -405,7 +421,7 @@ if (!function_exists('buildOpnResponse')) {
 // Session response builders
 // ──────────────────────────────────────────────
 
-if (!function_exists('buildCreateSessionResponse')) {
+if (! function_exists('buildCreateSessionResponse')) {
     function buildCreateSessionResponse(): string
     {
         return buildMsgResponse(464, function (BinaryEncoder $e) {
@@ -423,7 +439,7 @@ if (!function_exists('buildCreateSessionResponse')) {
     }
 }
 
-if (!function_exists('buildActivateSessionResponse')) {
+if (! function_exists('buildActivateSessionResponse')) {
     function buildActivateSessionResponse(): string
     {
         return buildMsgResponse(470, function (BinaryEncoder $e) {
@@ -434,7 +450,7 @@ if (!function_exists('buildActivateSessionResponse')) {
     }
 }
 
-if (!function_exists('buildDiscoverLimitsResponse')) {
+if (! function_exists('buildDiscoverLimitsResponse')) {
     function buildDiscoverLimitsResponse(): string
     {
         return buildMsgResponse(634, function (BinaryEncoder $e) {
@@ -450,7 +466,7 @@ if (!function_exists('buildDiscoverLimitsResponse')) {
     }
 }
 
-if (!function_exists('buildCreateSessionResponseWithCert')) {
+if (! function_exists('buildCreateSessionResponseWithCert')) {
     function buildCreateSessionResponseWithCert(string $serverCertDer): string
     {
         return buildMsgResponse(464, function (BinaryEncoder $e) use ($serverCertDer) {
@@ -468,7 +484,7 @@ if (!function_exists('buildCreateSessionResponseWithCert')) {
     }
 }
 
-if (!function_exists('buildCreateSessionResponseWithEccAdditionalHeader')) {
+if (! function_exists('buildCreateSessionResponseWithEccAdditionalHeader')) {
     function buildCreateSessionResponseWithEccAdditionalHeader(): string
     {
         // Build a CreateSession response where the response header contains
@@ -524,6 +540,7 @@ if (!function_exists('buildCreateSessionResponseWithEccAdditionalHeader')) {
         $e->writeUInt32(0);
 
         $d = $e->getBuffer();
+
         return substr($d, 0, 4) . pack('V', strlen($d)) . substr($d, 8);
     }
 }
@@ -532,7 +549,7 @@ if (!function_exists('buildCreateSessionResponseWithEccAdditionalHeader')) {
 // Subscription / monitored item response builders
 // ──────────────────────────────────────────────
 
-if (!function_exists('createMonitoredItemsResponseMsg')) {
+if (! function_exists('createMonitoredItemsResponseMsg')) {
     function createMonitoredItemsResponseMsg(int $count = 1): string
     {
         return buildMsgResponse(754, function (BinaryEncoder $e) use ($count) {
@@ -550,7 +567,7 @@ if (!function_exists('createMonitoredItemsResponseMsg')) {
     }
 }
 
-if (!function_exists('deleteMonitoredItemsResponseMsg')) {
+if (! function_exists('deleteMonitoredItemsResponseMsg')) {
     function deleteMonitoredItemsResponseMsg(int $count = 1): string
     {
         return buildMsgResponse(784, function (BinaryEncoder $e) use ($count) {
@@ -563,7 +580,7 @@ if (!function_exists('deleteMonitoredItemsResponseMsg')) {
     }
 }
 
-if (!function_exists('modifyMonitoredItemsResponseMsg')) {
+if (! function_exists('modifyMonitoredItemsResponseMsg')) {
     function modifyMonitoredItemsResponseMsg(int $count = 1): string
     {
         return buildMsgResponse(769, function (BinaryEncoder $e) use ($count) {
@@ -580,7 +597,7 @@ if (!function_exists('modifyMonitoredItemsResponseMsg')) {
     }
 }
 
-if (!function_exists('setTriggeringResponseMsg')) {
+if (! function_exists('setTriggeringResponseMsg')) {
     function setTriggeringResponseMsg(int $addCount = 1, int $removeCount = 0): string
     {
         return buildMsgResponse(778, function (BinaryEncoder $e) use ($addCount, $removeCount) {
@@ -600,7 +617,7 @@ if (!function_exists('setTriggeringResponseMsg')) {
     }
 }
 
-if (!function_exists('deleteSubscriptionsResponseMsg')) {
+if (! function_exists('deleteSubscriptionsResponseMsg')) {
     function deleteSubscriptionsResponseMsg(): string
     {
         return buildMsgResponse(850, function (BinaryEncoder $e) {
@@ -615,7 +632,7 @@ if (!function_exists('deleteSubscriptionsResponseMsg')) {
 // Client factory helpers
 // ──────────────────────────────────────────────
 
-if (!function_exists('createClientWithoutConnect')) {
+if (! function_exists('createClientWithoutConnect')) {
     function createClientWithoutConnect(): Client
     {
         $ref = new ReflectionClass(Client::class);
@@ -676,7 +693,7 @@ if (!function_exists('createClientWithoutConnect')) {
     }
 }
 
-if (!function_exists('setupConnectedClient')) {
+if (! function_exists('setupConnectedClient')) {
     function setupConnectedClient(MockTransport $mock): Client
     {
         $client = createClientWithoutConnect();
@@ -694,7 +711,7 @@ if (!function_exists('setupConnectedClient')) {
     }
 }
 
-if (!function_exists('makeConnectedClient')) {
+if (! function_exists('makeConnectedClient')) {
     function makeConnectedClient(TcpTransport $transport, ?SecureChannel $sc = null): Client
     {
         $client = createClientWithoutConnect();
@@ -719,13 +736,13 @@ if (!function_exists('makeConnectedClient')) {
 // Temporary file helpers
 // ──────────────────────────────────────────────
 
-if (!isset($GLOBALS['_tempFiles'])) {
+if (! isset($GLOBALS['_tempFiles'])) {
     $GLOBALS['_tempFiles'] = [];
 }
 
 $_tempFiles = &$GLOBALS['_tempFiles'];
 
-if (!function_exists('writeTmpFile')) {
+if (! function_exists('writeTmpFile')) {
     function writeTmpFile(string $content): string
     {
         global $_tempFiles;
@@ -737,7 +754,7 @@ if (!function_exists('writeTmpFile')) {
     }
 }
 
-if (!function_exists('cleanupTmpFiles')) {
+if (! function_exists('cleanupTmpFiles')) {
     function cleanupTmpFiles(): void
     {
         global $_tempFiles;

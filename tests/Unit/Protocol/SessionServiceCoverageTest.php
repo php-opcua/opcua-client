@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
-use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Security\CertificateManager;
@@ -63,7 +62,7 @@ describe('SessionService wrapWithSecureChannel (non-secure)', function () {
 
         expect(substr($result, 0, 3))->toBe('MSG');
         $decoder = new BinaryDecoder($result);
-        $header = PhpOpcua\Client\Protocol\MessageHeader::decode($decoder);
+        $header = MessageHeader::decode($decoder);
         expect($header->getMessageSize())->toBe(strlen($result));
     });
 
@@ -435,7 +434,14 @@ describe('SessionService ECC secure paths', function () {
 
         $session = new SessionService(100, 200, $channel);
         $msg = $session->encodeActivateSessionRequest(
-            1, NodeId::numeric(0, 2), null, null, null, null, $serverNonceBytes, $serverNonceBytes,
+            1,
+            NodeId::numeric(0, 2),
+            null,
+            null,
+            null,
+            null,
+            $serverNonceBytes,
+            $serverNonceBytes,
         );
         expect(strlen($msg))->toBeGreaterThan(50);
     });
@@ -447,7 +453,14 @@ describe('SessionService ECC secure paths', function () {
 
         $session = new SessionService(100, 200, $channel);
         $msg = $session->encodeActivateSessionRequest(
-            1, NodeId::numeric(0, 2), 'admin', 'password123', null, null, $serverNonceBytes, $serverNonceBytes,
+            1,
+            NodeId::numeric(0, 2),
+            'admin',
+            'password123',
+            null,
+            null,
+            $serverNonceBytes,
+            $serverNonceBytes,
         );
         expect(strlen($msg))->toBeGreaterThan(100);
     });
@@ -662,7 +675,14 @@ describe('SessionService ECC short password padding', function () {
         $session = new SessionService(100, 200, $channel);
         // Very short password to trigger paddingSize += blockSize
         $msg = $session->encodeActivateSessionRequest(
-            1, NodeId::numeric(0, 2), 'u', 'p', null, null, $serverNonceBytes, $serverNonceBytes,
+            1,
+            NodeId::numeric(0, 2),
+            'u',
+            'p',
+            null,
+            null,
+            $serverNonceBytes,
+            $serverNonceBytes,
         );
         expect(strlen($msg))->toBeGreaterThan(100);
     });

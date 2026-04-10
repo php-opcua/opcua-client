@@ -468,19 +468,19 @@ describe('MessageSecurity error handling', function () {
 
     it('generateEphemeralKeyPair throws for unsupported curve', function () {
         expect(fn () => $this->ms->generateEphemeralKeyPair('secp521r1'))
-            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'Unsupported curve: secp521r1');
+            ->toThrow(PhpOpcua\Client\Exception\SecurityException::class, 'Unsupported curve: secp521r1');
     });
 
     it('loadEcPublicKeyFromBytes throws for non-uncompressed format', function () {
         $compressedKey = "\x02" . str_repeat("\x01", 32);
         expect(fn () => $this->ms->loadEcPublicKeyFromBytes($compressedKey, 'prime256v1'))
-            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'uncompressed format');
+            ->toThrow(PhpOpcua\Client\Exception\SecurityException::class, 'uncompressed format');
     });
 
     it('loadEcPublicKeyFromBytes throws for unsupported curve', function () {
         $fakeKey = "\x04" . str_repeat("\x01", 64);
         expect(fn () => $this->ms->loadEcPublicKeyFromBytes($fakeKey, 'secp521r1'))
-            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'Unsupported curve: secp521r1');
+            ->toThrow(PhpOpcua\Client\Exception\SecurityException::class, 'Unsupported curve: secp521r1');
     });
 
 });
@@ -527,19 +527,19 @@ describe('MessageSecurity ECDSA DER/Raw conversion', function () {
 
     it('ecdsaDerToRaw throws for missing SEQUENCE tag', function () {
         expect(fn () => $this->ms->ecdsaDerToRaw("\x31\x00", 32))
-            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'missing SEQUENCE tag');
+            ->toThrow(PhpOpcua\Client\Exception\SecurityException::class, 'missing SEQUENCE tag');
     });
 
     it('ecdsaDerToRaw throws for missing INTEGER tag for r', function () {
         $invalid = "\x30\x04\x03\x01\x01\x02";
         expect(fn () => $this->ms->ecdsaDerToRaw($invalid, 32))
-            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'missing INTEGER tag for r');
+            ->toThrow(PhpOpcua\Client\Exception\SecurityException::class, 'missing INTEGER tag for r');
     });
 
     it('ecdsaDerToRaw throws for missing INTEGER tag for s', function () {
         $invalid = "\x30\x06\x02\x01\x01\x03\x01\x01";
         expect(fn () => $this->ms->ecdsaDerToRaw($invalid, 32))
-            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'missing INTEGER tag for s');
+            ->toThrow(PhpOpcua\Client\Exception\SecurityException::class, 'missing INTEGER tag for s');
     });
 
     it('ecdsaRawToDer handles high-bit r and s values', function () {
@@ -562,13 +562,13 @@ describe('MessageSecurity ensureNotFalse', function () {
         $ms = new MessageSecurity();
         // AES-256-CBC requires 32-byte key and 16-byte IV; use wrong sizes to trigger OpenSSL failure
         expect(fn () => $ms->symmetricEncrypt('data', 'short', 'x', SecurityPolicy::Basic256Sha256))
-            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class);
+            ->toThrow(PhpOpcua\Client\Exception\SecurityException::class);
     });
 
     it('symmetricDecrypt throws SecurityException for invalid data', function () {
         $ms = new MessageSecurity();
         expect(fn () => $ms->symmetricDecrypt('not-encrypted', 'short', 'x', SecurityPolicy::Basic256Sha256))
-            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class);
+            ->toThrow(PhpOpcua\Client\Exception\SecurityException::class);
     });
 
 });
@@ -576,7 +576,7 @@ describe('MessageSecurity ensureNotFalse', function () {
 describe('MessageSecurity derEncodeLength', function () {
 
     beforeEach(function () {
-        $this->ms = new class extends MessageSecurity {
+        $this->ms = new class() extends MessageSecurity {
             public function callDerEncodeLength(int $length): string
             {
                 return $this->derEncodeLength($length);

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace PhpOpcua\Client\Client;
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
+use PhpOpcua\Client\Exception\HandshakeException;
+use PhpOpcua\Client\Exception\MessageTypeException;
 use PhpOpcua\Client\Exception\ProtocolException;
 use PhpOpcua\Client\Exception\SecurityException;
 use PhpOpcua\Client\Protocol\AcknowledgeMessage;
@@ -44,11 +46,11 @@ trait ManagesHandshakeTrait
         if ($header->getMessageType() === 'ERR') {
             $errorCode = $decoder->readUInt32();
             $errorMessage = $decoder->readString();
-            throw new ProtocolException("Server error during handshake: [{$errorCode}] {$errorMessage}");
+            throw new HandshakeException($errorCode, $errorMessage ?? '');
         }
 
         if ($header->getMessageType() !== 'ACK') {
-            throw new ProtocolException("Expected ACK, got: {$header->getMessageType()}");
+            throw new MessageTypeException('ACK', $header->getMessageType());
         }
 
         $ack = AcknowledgeMessage::decode($decoder);
@@ -113,7 +115,7 @@ trait ManagesHandshakeTrait
         $helloDecoder = new BinaryDecoder($helloResponse);
         $helloHeader = MessageHeader::decode($helloDecoder);
         if ($helloHeader->getMessageType() !== 'ACK') {
-            throw new ProtocolException("Discovery: Expected ACK, got: {$helloHeader->getMessageType()}");
+            throw new MessageTypeException('ACK', $helloHeader->getMessageType());
         }
         AcknowledgeMessage::decode($helloDecoder);
 
@@ -125,7 +127,7 @@ trait ManagesHandshakeTrait
         $opnDecoder = new BinaryDecoder($opnResponse);
         $opnHeader = MessageHeader::decode($opnDecoder);
         if ($opnHeader->getMessageType() !== 'OPN') {
-            throw new ProtocolException("Discovery: Expected OPN, got: {$opnHeader->getMessageType()}");
+            throw new MessageTypeException('OPN', $opnHeader->getMessageType());
         }
         $opnDecoder->readUInt32();
         $scResponse = SecureChannelResponse::decode($opnDecoder);

@@ -2,9 +2,12 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/Helpers/ClientTestHelpers.php';
+
 use PhpOpcua\Client\ClientBuilder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Exception\ConnectionException;
+use PhpOpcua\Client\Exception\MessageTypeException;
 use PhpOpcua\Client\Exception\ProtocolException;
 use PhpOpcua\Client\Protocol\MessageHeader;
 
@@ -90,7 +93,7 @@ describe('Client handshake error handling', function () {
 
         try {
             expect(fn () => $builder->connect("opc.tcp://$host:$port"))
-                ->toThrow(ProtocolException::class, 'Expected ACK, got: MSG');
+                ->toThrow(MessageTypeException::class, 'Expected ACK response, got: MSG');
         } finally {
             pcntl_waitpid($pid, $status);
         }

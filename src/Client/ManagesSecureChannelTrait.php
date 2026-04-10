@@ -9,6 +9,7 @@ use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Event\SecureChannelClosed;
 use PhpOpcua\Client\Event\SecureChannelOpened;
 use PhpOpcua\Client\Exception\ConfigurationException;
+use PhpOpcua\Client\Exception\MessageTypeException;
 use PhpOpcua\Client\Exception\ProtocolException;
 use PhpOpcua\Client\Protocol\BrowseService;
 use PhpOpcua\Client\Protocol\CallService;
@@ -81,7 +82,7 @@ trait ManagesSecureChannelTrait
         $header = MessageHeader::decode($decoder);
 
         if ($header->getMessageType() !== 'OPN') {
-            throw new ProtocolException("Expected OPN response, got: {$header->getMessageType()}");
+            throw new MessageTypeException('OPN', $header->getMessageType());
         }
 
         $decoder->readUInt32();

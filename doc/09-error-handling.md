@@ -12,9 +12,15 @@ RuntimeException
         ├── EncodingException
         ├── InvalidNodeIdException
         ├── ProtocolException
+        │     ├── HandshakeException
+        │     └── MessageTypeException
         ├── SecurityException
-        │     └── UntrustedCertificateException
+        │     ├── CertificateParseException
+        │     ├── OpenSslException
+        │     ├── SignatureVerificationException
+        │     └── UnsupportedCurveException
         ├── ServiceException
+        ├── UntrustedCertificateException
         ├── WriteTypeDetectionException
         └── WriteTypeMismatchException
 ```
@@ -132,13 +138,33 @@ Invalid setup. Thrown when:
 
 ### SecurityException
 
-Crypto failures. Thrown when:
+Crypto failures. Base class for all security-related exceptions. Catch this for broad security error handling, or use the specific subclasses below:
 
-- Server certificate unavailable or unreadable
-- Private key parsing failed
-- Asymmetric sign / encrypt / decrypt failed
-- Symmetric encrypt / decrypt failed
-- PEM decode failure
+#### OpenSslException
+
+Low-level OpenSSL failure. Thrown when an OpenSSL function returns `false` — includes the OpenSSL error string in the message. Covers: key generation, CSR signing, certificate export, encrypt/decrypt, sign/verify operations.
+
+#### SignatureVerificationException
+
+Thrown when a cryptographic signature does not match the expected value. This means the message was tampered with or the wrong key was used. Covers: OPN asymmetric signature (RSA and ECDSA), MSG symmetric HMAC signature.
+
+#### UnsupportedCurveException
+
+Thrown when an ECC operation references a curve that is not supported. Carries `$curveName` (the OpenSSL curve name that was rejected). Supported curves: `prime256v1`, `secp384r1`, `brainpoolP256r1`, `brainpoolP384r1`.
+
+```php
+use PhpOpcua\Client\Exception\UnsupportedCurveException;
+
+try {
+    $ms->generateEphemeralKeyPair('secp521r1');
+} catch (UnsupportedCurveException $e) {
+    echo "Curve not supported: {$e->curveName}\n";
+}
+```
+
+#### CertificateParseException
+
+Thrown when a required field is missing from a parsed X.509 certificate (e.g. `validFrom_time_t` or `validTo_time_t` absent after `openssl_x509_parse`).
 
 ### EncodingException
 
@@ -156,11 +182,37 @@ Malformed node identifiers. Thrown when parsing a string that does not match any
 
 ### ProtocolException
 
-OPC UA protocol violations. Thrown when:
+OPC UA protocol violations. Base class for protocol-level errors. Catch this for broad protocol error handling, or use the specific subclasses below:
 
-- Server sends ERR during handshake
-- Unexpected message type (expected ACK, got something else)
-- Invalid message size
+- Invalid message size from transport layer
+
+#### HandshakeException
+
+Thrown when the server responds with an ERR message during the HEL/ACK handshake. Carries `$errorCode` (the OPC UA status code from the ERR response).
+
+```php
+use PhpOpcua\Client\Exception\HandshakeException;
+
+try {
+    $client = ClientBuilder::create()->connect('opc.tcp://server:4840');
+} catch (HandshakeException $e) {
+    echo "Handshake failed with code: " . sprintf('0x%08X', $e->errorCode) . "\n";
+}
+```
+
+#### MessageTypeException
+
+Thrown when the server responds with an unexpected message type. Carries `$expected` (what was expected, e.g. `'OPN'`) and `$actual` (what was received, e.g. `'MSG'`).
+
+```php
+use PhpOpcua\Client\Exception\MessageTypeException;
+
+try {
+    $client = ClientBuilder::create()->connect('opc.tcp://server:4840');
+} catch (MessageTypeException $e) {
+    echo "Expected {$e->expected}, got {$e->actual}\n";
+}
+```
 
 ### WriteTypeDetectionException
 

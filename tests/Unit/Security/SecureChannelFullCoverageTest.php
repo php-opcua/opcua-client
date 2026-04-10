@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../Helpers/SecurityTestHelpers.php';
 
-use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Exception\ProtocolException;
 use PhpOpcua\Client\Exception\SecurityException;
