@@ -78,8 +78,12 @@ abstract class AbstractProtocolService
      * @param int $timeoutHint
      * @return void
      */
-    protected function writeRequestHeader(BinaryEncoder $body, int $requestId, NodeId $authToken, int $timeoutHint = 10000): void
-    {
+    protected function writeRequestHeader(
+        BinaryEncoder $body,
+        int $requestId,
+        NodeId $authToken,
+        int $timeoutHint = 10000,
+    ): void {
         $body->writeNodeId($authToken);
         $body->writeInt64(0);
         $body->writeUInt32($requestId);

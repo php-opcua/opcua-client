@@ -32,6 +32,10 @@ final class TestHelper
 
     public const ENDPOINT_LEGACY = 'opc.tcp://localhost:4847/UA/TestServer';
 
+    public const ENDPOINT_ECC_NIST = 'opc.tcp://localhost:4848/UA/TestServer';
+
+    public const ENDPOINT_ECC_BRAINPOOL = 'opc.tcp://localhost:4849/UA/TestServer';
+
     // ── Certificate paths (overridable via OPCUA_CERTS_DIR env var) ────
     public static function getCertsDir(): string
     {

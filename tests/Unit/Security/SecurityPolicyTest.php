@@ -100,6 +100,96 @@ describe('SecurityPolicy', function () {
         expect($p->getAsymmetricSignatureUri())->toContain('rsa-pss-sha2-256');
     });
 
+    it('EccNistP256 returns correct values', function () {
+        $p = SecurityPolicy::EccNistP256;
+        expect($p->getSymmetricEncryptionAlgorithm())->toBe('aes-128-cbc');
+        expect($p->getSymmetricSignatureAlgorithm())->toBe('sha256');
+        expect($p->getSymmetricKeyLength())->toBe(16);
+        expect($p->getSymmetricBlockSize())->toBe(16);
+        expect($p->getSymmetricSignatureSize())->toBe(32);
+        expect($p->getAsymmetricEncryptionPadding())->toBe(0);
+        expect($p->getAsymmetricSignatureAlgorithm())->toBe('sha256');
+        expect($p->getMinAsymmetricKeyLength())->toBe(256);
+        expect($p->getDerivedKeyLength())->toBe(16);
+        expect($p->getDerivedSignatureKeyLength())->toBe(32);
+        expect($p->getKeyDerivationAlgorithm())->toBe('sha256');
+        expect($p->getAsymmetricPaddingOverhead())->toBe(0);
+        expect($p->getAsymmetricEncryptionUri())->toBe('');
+        expect($p->getAsymmetricSignatureUri())->toContain('ecdsa-sha256');
+        expect($p->isEcc())->toBeTrue();
+        expect($p->getEcdhCurveName())->toBe('prime256v1');
+        expect($p->getEphemeralKeyLength())->toBe(64);
+    });
+
+    it('EccNistP384 returns correct values', function () {
+        $p = SecurityPolicy::EccNistP384;
+        expect($p->getSymmetricEncryptionAlgorithm())->toBe('aes-256-cbc');
+        expect($p->getSymmetricSignatureAlgorithm())->toBe('sha384');
+        expect($p->getSymmetricKeyLength())->toBe(32);
+        expect($p->getSymmetricBlockSize())->toBe(16);
+        expect($p->getSymmetricSignatureSize())->toBe(48);
+        expect($p->getAsymmetricEncryptionPadding())->toBe(0);
+        expect($p->getAsymmetricSignatureAlgorithm())->toBe('sha384');
+        expect($p->getMinAsymmetricKeyLength())->toBe(384);
+        expect($p->getDerivedKeyLength())->toBe(32);
+        expect($p->getDerivedSignatureKeyLength())->toBe(48);
+        expect($p->getKeyDerivationAlgorithm())->toBe('sha384');
+        expect($p->getAsymmetricPaddingOverhead())->toBe(0);
+        expect($p->getAsymmetricEncryptionUri())->toBe('');
+        expect($p->getAsymmetricSignatureUri())->toContain('ecdsa-sha384');
+        expect($p->isEcc())->toBeTrue();
+        expect($p->getEcdhCurveName())->toBe('secp384r1');
+        expect($p->getEphemeralKeyLength())->toBe(96);
+    });
+
+    it('EccBrainpoolP256r1 returns correct values', function () {
+        $p = SecurityPolicy::EccBrainpoolP256r1;
+        expect($p->getSymmetricEncryptionAlgorithm())->toBe('aes-128-cbc');
+        expect($p->getSymmetricSignatureAlgorithm())->toBe('sha256');
+        expect($p->getSymmetricKeyLength())->toBe(16);
+        expect($p->getSymmetricBlockSize())->toBe(16);
+        expect($p->getSymmetricSignatureSize())->toBe(32);
+        expect($p->getAsymmetricEncryptionPadding())->toBe(0);
+        expect($p->getAsymmetricSignatureAlgorithm())->toBe('sha256');
+        expect($p->getMinAsymmetricKeyLength())->toBe(256);
+        expect($p->getDerivedKeyLength())->toBe(16);
+        expect($p->getDerivedSignatureKeyLength())->toBe(32);
+        expect($p->getKeyDerivationAlgorithm())->toBe('sha256');
+        expect($p->getAsymmetricPaddingOverhead())->toBe(0);
+        expect($p->getAsymmetricEncryptionUri())->toBe('');
+        expect($p->getAsymmetricSignatureUri())->toContain('ecdsa-sha256');
+        expect($p->isEcc())->toBeTrue();
+        expect($p->getEcdhCurveName())->toBe('brainpoolP256r1');
+        expect($p->getEphemeralKeyLength())->toBe(64);
+    });
+
+    it('EccBrainpoolP384r1 returns correct values', function () {
+        $p = SecurityPolicy::EccBrainpoolP384r1;
+        expect($p->getSymmetricEncryptionAlgorithm())->toBe('aes-256-cbc');
+        expect($p->getSymmetricSignatureAlgorithm())->toBe('sha384');
+        expect($p->getSymmetricKeyLength())->toBe(32);
+        expect($p->getSymmetricBlockSize())->toBe(16);
+        expect($p->getSymmetricSignatureSize())->toBe(48);
+        expect($p->getAsymmetricEncryptionPadding())->toBe(0);
+        expect($p->getAsymmetricSignatureAlgorithm())->toBe('sha384');
+        expect($p->getMinAsymmetricKeyLength())->toBe(384);
+        expect($p->getDerivedKeyLength())->toBe(32);
+        expect($p->getDerivedSignatureKeyLength())->toBe(48);
+        expect($p->getKeyDerivationAlgorithm())->toBe('sha384');
+        expect($p->getAsymmetricPaddingOverhead())->toBe(0);
+        expect($p->getAsymmetricEncryptionUri())->toBe('');
+        expect($p->getAsymmetricSignatureUri())->toContain('ecdsa-sha384');
+        expect($p->isEcc())->toBeTrue();
+        expect($p->getEcdhCurveName())->toBe('brainpoolP384r1');
+        expect($p->getEphemeralKeyLength())->toBe(96);
+    });
+
+    it('RSA policies are not ECC', function () {
+        expect(SecurityPolicy::None->isEcc())->toBeFalse();
+        expect(SecurityPolicy::Basic256Sha256->isEcc())->toBeFalse();
+        expect(SecurityPolicy::Aes256Sha256RsaPss->isEcc())->toBeFalse();
+    });
+
     it('policy URIs are correct', function () {
         expect(SecurityPolicy::None->value)->toBe('http://opcfoundation.org/UA/SecurityPolicy#None');
         expect(SecurityPolicy::Basic256Sha256->value)->toBe('http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256');

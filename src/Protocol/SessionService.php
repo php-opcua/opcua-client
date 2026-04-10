@@ -19,6 +19,10 @@ class SessionService
 
     private string $usernamePolicyId = 'username';
 
+    private ?string $lastEccServerEphemeralKey = null;
+
+    private ?string $currentEccServerEphemeralKey = null;
+
     private string $certificatePolicyId = 'certificate';
 
     private string $anonymousPolicyId = 'anonymous';
@@ -145,11 +149,32 @@ class SessionService
 
         $decoder->readUInt32();
 
+        $eccServerEphemeralKey = null;
+        $remaining = $decoder->getRemainingLength();
+        if ($remaining > 0 && getenv('OPCUA_ECC_DEBUG')) {
+            fwrite(STDERR, "[ECC] CreateSession response: $remaining bytes remaining after maxRequestSize\n");
+            $rawRemaining = $decoder->readRawBytes($remaining);
+            fwrite(STDERR, '[ECC] Remaining hex: ' . bin2hex(substr($rawRemaining, 0, min(80, $remaining))) . "\n");
+            $innerDec = new BinaryDecoder($rawRemaining);
+            try {
+                $eccServerEphemeralKey = $innerDec->readByteString();
+                fwrite(STDERR, '[ECC] eccServerEphemeralKey: ' . strlen($eccServerEphemeralKey ?? '') . " bytes\n");
+            } catch (\Throwable $e) {
+                fwrite(STDERR, '[ECC] Failed to read eccServerEphemeralKey: ' . $e->getMessage() . "\n");
+            }
+        } elseif ($remaining > 0) {
+            try {
+                $eccServerEphemeralKey = $decoder->readByteString();
+            } catch (\Throwable) {
+            }
+        }
+
         return [
             'sessionId' => $sessionId,
             'authenticationToken' => $authenticationToken,
             'serverNonce' => $serverNonce,
             'serverCertificate' => $serverCertificate,
+            'eccServerEphemeralKey' => $eccServerEphemeralKey,
         ];
     }
 
@@ -170,6 +195,7 @@ class SessionService
         ?string $userCertDer = null,
         ?OpenSSLAsymmetricKey $userPrivateKey = null,
         ?string $serverNonce = null,
+        ?string $eccServerEphemeralKey = null,
     ): string {
         if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
             return $this->encodeActivateSessionRequestSecure(
@@ -180,6 +206,7 @@ class SessionService
                 $userCertDer,
                 $userPrivateKey,
                 $serverNonce,
+                $eccServerEphemeralKey,
             );
         }
 
@@ -312,10 +339,117 @@ class SessionService
         for ($i = 0; $i < $count; $i++) {
             $decoder->readString();
         }
-        $decoder->readNodeId();
-        $decoder->readByte();
+
+        $additionalHeaderTypeId = $decoder->readNodeId();
+        $additionalHeaderEncoding = $decoder->readByte();
+
+        if (getenv('OPCUA_ECC_DEBUG')) {
+            fwrite(STDERR, '[ECC] AdditionalHeader: typeId=' . $additionalHeaderTypeId . ' encoding=' . $additionalHeaderEncoding . "\n");
+        }
+
+        if ($additionalHeaderEncoding === 0x01) {
+            $bodyLen = $decoder->readInt32();
+            $bodyBytes = $decoder->readRawBytes($bodyLen);
+            if (getenv('OPCUA_ECC_DEBUG')) {
+                fwrite(STDERR, '[ECC] AdditionalHeader body: ' . $bodyLen . 'b hex=' . bin2hex(substr($bodyBytes, 0, 40)) . "...\n");
+            }
+            $this->parseAdditionalParameters($bodyBytes);
+        }
 
         return $statusCode;
+    }
+
+    /**
+     * @param string $bodyBytes
+     */
+    private function parseAdditionalParameters(string $bodyBytes): void
+    {
+        $dec = new BinaryDecoder($bodyBytes);
+
+        $paramCount = $dec->readInt32();
+        for ($i = 0; $i < $paramCount; $i++) {
+            $nsIndex = $dec->readUInt16();
+            $key = $dec->readString();
+
+            $variantEncoding = $dec->readByte();
+            if ($key === 'ECDHKey' && ($variantEncoding & 0x3F) === 22) {
+                $extTypeId = $dec->readNodeId();
+                $extEncoding = $dec->readByte();
+                if ($extEncoding === 0x01) {
+                    $extBodyLen = $dec->readInt32();
+                    $publicKey = $dec->readByteString();
+                    $signature = $dec->readByteString();
+                    $this->lastEccServerEphemeralKey = $publicKey;
+                }
+            } else {
+                $this->skipVariantValue($dec, $variantEncoding);
+            }
+        }
+    }
+
+    /**
+     * @param BinaryDecoder $dec
+     * @param int $encoding
+     */
+    private function skipVariantValue(BinaryDecoder $dec, int $encoding): void
+    {
+        $builtinType = $encoding & 0x3F;
+        match ($builtinType) {
+            1 => $dec->readByte(),
+            2, 3 => $dec->readByte(),
+            4, 5 => $dec->readRawBytes(2),
+            6, 7 => $dec->readUInt32(),
+            8, 9 => $dec->readRawBytes(8),
+            10 => $dec->readRawBytes(4),
+            11 => $dec->readRawBytes(8),
+            12 => $dec->readString(),
+            13 => $dec->readRawBytes(8),
+            14 => $dec->readRawBytes(16),
+            15, 16 => $dec->readByteString(),
+            22 => $this->skipExtensionObject($dec),
+            default => null,
+        };
+    }
+
+    /**
+     * @param BinaryDecoder $dec
+     */
+    private function skipExtensionObject(BinaryDecoder $dec): void
+    {
+        $dec->readNodeId();
+        $enc = $dec->readByte();
+        if ($enc === 0x01) {
+            $len = $dec->readInt32();
+            $dec->readRawBytes($len);
+        }
+    }
+
+    /**
+     * @return ?string
+     */
+    /**
+     * @param BinaryEncoder $body
+     * @param string $eccPolicyUri
+     */
+    private function writeEcdhAdditionalHeader(BinaryEncoder $body, string $eccPolicyUri): void
+    {
+        $inner = new BinaryEncoder();
+        $inner->writeInt32(1);
+        $inner->writeUInt16(0);
+        $inner->writeString('ECDHPolicyUri');
+        $inner->writeByte(12);
+        $inner->writeString($eccPolicyUri);
+        $innerBytes = $inner->getBuffer();
+
+        $body->writeNodeId(NodeId::numeric(0, 17537));
+        $body->writeByte(0x01);
+        $body->writeInt32(strlen($innerBytes));
+        $body->writeRawBytes($innerBytes);
+    }
+
+    public function getLastEccServerEphemeralKey(): ?string
+    {
+        return $this->lastEccServerEphemeralKey;
     }
 
     /**
@@ -394,14 +528,21 @@ class SessionService
 
         $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::CREATE_SESSION_REQUEST));
 
+        $eccPolicyUri = ($this->secureChannel !== null && $this->secureChannel->getPolicy()->isEcc())
+            ? $this->secureChannel->getPolicy()->value : null;
+
         $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
         $innerBody->writeInt64(0);
         $innerBody->writeUInt32($requestId);
         $innerBody->writeUInt32(0);
         $innerBody->writeString(null);
         $innerBody->writeUInt32(10000);
-        $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
-        $innerBody->writeByte(0);
+        if ($eccPolicyUri !== null) {
+            $this->writeEcdhAdditionalHeader($innerBody, $eccPolicyUri);
+        } else {
+            $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
+            $innerBody->writeByte(0);
+        }
 
         $applicationUri = $this->secureChannel->getCertificateManager()->getApplicationUri(
             $this->secureChannel->getClientCertDer(),
@@ -447,6 +588,7 @@ class SessionService
         ?string $userCertDer,
         ?OpenSSLAsymmetricKey $userPrivateKey,
         ?string $serverNonce,
+        ?string $eccServerEphemeralKey = null,
     ): string {
         $innerBody = new BinaryEncoder();
 
@@ -458,8 +600,14 @@ class SessionService
         $innerBody->writeUInt32(0);
         $innerBody->writeString(null);
         $innerBody->writeUInt32(10000);
-        $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
-        $innerBody->writeByte(0);
+        if ($this->secureChannel !== null && $this->secureChannel->getPolicy()->isEcc()) {
+            $this->writeEcdhAdditionalHeader($innerBody, $this->secureChannel->getPolicy()->value);
+        } else {
+            $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
+            $innerBody->writeByte(0);
+        }
+
+        $this->currentEccServerEphemeralKey = $eccServerEphemeralKey;
 
         $this->writeClientSignature($innerBody, $serverNonce);
 
@@ -511,6 +659,11 @@ class SessionService
             $clientPrivateKey,
             $policy,
         );
+
+        if ($policy->isEcc()) {
+            $coordinateSize = $policy->getEphemeralKeyLength() / 2;
+            $signature = $this->secureChannel->getMessageSecurity()->ecdsaDerToRaw($signature, $coordinateSize);
+        }
 
         $encoder->writeString($policy->getAsymmetricSignatureUri());
         $encoder->writeByteString($signature);
@@ -578,21 +731,27 @@ class SessionService
         if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive() && $serverNonce !== null) {
             $passwordBytes = $password;
             $nonceBytes = $serverNonce;
+            $policy = $this->secureChannel->getPolicy();
 
             $plaintext = pack('V', strlen($passwordBytes) + strlen($nonceBytes))
                 . $passwordBytes
                 . $nonceBytes;
 
-            $policy = $this->secureChannel->getPolicy();
-            $serverCertDer = $this->secureChannel->getServerCertDer();
-            $encrypted = $this->secureChannel->getMessageSecurity()->asymmetricEncrypt(
-                $plaintext,
-                $serverCertDer,
-                $policy,
-            );
+            if ($policy->isEcc()) {
+                $encryptedSecret = $this->buildEccEncryptedSecret($passwordBytes, $nonceBytes, $policy);
+                $tokenBody->writeByteString($encryptedSecret);
+                $tokenBody->writeString(null);
+            } else {
+                $serverCertDer = $this->secureChannel->getServerCertDer();
+                $encrypted = $this->secureChannel->getMessageSecurity()->asymmetricEncrypt(
+                    $plaintext,
+                    $serverCertDer,
+                    $policy,
+                );
 
-            $tokenBody->writeByteString($encrypted);
-            $tokenBody->writeString($policy->getAsymmetricEncryptionUri());
+                $tokenBody->writeByteString($encrypted);
+                $tokenBody->writeString($policy->getAsymmetricEncryptionUri());
+            }
         } else {
             $tokenBody->writeByteString($password);
             $tokenBody->writeString(null);
@@ -601,6 +760,84 @@ class SessionService
         $tokenBodyBytes = $tokenBody->getBuffer();
         $encoder->writeInt32(strlen($tokenBodyBytes));
         $encoder->writeRawBytes($tokenBodyBytes);
+    }
+
+    /**
+     * @param string $password Raw UTF-8 password bytes.
+     * @param string $receiverNonce Server session nonce (contains server ephemeral public key).
+     * @param SecurityPolicy $policy
+     * @return string Complete EccEncryptedSecret blob for the Password ByteString field.
+     */
+    private function buildEccEncryptedSecret(string $password, string $receiverNonce, SecurityPolicy $policy): string
+    {
+        $ms = $this->secureChannel->getMessageSecurity();
+        $clientPrivateKey = $this->secureChannel->getClientPrivateKey();
+        $clientCertDer = $this->secureChannel->getClientCertDer();
+        $curveName = $policy->getEcdhCurveName();
+        $algorithm = $policy->getKeyDerivationAlgorithm();
+        $coordinateSize = $policy->getEphemeralKeyLength() / 2;
+        $signatureSize = $coordinateSize * 2;
+
+        $ephemeral = $ms->generateEphemeralKeyPair($curveName);
+        $senderNonce = substr($ephemeral['publicKeyBytes'], 1);
+
+        $eccReceiverNonce = $this->currentEccServerEphemeralKey ?? $receiverNonce;
+        $ephemeralKeyLen = $policy->getEphemeralKeyLength();
+        $receiverEphemeralRawKey = substr($eccReceiverNonce, 0, $ephemeralKeyLen);
+        $receiverEphemeralPub = $ms->loadEcPublicKeyFromBytes("\x04" . $receiverEphemeralRawKey, $curveName);
+
+        $sharedSecret = $ms->computeEcdhSharedSecret($ephemeral['privateKey'], $receiverEphemeralPub);
+
+        $encKeyLen = $policy->getDerivedKeyLength();
+        $blockSize = $policy->getSymmetricBlockSize();
+        $salt = pack('v', $encKeyLen + $blockSize) . 'opcua-secret' . $senderNonce . $eccReceiverNonce;
+        $keyData = hash_hkdf($algorithm, $sharedSecret, $encKeyLen + $blockSize, $salt, $salt);
+        $encKey = substr($keyData, 0, $encKeyLen);
+        $iv = substr($keyData, $encKeyLen, $blockSize);
+
+        $secretEncoder = new BinaryEncoder();
+        $secretEncoder->writeByteString($receiverNonce);
+        $secretEncoder->writeByteString($password);
+        $pos = strlen($secretEncoder->getBuffer());
+        $paddingSize = $blockSize - (($pos + 2) % $blockSize);
+        $paddingSize %= $blockSize;
+        if (strlen($password) + $paddingSize < $blockSize) {
+            $paddingSize += $blockSize;
+        }
+        for ($i = 0; $i < $paddingSize; $i++) {
+            $secretEncoder->writeByte($paddingSize & 0xFF);
+        }
+        $secretEncoder->writeUInt16($paddingSize);
+        $dataToEncrypt = $secretEncoder->getBuffer();
+
+        $cipher = $policy->getSymmetricEncryptionAlgorithm();
+        $encryptedData = openssl_encrypt($dataToEncrypt, $cipher, $encKey, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $iv);
+
+        $headerLen = strlen($senderNonce) + strlen($eccReceiverNonce) + 8;
+
+        $body = new BinaryEncoder();
+        $body->writeString($policy->value);
+        $body->writeByteString($clientCertDer);
+        $body->writeDateTime(new \DateTimeImmutable());
+        $body->writeUInt16($headerLen);
+        $body->writeByteString($senderNonce);
+        $body->writeByteString($eccReceiverNonce);
+        $body->writeRawBytes($encryptedData);
+        $body->writeRawBytes(str_repeat("\x00", $signatureSize));
+        $bodyBytes = $body->getBuffer();
+
+        $ext = new BinaryEncoder();
+        $ext->writeNodeId(NodeId::numeric(0, 17546));
+        $ext->writeByte(0x01);
+        $ext->writeInt32(strlen($bodyBytes));
+        $ext->writeRawBytes($bodyBytes);
+        $fullBlob = $ext->getBuffer();
+
+        $dataToSign = substr($fullBlob, 0, strlen($fullBlob) - $signatureSize);
+        $derSig = $ms->asymmetricSign($dataToSign, $clientPrivateKey, $policy);
+        $rawSig = $ms->ecdsaDerToRaw($derSig, $coordinateSize);
+
+        return $dataToSign . $rawSig;
     }
 
     /**

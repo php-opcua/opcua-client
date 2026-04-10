@@ -30,6 +30,8 @@ class SecureChannel
 
     private ?string $serverNonce = null;
 
+    private ?OpenSSLAsymmetricKey $clientEphemeralPrivateKey = null;
+
     private int $secureChannelId = 0;
 
     private int $tokenId = 0;
@@ -154,8 +156,14 @@ class SecureChannel
     public function createOpenSecureChannelMessage(): string
     {
         if ($this->isSecurityActive()) {
-            $nonceLength = $this->policy->getDerivedKeyLength();
-            $this->clientNonce = random_bytes(max($nonceLength, 32));
+            if ($this->policy->isEcc()) {
+                $ephemeral = $this->messageSecurity->generateEphemeralKeyPair($this->policy->getEcdhCurveName());
+                $this->clientEphemeralPrivateKey = $ephemeral['privateKey'];
+                $this->clientNonce = substr($ephemeral['publicKeyBytes'], 1);
+            } else {
+                $nonceLength = $this->policy->getDerivedKeyLength();
+                $this->clientNonce = random_bytes(max($nonceLength, 32));
+            }
         } else {
             $this->clientNonce = '';
         }
@@ -198,6 +206,10 @@ class SecureChannel
         $plainBodyBytes = $plainBody->getBuffer();
 
         if ($this->isSecurityActive()) {
+            if ($this->policy->isEcc()) {
+                return $this->createOPNMessageEcc($securityHeaderBytes, $plainBodyBytes);
+            }
+
             $signatureSize = $this->getClientKeyLengthBytes();
 
             $keyLengthBytes = $this->certManager->getPublicKeyLength($this->serverCertDer);
@@ -258,6 +270,20 @@ class SecureChannel
         $decoder = new BinaryDecoder($response);
         $header = MessageHeader::decode($decoder);
 
+        if ($header->getMessageType() === 'ERR') {
+            $statusCode = $decoder->readUInt32();
+            $reason = '';
+            try {
+                $reason = $decoder->readString() ?? '';
+            } catch (\Throwable) {
+            }
+            throw new ProtocolException(sprintf(
+                'OPN rejected by server: 0x%08X — %s',
+                $statusCode,
+                $reason,
+            ));
+        }
+
         if ($header->getMessageType() !== 'OPN') {
             throw new ProtocolException("Expected OPN response, got: {$header->getMessageType()}");
         }
@@ -265,7 +291,9 @@ class SecureChannel
         $channelId = $decoder->readUInt32();
 
         $policyUri = $decoder->readString();
+
         $senderCert = $decoder->readByteString();
+
         $receiverThumbprint = $decoder->readByteString();
 
         if ($this->isSecurityActive()) {
@@ -273,33 +301,37 @@ class SecureChannel
                 $this->serverCertDer = $senderCert;
             }
 
-            $encryptedData = $decoder->readRawBytes($decoder->getRemainingLength());
+            if ($this->policy->isEcc()) {
+                $innerDecoder = $this->processOPNResponseEcc($decoder, $response, $policyUri, $senderCert, $receiverThumbprint);
+            } else {
+                $encryptedData = $decoder->readRawBytes($decoder->getRemainingLength());
 
-            $decryptedData = $this->messageSecurity->asymmetricDecrypt(
-                $encryptedData,
-                $this->clientPrivateKey,
-                $this->policy,
-            );
+                $decryptedData = $this->messageSecurity->asymmetricDecrypt(
+                    $encryptedData,
+                    $this->clientPrivateKey,
+                    $this->policy,
+                );
 
-            $signatureSize = $this->certManager->getPublicKeyLength($this->serverCertDer);
+                $signatureSize = $this->certManager->getPublicKeyLength($this->serverCertDer);
 
-            $signature = substr($decryptedData, -$signatureSize);
-            $dataWithoutSig = substr($decryptedData, 0, -$signatureSize);
+                $signature = substr($decryptedData, -$signatureSize);
+                $dataWithoutSig = substr($decryptedData, 0, -$signatureSize);
 
-            $headerBytes = substr($response, 0, 12);
-            $secHeaderEncoder = new BinaryEncoder();
-            $secHeaderEncoder->writeString($policyUri);
-            $secHeaderEncoder->writeByteString($senderCert);
-            $secHeaderEncoder->writeByteString($receiverThumbprint);
-            $signedContent = $headerBytes . $secHeaderEncoder->getBuffer() . $dataWithoutSig;
+                $headerBytes = substr($response, 0, 12);
+                $secHeaderEncoder = new BinaryEncoder();
+                $secHeaderEncoder->writeString($policyUri);
+                $secHeaderEncoder->writeByteString($senderCert);
+                $secHeaderEncoder->writeByteString($receiverThumbprint);
+                $signedContent = $headerBytes . $secHeaderEncoder->getBuffer() . $dataWithoutSig;
 
-            if (! $this->messageSecurity->asymmetricVerify($signedContent, $signature, $this->serverCertDer, $this->policy)) {
-                throw new SecurityException('OPN response signature verification failed');
+                if (! $this->messageSecurity->asymmetricVerify($signedContent, $signature, $this->serverCertDer, $this->policy)) {
+                    throw new SecurityException('OPN response signature verification failed');
+                }
+
+                $strippedData = $this->stripAsymmetricPadding($dataWithoutSig);
+
+                $innerDecoder = new BinaryDecoder($strippedData);
             }
-
-            $strippedData = $this->stripAsymmetricPadding($dataWithoutSig);
-
-            $innerDecoder = new BinaryDecoder($strippedData);
         } else {
             $innerDecoder = $decoder;
         }
@@ -328,7 +360,11 @@ class SecureChannel
         $this->serverNonce = $innerDecoder->readByteString();
 
         if ($this->isSecurityActive() && $this->serverNonce !== null) {
-            $this->deriveSymmetricKeys();
+            if ($this->policy->isEcc()) {
+                $this->deriveSymmetricKeysEcc();
+            } else {
+                $this->deriveSymmetricKeys();
+            }
         }
 
         return [
@@ -375,8 +411,9 @@ class SecureChannel
         $plaintext->writeRawBytes($innerBody);
         $plaintextBytes = $plaintext->getBuffer();
 
-        $signatureSize = $this->policy->getSymmetricSignatureSize();
         $blockSize = $this->policy->getSymmetricBlockSize();
+
+        $signatureSize = $this->policy->getSymmetricSignatureSize();
 
         if ($this->mode === SecurityMode::SignAndEncrypt) {
             $paddedPlaintext = $this->addSymmetricPadding($plaintextBytes, $signatureSize, $blockSize);
@@ -668,5 +705,113 @@ class SecureChannel
         $requestHandle = $decoder->readUInt32();
 
         return $requestHandle;
+    }
+
+    /**
+     * @param string $securityHeaderBytes
+     * @param string $plainBodyBytes
+     * @return string ECC OPN message (signed, NOT encrypted).
+     */
+    private function createOPNMessageEcc(string $securityHeaderBytes, string $plainBodyBytes): string
+    {
+        $coordinateSize = $this->policy->getEphemeralKeyLength() / 2;
+        $signatureSize = $coordinateSize * 2;
+
+        $totalSize = 12 + strlen($securityHeaderBytes) + strlen($plainBodyBytes) + $signatureSize;
+
+        $headerEncoder = new BinaryEncoder();
+        $msgHeader = new MessageHeader('OPN', 'F', $totalSize);
+        $msgHeader->encode($headerEncoder);
+        $headerEncoder->writeUInt32($this->secureChannelId);
+        $headerBytes = $headerEncoder->getBuffer();
+
+        $dataToSign = $headerBytes . $securityHeaderBytes . $plainBodyBytes;
+        $derSignature = $this->messageSecurity->asymmetricSign($dataToSign, $this->clientPrivateKey, $this->policy);
+        $rawSignature = $this->messageSecurity->ecdsaDerToRaw($derSignature, $coordinateSize);
+
+        $encoder = new BinaryEncoder();
+        $encoder->writeRawBytes($headerBytes);
+        $encoder->writeRawBytes($securityHeaderBytes);
+        $encoder->writeRawBytes($plainBodyBytes);
+        $encoder->writeRawBytes($rawSignature);
+
+        return $encoder->getBuffer();
+    }
+
+    /**
+     * @param BinaryDecoder $decoder
+     * @param string $response
+     * @param ?string $policyUri
+     * @param ?string $senderCert
+     * @param ?string $receiverThumbprint
+     * @return BinaryDecoder
+     */
+    private function processOPNResponseEcc(
+        BinaryDecoder $decoder,
+        string $response,
+        ?string $policyUri,
+        ?string $senderCert,
+        ?string $receiverThumbprint,
+    ): BinaryDecoder {
+        $signedBody = $decoder->readRawBytes($decoder->getRemainingLength());
+
+        $coordinateSize = $this->policy->getEphemeralKeyLength() / 2;
+        $signatureSize = $coordinateSize * 2;
+        $dataWithoutSig = substr($signedBody, 0, -$signatureSize);
+        $rawSignature = substr($signedBody, -$signatureSize);
+        $signature = $this->messageSecurity->ecdsaRawToDer($rawSignature, $coordinateSize);
+
+        $headerBytes = substr($response, 0, 12);
+        $secHeaderEncoder = new BinaryEncoder();
+        $secHeaderEncoder->writeString($policyUri);
+        $secHeaderEncoder->writeByteString($senderCert);
+        $secHeaderEncoder->writeByteString($receiverThumbprint);
+        $signedContent = $headerBytes . $secHeaderEncoder->getBuffer() . $dataWithoutSig;
+
+        $verified = $this->messageSecurity->asymmetricVerify($signedContent, $signature, $this->serverCertDer, $this->policy);
+        if (! $verified) {
+            throw new SecurityException('OPN response ECC signature verification failed');
+        }
+
+        return new BinaryDecoder($dataWithoutSig);
+    }
+
+    private function deriveSymmetricKeysEcc(): void
+    {
+        $ephemeralKeyLen = $this->policy->getEphemeralKeyLength();
+        $serverEphemeralRawKey = substr($this->serverNonce, 0, $ephemeralKeyLen);
+
+        $serverEphemeralPublicKey = $this->messageSecurity->loadEcPublicKeyFromBytes(
+            "\x04" . $serverEphemeralRawKey,
+            $this->policy->getEcdhCurveName(),
+        );
+
+        $sharedSecret = $this->messageSecurity->computeEcdhSharedSecret(
+            $this->clientEphemeralPrivateKey,
+            $serverEphemeralPublicKey,
+        );
+
+        $sigKeyLen = $this->policy->getDerivedSignatureKeyLength();
+        $encKeyLen = $this->policy->getDerivedKeyLength();
+        $blockSize = $this->policy->getSymmetricBlockSize();
+        $totalLen = $sigKeyLen + $encKeyLen + $blockSize;
+        $saltKeyLen = $this->mode === SecurityMode::SignAndEncrypt
+            ? $totalLen
+            : $encKeyLen + $blockSize;
+
+        $algorithm = $this->policy->getKeyDerivationAlgorithm();
+
+        // Salt = uint16_le(encKeyLen+blockSize) + label + clientNonce + serverNonce
+        $clientSalt = pack('v', $saltKeyLen) . 'opcua-client' . $this->clientNonce . $this->serverNonce;
+        $clientDerived = hash_hkdf($algorithm, $sharedSecret, $totalLen, $clientSalt, $clientSalt);
+        $this->clientSigningKey = substr($clientDerived, 0, $sigKeyLen);
+        $this->clientEncryptingKey = substr($clientDerived, $sigKeyLen, $encKeyLen);
+        $this->clientIv = substr($clientDerived, $sigKeyLen + $encKeyLen, $blockSize);
+
+        $serverSalt = pack('v', $saltKeyLen) . 'opcua-server' . $this->serverNonce . $this->clientNonce;
+        $serverDerived = hash_hkdf($algorithm, $sharedSecret, $totalLen, $serverSalt, $serverSalt);
+        $this->serverSigningKey = substr($serverDerived, 0, $sigKeyLen);
+        $this->serverEncryptingKey = substr($serverDerived, $sigKeyLen, $encKeyLen);
+        $this->serverIv = substr($serverDerived, $sigKeyLen + $encKeyLen, $blockSize);
     }
 }

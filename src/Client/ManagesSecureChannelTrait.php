@@ -174,7 +174,8 @@ trait ManagesSecureChannelTrait
             return [$clientCertDer, $certManager->loadPrivateKeyPem($this->clientKeyPath)];
         }
 
-        $generated = $certManager->generateSelfSignedCertificate();
+        $eccCurve = $this->securityPolicy->isEcc() ? $this->securityPolicy->getEcdhCurveName() : null;
+        $generated = $certManager->generateSelfSignedCertificate('urn:opcua-client', $eccCurve);
 
         return [$generated['certDer'], $generated['privateKey']];
     }

@@ -126,6 +126,8 @@ class Client implements OpcUaClientInterface
 
     private ?string $serverNonce = null;
 
+    private ?string $eccServerEphemeralKey = null;
+
     private ?string $usernamePolicyId = null;
 
     private ?string $certificatePolicyId = null;

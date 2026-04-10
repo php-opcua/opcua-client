@@ -56,6 +56,11 @@ trait ManagesSessionTrait
             $this->serverNonce = $sessionResult['serverNonce'];
         }
 
+        $eccKey = $this->session->getLastEccServerEphemeralKey();
+        if ($eccKey !== null) {
+            $this->eccServerEphemeralKey = $eccKey;
+        }
+
         if (isset($sessionResult['serverCertificate'])) {
             if ($this->secureChannel !== null && $this->secureChannel->getServerCertDer() === null) {
                 $this->secureChannel->setServerCertDer($sessionResult['serverCertificate']);
@@ -82,6 +87,7 @@ trait ManagesSessionTrait
             $userCertDer,
             $userPrivateKey,
             $this->serverNonce,
+            $this->eccServerEphemeralKey,
         );
         $this->logger->debug('ActivateSession request', $this->logContext());
         $this->transport->send($request);

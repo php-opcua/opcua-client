@@ -147,11 +147,30 @@ class CertificateManager
     }
 
     /**
+     * @param string $derCert
+     * @return int OPENSSL_KEYTYPE_RSA or OPENSSL_KEYTYPE_EC.
+     * @throws SecurityException
+     */
+    public function getKeyType(string $derCert): int
+    {
+        $pem = $this->derToPem($derCert);
+        $cert = self::ensureNotFalse(openssl_x509_read($pem), 'Failed to read certificate');
+        $pubKey = self::ensureNotFalse(openssl_pkey_get_public($cert), 'Failed to get public key from certificate');
+        $details = self::ensureNotFalse(openssl_pkey_get_details($pubKey), 'Failed to get key details');
+
+        return (int) $details['type'];
+    }
+
+    /**
+     * @param string $applicationUri
+     * @param ?string $eccCurveName OpenSSL curve name for ECC (e.g. 'prime256v1'). Null for RSA.
      * @return array{certDer: string, privateKey: OpenSSLAsymmetricKey}
      * @throws SecurityException
      */
-    public function generateSelfSignedCertificate(string $applicationUri = 'urn:opcua-client'): array
-    {
+    public function generateSelfSignedCertificate(
+        string $applicationUri = 'urn:opcua-client',
+        ?string $eccCurveName = null,
+    ): array {
         $hostname = gethostname() ?: 'localhost';
 
         $configContent = "[req]\n"
@@ -163,7 +182,9 @@ class CertificateManager
             . "O = OPC UA PHP Client\n"
             . "[v3_req]\n"
             . "basicConstraints = CA:FALSE\n"
-            . "keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment\n"
+            . ($eccCurveName !== null
+                ? "keyUsage = digitalSignature, nonRepudiation, keyAgreement\n"
+                : "keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment\n")
             . "extendedKeyUsage = clientAuth\n"
             . "subjectAltName = URI:{$applicationUri}, DNS:{$hostname}\n";
 
@@ -175,23 +196,35 @@ class CertificateManager
             $meta = stream_get_meta_data($tmpHandle);
             $configPath = $meta['uri'];
 
-            $keyConfig = [
-                'private_key_bits' => 2048,
-                'private_key_type' => OPENSSL_KEYTYPE_RSA,
-                'config' => $configPath,
-            ];
+            if ($eccCurveName !== null) {
+                $keyConfig = [
+                    'private_key_type' => OPENSSL_KEYTYPE_EC,
+                    'curve_name' => $eccCurveName,
+                ];
+                $digestAlg = match ($eccCurveName) {
+                    'secp384r1', 'brainpoolP384r1' => 'sha384',
+                    default => 'sha256',
+                };
+            } else {
+                $keyConfig = [
+                    'private_key_bits' => 2048,
+                    'private_key_type' => OPENSSL_KEYTYPE_RSA,
+                    'config' => $configPath,
+                ];
+                $digestAlg = 'sha256';
+            }
 
             $privateKey = self::ensureNotFalse(openssl_pkey_new($keyConfig), 'Failed to generate private key');
 
             $dn = ['CN' => 'OPC UA PHP Client', 'O' => 'OPC UA PHP Client'];
 
             $csr = self::ensureNotFalse(
-                openssl_csr_new($dn, $privateKey, ['digest_alg' => 'sha256', 'config' => $configPath]),
+                openssl_csr_new($dn, $privateKey, ['digest_alg' => $digestAlg, 'config' => $configPath]),
                 'Failed to generate CSR',
             );
 
             $cert = self::ensureNotFalse(
-                openssl_csr_sign($csr, null, $privateKey, 365, ['digest_alg' => 'sha256', 'config' => $configPath, 'x509_extensions' => 'v3_req']),
+                openssl_csr_sign($csr, null, $privateKey, 365, ['digest_alg' => $digestAlg, 'config' => $configPath, 'x509_extensions' => 'v3_req']),
                 'Failed to generate self-signed certificate',
             );
 

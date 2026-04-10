@@ -35,7 +35,7 @@ jobs:
 
       - name: Start OPC UA test servers
         id: opcua
-        uses: php-opcua/uanetstandard-test-suite@v1.0.0
+        uses: php-opcua/uanetstandard-test-suite@v1.1.0
 
       - name: Run tests
         env:

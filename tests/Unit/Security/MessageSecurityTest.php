@@ -269,4 +269,193 @@ describe('MessageSecurity key derivation', function () {
         $decrypted = $this->ms->symmetricDecrypt($encrypted, $keys['encryptingKey'], $keys['iv'], SecurityPolicy::Basic256Sha256);
         expect($decrypted)->toBe($plaintext);
     });
+
+    describe('ECC operations', function () {
+
+        it('generates P-256 ephemeral key pair with correct public key format', function () {
+            $result = $this->ms->generateEphemeralKeyPair('prime256v1');
+            expect($result['privateKey'])->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+            expect(strlen($result['publicKeyBytes']))->toBe(65);
+            expect($result['publicKeyBytes'][0])->toBe("\x04");
+        });
+
+        it('generates P-384 ephemeral key pair with correct public key format', function () {
+            $result = $this->ms->generateEphemeralKeyPair('secp384r1');
+            expect($result['privateKey'])->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+            expect(strlen($result['publicKeyBytes']))->toBe(97);
+            expect($result['publicKeyBytes'][0])->toBe("\x04");
+        });
+
+        it('computes ECDH shared secret for P-256', function () {
+            $a = $this->ms->generateEphemeralKeyPair('prime256v1');
+            $b = $this->ms->generateEphemeralKeyPair('prime256v1');
+            $bPub = $this->ms->loadEcPublicKeyFromBytes($b['publicKeyBytes'], 'prime256v1');
+
+            $secret = $this->ms->computeEcdhSharedSecret($a['privateKey'], $bPub);
+            expect(strlen($secret))->toBe(32);
+        });
+
+        it('ECDH shared secret is symmetric (A-B == B-A)', function () {
+            $a = $this->ms->generateEphemeralKeyPair('prime256v1');
+            $b = $this->ms->generateEphemeralKeyPair('prime256v1');
+
+            $aPub = $this->ms->loadEcPublicKeyFromBytes($a['publicKeyBytes'], 'prime256v1');
+            $bPub = $this->ms->loadEcPublicKeyFromBytes($b['publicKeyBytes'], 'prime256v1');
+
+            $secretAB = $this->ms->computeEcdhSharedSecret($a['privateKey'], $bPub);
+            $secretBA = $this->ms->computeEcdhSharedSecret($b['privateKey'], $aPub);
+            expect($secretAB)->toBe($secretBA);
+        });
+
+        it('computes ECDH shared secret for P-384', function () {
+            $a = $this->ms->generateEphemeralKeyPair('secp384r1');
+            $b = $this->ms->generateEphemeralKeyPair('secp384r1');
+            $bPub = $this->ms->loadEcPublicKeyFromBytes($b['publicKeyBytes'], 'secp384r1');
+
+            $secret = $this->ms->computeEcdhSharedSecret($a['privateKey'], $bPub);
+            expect(strlen($secret))->toBe(48);
+        });
+
+        it('loads EC public key from bytes and round-trips', function () {
+            $pair = $this->ms->generateEphemeralKeyPair('prime256v1');
+            $loaded = $this->ms->loadEcPublicKeyFromBytes($pair['publicKeyBytes'], 'prime256v1');
+            expect($loaded)->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+
+            $details = openssl_pkey_get_details($loaded);
+            expect($details['type'])->toBe(OPENSSL_KEYTYPE_EC);
+        });
+
+        it('derives keys with HKDF for EccNistP256', function () {
+            $sharedSecret = random_bytes(32);
+            $info = random_bytes(64);
+            $keys = $this->ms->deriveKeysHkdf($sharedSecret, '', $info, SecurityPolicy::EccNistP256);
+
+            expect(strlen($keys['signingKey']))->toBe(32);
+            expect(strlen($keys['encryptingKey']))->toBe(16);
+            expect(strlen($keys['iv']))->toBe(16);
+        });
+
+        it('derives keys with HKDF for EccNistP384', function () {
+            $sharedSecret = random_bytes(48);
+            $info = random_bytes(64);
+            $keys = $this->ms->deriveKeysHkdf($sharedSecret, '', $info, SecurityPolicy::EccNistP384);
+
+            expect(strlen($keys['signingKey']))->toBe(48);
+            expect(strlen($keys['encryptingKey']))->toBe(32);
+            expect(strlen($keys['iv']))->toBe(16);
+        });
+
+        it('generates brainpoolP256r1 ephemeral key pair with correct public key format', function () {
+            $result = $this->ms->generateEphemeralKeyPair('brainpoolP256r1');
+            expect($result['privateKey'])->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+            expect(strlen($result['publicKeyBytes']))->toBe(65);
+            expect($result['publicKeyBytes'][0])->toBe("\x04");
+        });
+
+        it('generates brainpoolP384r1 ephemeral key pair with correct public key format', function () {
+            $result = $this->ms->generateEphemeralKeyPair('brainpoolP384r1');
+            expect($result['privateKey'])->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+            expect(strlen($result['publicKeyBytes']))->toBe(97);
+            expect($result['publicKeyBytes'][0])->toBe("\x04");
+        });
+
+        it('computes ECDH shared secret for brainpoolP256r1', function () {
+            $a = $this->ms->generateEphemeralKeyPair('brainpoolP256r1');
+            $b = $this->ms->generateEphemeralKeyPair('brainpoolP256r1');
+            $bPub = $this->ms->loadEcPublicKeyFromBytes($b['publicKeyBytes'], 'brainpoolP256r1');
+
+            $secret = $this->ms->computeEcdhSharedSecret($a['privateKey'], $bPub);
+            expect(strlen($secret))->toBe(32);
+        });
+
+        it('ECDH shared secret is symmetric for brainpoolP256r1 (A-B == B-A)', function () {
+            $a = $this->ms->generateEphemeralKeyPair('brainpoolP256r1');
+            $b = $this->ms->generateEphemeralKeyPair('brainpoolP256r1');
+
+            $aPub = $this->ms->loadEcPublicKeyFromBytes($a['publicKeyBytes'], 'brainpoolP256r1');
+            $bPub = $this->ms->loadEcPublicKeyFromBytes($b['publicKeyBytes'], 'brainpoolP256r1');
+
+            $secretAB = $this->ms->computeEcdhSharedSecret($a['privateKey'], $bPub);
+            $secretBA = $this->ms->computeEcdhSharedSecret($b['privateKey'], $aPub);
+            expect($secretAB)->toBe($secretBA);
+        });
+
+        it('computes ECDH shared secret for brainpoolP384r1', function () {
+            $a = $this->ms->generateEphemeralKeyPair('brainpoolP384r1');
+            $b = $this->ms->generateEphemeralKeyPair('brainpoolP384r1');
+            $bPub = $this->ms->loadEcPublicKeyFromBytes($b['publicKeyBytes'], 'brainpoolP384r1');
+
+            $secret = $this->ms->computeEcdhSharedSecret($a['privateKey'], $bPub);
+            expect(strlen($secret))->toBe(48);
+        });
+
+        it('loads brainpoolP256r1 EC public key from bytes and round-trips', function () {
+            $pair = $this->ms->generateEphemeralKeyPair('brainpoolP256r1');
+            $loaded = $this->ms->loadEcPublicKeyFromBytes($pair['publicKeyBytes'], 'brainpoolP256r1');
+            expect($loaded)->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+
+            $details = openssl_pkey_get_details($loaded);
+            expect($details['type'])->toBe(OPENSSL_KEYTYPE_EC);
+        });
+
+        it('derives keys with HKDF for EccBrainpoolP256r1', function () {
+            $sharedSecret = random_bytes(32);
+            $info = random_bytes(64);
+            $keys = $this->ms->deriveKeysHkdf($sharedSecret, '', $info, SecurityPolicy::EccBrainpoolP256r1);
+
+            expect(strlen($keys['signingKey']))->toBe(32);
+            expect(strlen($keys['encryptingKey']))->toBe(16);
+            expect(strlen($keys['iv']))->toBe(16);
+        });
+
+        it('derives keys with HKDF for EccBrainpoolP384r1', function () {
+            $sharedSecret = random_bytes(48);
+            $info = random_bytes(64);
+            $keys = $this->ms->deriveKeysHkdf($sharedSecret, '', $info, SecurityPolicy::EccBrainpoolP384r1);
+
+            expect(strlen($keys['signingKey']))->toBe(48);
+            expect(strlen($keys['encryptingKey']))->toBe(32);
+            expect(strlen($keys['iv']))->toBe(16);
+        });
+
+        it('ECDSA sign and verify work with brainpoolP256r1', function () {
+            $pair = $this->ms->generateEphemeralKeyPair('brainpoolP256r1');
+            $data = 'test data for ECDSA signing';
+
+            $signature = '';
+            openssl_sign($data, $signature, $pair['privateKey'], 'sha256');
+            expect(strlen($signature))->toBeGreaterThan(60)->toBeLessThan(80);
+
+            $pubKey = $this->ms->loadEcPublicKeyFromBytes($pair['publicKeyBytes'], 'brainpoolP256r1');
+            $valid = openssl_verify($data, $signature, $pubKey, 'sha256');
+            expect($valid)->toBe(1);
+        });
+
+        it('ECDSA sign and verify work with brainpoolP384r1', function () {
+            $pair = $this->ms->generateEphemeralKeyPair('brainpoolP384r1');
+            $data = 'test data for ECDSA signing';
+
+            $signature = '';
+            openssl_sign($data, $signature, $pair['privateKey'], 'sha384');
+            expect(strlen($signature))->toBeGreaterThan(90)->toBeLessThan(115);
+
+            $pubKey = $this->ms->loadEcPublicKeyFromBytes($pair['publicKeyBytes'], 'brainpoolP384r1');
+            $valid = openssl_verify($data, $signature, $pubKey, 'sha384');
+            expect($valid)->toBe(1);
+        });
+
+        it('ECDSA sign and verify work with P-256', function () {
+            $pair = $this->ms->generateEphemeralKeyPair('prime256v1');
+            $data = 'test data for ECDSA signing';
+
+            $signature = '';
+            openssl_sign($data, $signature, $pair['privateKey'], 'sha256');
+            expect(strlen($signature))->toBeGreaterThan(60)->toBeLessThan(80);
+
+            $pubKey = $this->ms->loadEcPublicKeyFromBytes($pair['publicKeyBytes'], 'prime256v1');
+            $valid = openssl_verify($data, $signature, $pubKey, 'sha256');
+            expect($valid)->toBe(1);
+        });
+
+    });
 });
