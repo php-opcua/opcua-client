@@ -1,5 +1,26 @@
 # Changelog
 
+## [v4.1.0] - 2026-04-x
+
+### Added
+
+- **ECC security policies: `ECC_nistP256`, `ECC_nistP384`, `ECC_brainpoolP256r1`, and `ECC_brainpoolP384r1`.** Full Elliptic Curve Cryptography support for OPC UA secure channels, including:
+  - ECDSA signatures (SHA-256 / SHA-384) for OpenSecureChannel (sign-only, no asymmetric encryption)
+  - ECDH ephemeral key agreement for symmetric key derivation
+  - HKDF-SHA256 / HKDF-SHA384 key derivation with mode-dependent salt (replaces P_SHA for ECC)
+  - HMAC-SHA256 / HMAC-SHA384 symmetric signing for MSG messages
+  - AES-128-CBC (P-256) / AES-256-CBC (P-384) symmetric encryption
+  - Auto-generated ECC certificates when no client certificate is provided (NIST P-256/P-384 or Brainpool P-256/P-384)
+  - Username/password authentication via `EccEncryptedSecret` protocol (ECDH + AES + ECDSA signature)
+  - `ECDHPolicyUri` request in CreateSession `AdditionalHeader` to obtain server ephemeral key
+  - Parsing of `ECDHKey` (EphemeralKeyType) from server's `AdditionalHeader` response
+  - Raw R||S ECDSA signature format conversion (DER to/from raw) for OPN, ActivateSession, and EncryptedSecret
+- **New `SecurityPolicy` enum cases:** `EccNistP256`, `EccNistP384`, `EccBrainpoolP256r1`, `EccBrainpoolP384r1` with methods `isEcc()`, `getEcdhCurveName()`, `getEphemeralKeyLength()`.
+- **New `MessageSecurity` methods:** `computeEcdhSharedSecret()`, `deriveKeysHkdf()`, `generateEphemeralKeyPair()`, `loadEcPublicKeyFromBytes()`, `ecdsaDerToRaw()`, `ecdsaRawToDer()`.
+- **New `CertificateManager` methods:** `getKeyType()`, ECC certificate generation via optional `$eccCurveName` parameter on `generateSelfSignedCertificate()`.
+- **7 new NIST ECC integration tests** against the `uanetstandard-test-suite` ECC server (port 4848): P-256 Sign, P-256 SignAndEncrypt (anonymous + admin + read), P-384 SignAndEncrypt (anonymous + admin), P-384 Sign.
+- **7 new Brainpool ECC integration tests** against the `uanetstandard-test-suite` Brainpool server (port 4849): brainpoolP256r1 Sign, brainpoolP256r1 SignAndEncrypt (anonymous + admin + read), brainpoolP384r1 SignAndEncrypt (anonymous + admin), brainpoolP384r1 Sign.
+
 ## [v4.0.3] - 2026-04-07
 
 ### Added
@@ -12,7 +33,7 @@
 ### Changed
 
 - **Migrated test infrastructure from `opcua-test-suite` to `uanetstandard-test-suite`.** Integration tests now run against the [OPC Foundation UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) reference implementation instead of node-opcua. This is the de facto standard OPC UA stack, maintained by the same organization that defines the specification.
-- Updated GitHub Actions workflow to use `php-opcua/uanetstandard-test-suite@v1.0.0`.
+- Updated GitHub Actions workflow to use `php-opcua/uanetstandard-test-suite@v1.1.0`.
 - Updated certificate paths in `TestHelper.php` to point to the new test suite.
 
 ### Added

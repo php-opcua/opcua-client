@@ -4,6 +4,8 @@
 
 Each policy defines the algorithms used for encryption and signing:
 
+### RSA Policies
+
 | Policy | Asymmetric Sign | Asymmetric Encrypt | Symmetric Sign | Symmetric Encrypt | Min Key |
 |--------|----------------|-------------------|---------------|-------------------|---------|
 | None | -- | -- | -- | -- | -- |
@@ -13,11 +15,24 @@ Each policy defines the algorithms used for encryption and signing:
 | Aes128Sha256RsaOaep | RSA-SHA256 | RSA-OAEP | HMAC-SHA256 | AES-128-CBC | 2048 bit |
 | Aes256Sha256RsaPss | RSA-PSS-SHA256 | RSA-OAEP-SHA256 | HMAC-SHA256 | AES-256-CBC | 2048 bit |
 
-> **Tip:** For new deployments, use `Basic256Sha256` or `Aes256Sha256RsaPss`. The older policies (`Basic128Rsa15`, `Basic256`) exist for legacy server compatibility.
+### ECC Policies
+
+| Policy | Asymmetric Sign | Key Agreement | Symmetric Sign | Symmetric Encrypt | Curve |
+|--------|----------------|--------------|---------------|-------------------|-------|
+| EccNistP256 | ECDSA-SHA256 | ECDH P-256 | HMAC-SHA256 | AES-128-CBC | prime256v1 |
+| EccNistP384 | ECDSA-SHA384 | ECDH P-384 | HMAC-SHA384 | AES-256-CBC | secp384r1 |
+| EccBrainpoolP256r1 | ECDSA-SHA256 | ECDH BP-256 | HMAC-SHA256 | AES-128-CBC | brainpoolP256r1 |
+| EccBrainpoolP384r1 | ECDSA-SHA384 | ECDH BP-384 | HMAC-SHA384 | AES-256-CBC | brainpoolP384r1 |
+
+ECC policies use ECDH key agreement instead of RSA encryption. The OpenSecureChannel message is sign-only (no asymmetric encryption). Symmetric keys are derived via HKDF instead of P_SHA.
+
+The Brainpool curves are the European alternative to NIST curves. They provide equivalent security levels but with curve parameters generated in a verifiable way ("nothing-up-my-sleeve"). Required by BSI TR-03116 and other European regulations. The protocol is identical to NIST — only the underlying curve differs.
+
+> **Tip:** For new deployments, use `Basic256Sha256`, `Aes256Sha256RsaPss`, or any ECC policy for modern security. Choose NIST curves for maximum interoperability or Brainpool curves for European regulatory compliance. The older policies (`Basic128Rsa15`, `Basic256`) exist for legacy server compatibility.
 
 ## Certificate Setup
 
-### Generating Test Certificates
+### RSA Certificates
 
 ```bash
 # 1. Create a CA
@@ -33,14 +48,26 @@ openssl req -new -key client.key -out client.csr \
 openssl x509 -req -in client.csr -CA ca.pem -CAkey ca.key \
   -CAcreateserial -days 365 -out client.pem \
   -copy_extensions copy
+```
 
-# 3. (Optional) Convert to DER format
-openssl x509 -in client.pem -outform der -out client.der
+### ECC Certificates
+
+```bash
+# P-256 client certificate
+openssl ecparam -name prime256v1 -genkey -noout -out client-ecc.key
+openssl req -new -key client-ecc.key -out client-ecc.csr \
+  -subj "/CN=OPC UA ECC Client" \
+  -addext "subjectAltName=URI:urn:opcua-client:client"
+openssl x509 -req -in client-ecc.csr -CA ca.pem -CAkey ca.key \
+  -CAcreateserial -days 365 -out client-ecc.pem \
+  -copy_extensions copy
 ```
 
 > **Note:** The `subjectAltName` URI is required by OPC UA. It must match the application URI your server expects.
 
 ## Client Configuration
+
+### RSA
 
 ```php
 use PhpOpcua\Client\ClientBuilder;
@@ -58,9 +85,40 @@ $client = ClientBuilder::create()
     ->connect('opc.tcp://server:4840');
 ```
 
-If you skip `setClientCertificate()`, the library auto-generates a self-signed RSA 2048 certificate in memory with proper OPC UA extensions. This works for testing or servers configured with auto-accept trust.
+### ECC
+
+```php
+$client = ClientBuilder::create()
+    ->setSecurityPolicy(SecurityPolicy::EccNistP256)
+    ->setSecurityMode(SecurityMode::SignAndEncrypt)
+    ->setClientCertificate(
+        '/path/to/client-ecc.pem',
+        '/path/to/client-ecc.key',
+    )
+    ->connect('opc.tcp://server:4848');
+```
+
+If you skip `setClientCertificate()`, the library auto-generates a self-signed certificate in memory:
+- **RSA policies**: RSA 2048-bit certificate
+- **ECC policies**: ECC certificate matching the security policy curve (P-256, P-384, brainpoolP256r1, or brainpoolP384r1)
 
 > **Warning:** Auto-generated certificates are ephemeral. Every new `Client` instance gets a different certificate. For production, always provide your own.
+
+### ECC with Username/Password
+
+```php
+$client = ClientBuilder::create()
+    ->setSecurityPolicy(SecurityPolicy::EccNistP256)
+    ->setSecurityMode(SecurityMode::SignAndEncrypt)
+    ->setUserCredentials('admin', 'admin123')
+    ->connect('opc.tcp://server:4848');
+```
+
+For ECC policies, the password is encrypted using the `EccEncryptedSecret` protocol (ECDH key agreement + AES encryption). The client automatically:
+1. Requests an ephemeral ECDH key from the server via `AdditionalHeader` in CreateSession
+2. Generates its own ephemeral ECDH keypair
+3. Derives an AES encryption key from the ECDH shared secret
+4. Encrypts the password and signs the blob with ECDSA
 
 ## CertificateManager API
 
@@ -83,6 +141,13 @@ $thumbprint = $cm->getThumbprint($derBytes);         // SHA1 hash (binary)
 $keyLength  = $cm->getPublicKeyLength($derBytes);     // bytes (256 = 2048-bit key)
 $publicKey  = $cm->getPublicKeyFromCert($derBytes);   // OpenSSLAsymmetricKey
 $appUri     = $cm->getApplicationUri($derBytes);      // from SAN extension
+$keyType    = $cm->getKeyType($derBytes);             // OPENSSL_KEYTYPE_RSA or OPENSSL_KEYTYPE_EC
+
+// Generate self-signed certificates
+$rsa = $cm->generateSelfSignedCertificate('urn:my-app');              // RSA 2048
+$ecc = $cm->generateSelfSignedCertificate('urn:my-app', 'prime256v1');      // ECC P-256
+$bp  = $cm->generateSelfSignedCertificate('urn:my-app', 'brainpoolP256r1'); // ECC Brainpool P-256
+// Returns: ['certDer' => string, 'privateKey' => OpenSSLAsymmetricKey]
 ```
 
 ## MessageSecurity API
@@ -94,11 +159,11 @@ use PhpOpcua\Client\Security\MessageSecurity;
 
 $ms = new MessageSecurity();
 
-// Asymmetric (RSA)
+// Asymmetric (RSA or ECDSA -- auto-detected from key type)
 $signature = $ms->asymmetricSign($data, $privateKey, $policy);
 $valid     = $ms->asymmetricVerify($data, $signature, $derCert, $policy);
-$encrypted = $ms->asymmetricEncrypt($data, $derCert, $policy);
-$decrypted = $ms->asymmetricDecrypt($data, $privateKey, $policy);
+$encrypted = $ms->asymmetricEncrypt($data, $derCert, $policy);   // RSA only
+$decrypted = $ms->asymmetricDecrypt($data, $privateKey, $policy); // RSA only
 
 // Symmetric (AES + HMAC)
 $signature = $ms->symmetricSign($data, $signingKey, $policy);
@@ -106,14 +171,22 @@ $valid     = $ms->symmetricVerify($data, $signature, $signingKey, $policy);
 $encrypted = $ms->symmetricEncrypt($data, $encKey, $iv, $policy);
 $decrypted = $ms->symmetricDecrypt($data, $encKey, $iv, $policy);
 
-// Key derivation (P_SHA1 / P_SHA256)
-$keys = $ms->deriveKeys($secret, $seed, $policy);
+// Key derivation
+$keys = $ms->deriveKeys($secret, $seed, $policy);         // P_SHA1/P_SHA256 (RSA)
+$keys = $ms->deriveKeysHkdf($ikm, $salt, $info, $policy); // HKDF (ECC)
 // Returns: ['signingKey' => ..., 'encryptingKey' => ..., 'iv' => ...]
+
+// ECC-specific operations
+$shared = $ms->computeEcdhSharedSecret($privateKey, $publicKey);       // ECDH
+$pair   = $ms->generateEphemeralKeyPair('prime256v1');                  // Ephemeral EC keypair
+$pubKey = $ms->loadEcPublicKeyFromBytes($uncompressedPoint, 'prime256v1'); // Load from X+Y
+$raw    = $ms->ecdsaDerToRaw($derSignature, 32);  // DER -> raw R||S
+$der    = $ms->ecdsaRawToDer($rawSignature, 32);  // raw R||S -> DER
 ```
 
 ## Connection Flow
 
-Here is what happens when you call `connect()` with security enabled:
+### RSA
 
 ```
 Client                          Server
@@ -121,23 +194,45 @@ Client                          Server
   |--- HEL ---------------------->|  TCP handshake
   |<-- ACK -----------------------|
   |                               |
-  |--- OPN (asymmetric) --------->|  Encrypted with server's public key
+  |--- OPN (asymmetric) --------->|  Encrypted with server's RSA public key
   |<-- OPN response --------------|  Contains server nonce
   |                               |
   |   [derive symmetric keys      |
-  |    from shared nonces]        |
+  |    via P_SHA from nonces]     |
   |                               |
   |--- MSG (symmetric) ---------->|  AES encrypted, HMAC signed
   |<-- MSG (symmetric) ----------|
-  |                               |
-  |--- CLO ---------------------->|  Close secure channel
 ```
 
-**Phase 1 -- Discovery.** The client connects without security, calls `GetEndpoints`, and retrieves the server's certificate.
+### ECC
 
-**Phase 2 -- Asymmetric (OpenSecureChannel).** The client sends an OPN request encrypted with the server's public key. Both sides exchange nonces. Symmetric keys are derived from the shared nonces.
+```
+Client                          Server
+  |                               |
+  |--- HEL ---------------------->|  TCP handshake
+  |<-- ACK -----------------------|
+  |                               |
+  |--- OPN (sign-only) ---------->|  ECDSA signed, NOT encrypted
+  |<-- OPN response (signed) ----|  Contains server ephemeral key
+  |                               |
+  |   [ECDH key agreement         |
+  |    + HKDF key derivation]     |
+  |                               |
+  |--- MSG (symmetric) ---------->|  AES encrypted, HMAC signed
+  |<-- MSG (symmetric) ----------|
+```
 
-**Phase 3 -- Symmetric (Messages).** All `MSG` and `CLO` messages use the derived symmetric keys. Messages are signed with HMAC and encrypted with AES-CBC. Padding follows OPC UA spec (PKCS#7 style).
+**Phase 1 -- Discovery.** The client connects without security, calls `GetEndpoints`, and retrieves the server's certificate. For ECC endpoints, the server certificate uses an ECC key.
+
+**Phase 2 -- Asymmetric (OpenSecureChannel).**
+- **RSA:** The client sends an OPN request encrypted with the server's RSA public key.
+- **ECC:** The OPN request is sign-only (ECDSA). No asymmetric encryption. The client nonce contains the ephemeral ECDH public key (X+Y coordinates, 64 bytes for P-256, 96 for P-384).
+
+**Phase 3 -- Key derivation.**
+- **RSA:** Symmetric keys derived via P_SHA256(serverNonce, clientNonce).
+- **ECC:** Symmetric keys derived via HKDF from the ECDH shared secret. The salt includes the label ("opcua-client"/"opcua-server") and both nonces. The salt key length in the uint16 prefix depends on the security mode.
+
+**Phase 4 -- Symmetric (Messages).** All `MSG` and `CLO` messages use the derived symmetric keys. Messages are signed with HMAC and encrypted with AES-CBC. This phase is identical for RSA and ECC policies.
 
 The `SecureChannel` class manages this entire lifecycle: asymmetric key exchange, symmetric key derivation, message signing/encryption/padding, sequence number tracking, and token/channel ID management.
 

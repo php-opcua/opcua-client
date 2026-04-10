@@ -30,7 +30,7 @@ This library implements the full OPC UA binary protocol stack in pure PHP: TCP t
 - **Subscribe** to data changes and events in real time — get notified when a sensor value changes or an alarm fires
 - **Call methods** on the server — trigger operations, run diagnostics, execute commands on the PLC
 - **Query historical data** — pull raw logs, aggregated trends (min, max, average), or interpolated values at specific timestamps
-- **Secure everything** — 6 security policies from plaintext to AES-256 with RSA-PSS signatures, plus anonymous, username/password, or X.509 certificate authentication
+- **Secure everything** — 10 security policies: 6 RSA (plaintext to AES-256 with RSA-PSS) + 4 ECC (NIST P-256/P-384 and Brainpool P-256/P-384 with ECDSA/ECDH), plus anonymous, username/password, or X.509 certificate authentication
 
 All of this with zero external dependencies beyond `ext-openssl`, and full support for PHP 8.2 through 8.5.
 
@@ -46,7 +46,7 @@ All of this with zero external dependencies beyond `ext-openssl`, and full suppo
 
 This library is integration-tested against **[UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard)** — the **reference implementation** maintained by the OPC Foundation, the organization that defines the OPC UA specification. This is the same stack used by major industrial vendors to certify their products.
 
-1150+ integration tests run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec.
+1200+ integration tests run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec.
 
 **This library is already used in production with real industrial equipment** in factory automation and process control environments.
 
@@ -408,11 +408,11 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 - **Zero runtime dependencies** — only `ext-openssl`. Optional PSR-3 logging, PSR-16 caching, and PSR-14 events via any compatible implementation.
 - **PHP 8.2+** — runs on any modern PHP.
 - **Native binary protocol** — speaks OPC UA directly over TCP. No HTTP gateway, no REST bridge, no sidecar.
-- **Full security stack** — 6 policies up to Aes256Sha256RsaPss, 3 auth modes, auto-generated certs, persistent certificate trust store with TOFU.
+- **Full security stack** — 10 policies: 6 RSA up to Aes256Sha256RsaPss + 4 ECC (NIST and Brainpool), 3 auth modes, auto-generated certs, persistent certificate trust store with TOFU.
 - **Industrial-ready** — server certificate trust management, alarm event deduction, subscription recovery, auto-retry — built for certified industrial deployments.
 - **Batteries included** — browse, read, write, call, subscriptions, events, history, path resolution, batching, retry, CLI tool.
 - **Cross-platform** — Linux, macOS, Windows. No FFI, no COM.
-- **Thoroughly tested** — 1290+ tests, 99%+ code coverage across PHP 8.2, 8.3, 8.4, and 8.5.
+- **Thoroughly tested** — 1300+ tests, 99%+ code coverage across PHP 8.2, 8.3, 8.4, and 8.5.
 - **Typed everywhere** — all service responses return `public readonly` DTOs, not arrays.
 - **Session persistence** — keep OPC UA connections alive across PHP requests via [`opcua-session-manager`](https://github.com/php-opcua/opcua-session-manager).
 - **Laravel-ready** — drop-in via [`opcua-laravel-client`](https://github.com/php-opcua/laravel-opcua).
@@ -429,7 +429,7 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 | **Transfer & Recovery** | Transfer subscriptions across sessions and republish unacknowledged notifications |
 | **History Read** | Raw, processed (aggregated), and at-time historical queries |
 | **Endpoint Discovery** | Discover available endpoints and security policies |
-| **Security** | 6 policies from None through Aes256Sha256RsaPss |
+| **Security** | 10 policies: 6 RSA (None through Aes256Sha256RsaPss) + 4 ECC (NIST P-256/P-384, Brainpool P-256/P-384) |
 | **Authentication** | Anonymous, Username/Password, X.509 Certificate |
 | **Auto-Retry** | Automatic reconnect on connection failures |
 | **Fluent Builder API** | Chain `readMulti()`, `writeMulti()`, `createMonitoredItems()`, and `translateBrowsePaths()` calls with a fluent builder |
@@ -465,7 +465,7 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 
 ## Testing
 
-1290+ tests with **99%+ code coverage**. Unit tests cover encoding, crypto, protocol services, and error paths. Integration tests run against [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) — a Docker-based OPC UA environment built on the OPC Foundation's UA-.NETStandard reference implementation, with multiple security configs, custom types, and real-world scenarios.
+1300+ tests with **99%+ code coverage**. Unit tests cover encoding, crypto, protocol services, and error paths. Integration tests run against [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) — a Docker-based OPC UA environment built on the OPC Foundation's UA-.NETStandard reference implementation, with multiple security configs, custom types, and real-world scenarios.
 
 ```bash
 ./vendor/bin/pest                                          # everything
@@ -481,7 +481,7 @@ CI runs on PHP 8.2, 8.3, 8.4, and 8.5 via GitHub Actions.
 
 | Library | PHP | Dependencies | Security Policies | History Read | Auto-Batching | Notes |
 |---------|-----|-------------|-------------------|-------------|---------------|-------|
-| **php-opcua/opcua-client** | 8.2+ | `ext-openssl` only | 6 (None → Aes256Sha256RsaPss) | Yes | Yes | Zero external deps, full binary protocol |
+| **php-opcua/opcua-client** | 8.2+ | `ext-openssl` only | 10 (6 RSA + 4 ECC) | Yes | Yes | Zero external deps, full binary protocol |
 | [techdock/opcua](https://github.com/TECHDOCK-CH/php-opc-ua) | 8.4+ | phpseclib, symfony/cache, monolog, ... | Basic256Sha256 | No | Yes | Heavier dependency tree, still v0.2 |
 | [techdock/opcua-webapi-client](https://packagist.org/packages/techdock/opcua-webapi-client) | 8.1+ | Guzzle | N/A (HTTP) | No | No | Needs an OPC UA WebAPI gateway, not binary protocol |
 | [QuickOPC](https://opclabs.com/products/quickopc) | COM | Windows + COM | Yes | Yes | N/A | Commercial, Windows-only, not a real PHP package |

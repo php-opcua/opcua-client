@@ -31,7 +31,7 @@ composer require php-opcua/opcua-client
 - Method Call — invoke OPC UA methods, returns CallResult DTO
 - Subscriptions — data change and event monitoring, returns typed DTOs
 - History Read — raw, processed, and at-time historical queries
-- Security — 6 policies (None through Aes256Sha256RsaPss), 3 modes
+- Security — 10 policies: 6 RSA (None through Aes256Sha256RsaPss) + 4 ECC (EccNistP256, EccNistP384, EccBrainpoolP256r1, EccBrainpoolP384r1), 3 modes
 - Authentication — anonymous, username/password, X.509 certificate
 - PSR-3 Logging — optional structured logging via any PSR-3 logger; NullLogger by default
 - PSR-16 Cache — browse/browseAll/resolveNodeId/getEndpoints/discoverDataTypes results cached by default (InMemoryCache, 300s TTL). Any PSR-16 driver works (FileCache, Laravel, Redis). Per-call bypass with useCache: false. discoverDataTypes replays cached type definitions without server round-trips. Metadata read cache opt-in via setReadMetadataCache(true): caches non-Value attributes (DisplayName, BrowseName, DataType, NodeClass, etc.). Value never cached. read($nodeId, $attr, refresh: true) to bypass.
@@ -45,7 +45,7 @@ composer require php-opcua/opcua-client
 - Typed everywhere — all responses return public readonly DTOs, not arrays
 - MockClient — in-memory test double implementing OpcUaClientInterface; register handlers, assert calls, no TCP connection
 - DataValue factory methods — ofInt32(), ofDouble(), ofString(), ofBoolean(), of($value, BuiltinType), bad(StatusCode), etc.
-- 1290+ tests, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
+- 1300+ tests, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
 
 ### Property access style
 
@@ -151,9 +151,11 @@ $client = ClientBuilder::create()
     ->connect('opc.tcp://localhost:4840');
 ```
 
-Policies: None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss
+RSA Policies: None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss
+ECC Policies: EccNistP256, EccNistP384, EccBrainpoolP256r1, EccBrainpoolP384r1
 Modes: None (1), Sign (2), SignAndEncrypt (3)
-If no certificate provided, one gets auto-generated in memory (RSA 2048, self-signed).
+If no certificate provided, one gets auto-generated in memory (RSA 2048 for RSA policies, ECC matching curve for ECC policies).
+ECC uses ECDH key agreement (no RSA encryption), HKDF key derivation, and EccEncryptedSecret for password authentication.
 
 ### Authentication
 
@@ -617,13 +619,19 @@ Status codes vs exceptions:
 
 ## 10. Security
 
-Policies: None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss
-Each defines asymmetric sign/encrypt, symmetric sign/encrypt, and min key size.
+RSA Policies: None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss
+ECC Policies: EccNistP256 (P-256, AES-128, HMAC-SHA256), EccNistP384 (P-384, AES-256, HMAC-SHA384), EccBrainpoolP256r1 (BP-256, AES-128, HMAC-SHA256), EccBrainpoolP384r1 (BP-384, AES-256, HMAC-SHA384)
 
-Connection flow with security:
+Connection flow with RSA security:
 1. Discovery — connect without security, get server certificate
-2. Asymmetric Phase — OPN request encrypted with server's public key, nonce exchange
-3. Symmetric Phase — all messages use derived keys (AES-CBC + HMAC)
+2. Asymmetric Phase — OPN request encrypted with server's RSA public key, nonce exchange
+3. Symmetric Phase — all messages use derived keys (AES-CBC + HMAC), keys from P_SHA
+
+Connection flow with ECC security:
+1. Discovery — connect without security, get server ECC certificate
+2. Asymmetric Phase — OPN request signed only (ECDSA, no encryption), nonce = ephemeral ECDH pubkey (64/96 bytes X+Y)
+3. Symmetric Phase — keys derived via HKDF from ECDH shared secret, messages use AES-CBC + HMAC
+4. Password auth uses EccEncryptedSecret: client requests ECDHKey via AdditionalHeader, encrypts password with ECDH+AES
 
 ---
 

@@ -88,14 +88,29 @@ $client = ClientBuilder::create()
     ->setClientCertificate('/certs/client.pem', '/certs/client.key')
     ->setUserCertificate('/certs/user.pem', '/certs/user.key')
     ->connect('opc.tcp://192.168.1.100:4840');
+
+// ECC security — NIST (auto-generates ECC certificate if none provided)
+$client = ClientBuilder::create()
+    ->setSecurityPolicy(SecurityPolicy::EccNistP256)
+    ->setSecurityMode(SecurityMode::SignAndEncrypt)
+    ->setUserCredentials('admin', 'admin123')
+    ->connect('opc.tcp://192.168.1.100:4848');
+
+// ECC security — Brainpool (European alternative to NIST)
+$client = ClientBuilder::create()
+    ->setSecurityPolicy(SecurityPolicy::EccBrainpoolP256r1)
+    ->setSecurityMode(SecurityMode::SignAndEncrypt)
+    ->connect('opc.tcp://192.168.1.100:4849');
 ```
 
 ### Important rules
-- If `setClientCertificate()` is omitted but security policy/mode are set, a self-signed cert is auto-generated in memory (good for testing, not production)
-- Available policies: `None`, `Basic128Rsa15`, `Basic256`, `Basic256Sha256`, `Aes128Sha256RsaOaep`, `Aes256Sha256RsaPss`
+- If `setClientCertificate()` is omitted but security policy/mode are set, a self-signed cert is auto-generated in memory (RSA for RSA policies, ECC for ECC policies — good for testing, not production)
+- RSA policies: `None`, `Basic128Rsa15`, `Basic256`, `Basic256Sha256`, `Aes128Sha256RsaOaep`, `Aes256Sha256RsaPss`
+- ECC policies: `EccNistP256`, `EccNistP384`, `EccBrainpoolP256r1`, `EccBrainpoolP384r1`
 - Available modes: `None`, `Sign`, `SignAndEncrypt`
-- For production use `Basic256Sha256` or `Aes256Sha256RsaPss`
+- For production use `Basic256Sha256`, `Aes256Sha256RsaPss`, or any ECC policy. Choose NIST for interoperability, Brainpool for EU regulatory compliance (BSI TR-03116)
 - Auth methods are: anonymous (default), username/password (`setUserCredentials`), X.509 certificate (`setUserCertificate`)
+- ECC policies use ECDH key agreement instead of RSA encryption; password authentication uses EccEncryptedSecret protocol automatically
 
 ---
 

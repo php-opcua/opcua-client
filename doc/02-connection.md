@@ -139,6 +139,12 @@ $client = ClientBuilder::create()
 | `Basic256Sha256` | `http://opcfoundation.org/UA/SecurityPolicy#Basic256Sha256` |
 | `Aes128Sha256RsaOaep` | `http://opcfoundation.org/UA/SecurityPolicy#Aes128_Sha256_RsaOaep` |
 | `Aes256Sha256RsaPss` | `http://opcfoundation.org/UA/SecurityPolicy#Aes256_Sha256_RsaPss` |
+| `EccNistP256` | `http://opcfoundation.org/UA/SecurityPolicy#ECC_nistP256` |
+| `EccNistP384` | `http://opcfoundation.org/UA/SecurityPolicy#ECC_nistP384` |
+| `EccBrainpoolP256r1` | `http://opcfoundation.org/UA/SecurityPolicy#ECC_brainpoolP256r1` |
+| `EccBrainpoolP384r1` | `http://opcfoundation.org/UA/SecurityPolicy#ECC_brainpoolP384r1` |
+
+> **ECC:** The ECC policies use ECDH key agreement instead of RSA encryption. ECC endpoints require ECC certificates and a separate server endpoint. When no client certificate is provided, the library auto-generates an ECC certificate matching the policy curve. Brainpool curves are the European alternative to NIST curves, required by BSI TR-03116 and other EU regulations.
 
 **Available modes:**
 
@@ -176,7 +182,9 @@ $builder = ClientBuilder::create()
     ->setUserCredentials('myuser', 'mypassword');
 ```
 
-When security is active, the password is encrypted with the server's public key before transmission.
+When security is active:
+- **RSA policies:** The password is encrypted with the server's RSA public key before transmission.
+- **ECC policies:** The password is encrypted via the `EccEncryptedSecret` protocol (ECDH key agreement + AES encryption + ECDSA signature).
 
 ### X.509 Certificate
 

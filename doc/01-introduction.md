@@ -68,7 +68,7 @@ $client->disconnect();
 - Automatic DataType discovery — auto-detect and decode custom structures without writing codecs
 
 **Security**
-- 6 security policies (None through Aes256Sha256RsaPss)
+- 10 security policies: 6 RSA (None through Aes256Sha256RsaPss) + 4 ECC (EccNistP256, EccNistP384, EccBrainpoolP256r1, EccBrainpoolP384r1)
 - 3 security modes (None, Sign, SignAndEncrypt)
 - Anonymous, username/password, and X.509 certificate authentication
 - PEM and DER certificate support with auto-detection

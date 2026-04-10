@@ -149,12 +149,14 @@ class SessionService
 
         $decoder->readUInt32();
 
+        // OPC UA 1.05: read additional ECC server ephemeral key if present
         $eccServerEphemeralKey = null;
         $remaining = $decoder->getRemainingLength();
         if ($remaining > 0 && getenv('OPCUA_ECC_DEBUG')) {
             fwrite(STDERR, "[ECC] CreateSession response: $remaining bytes remaining after maxRequestSize\n");
             $rawRemaining = $decoder->readRawBytes($remaining);
             fwrite(STDERR, '[ECC] Remaining hex: ' . bin2hex(substr($rawRemaining, 0, min(80, $remaining))) . "\n");
+            // Re-parse remaining
             $innerDec = new BinaryDecoder($rawRemaining);
             try {
                 $eccServerEphemeralKey = $innerDec->readByteString();
@@ -433,6 +435,10 @@ class SessionService
      */
     private function writeEcdhAdditionalHeader(BinaryEncoder $body, string $eccPolicyUri): void
     {
+        // AdditionalParametersType body: Int32(count) + KeyValuePair[]
+        // KeyValuePair: QualifiedName(key) + Variant(value)
+        // QualifiedName: UInt16(nsIndex) + String(name)
+        // Variant for String: Byte(12) + String(value)
         $inner = new BinaryEncoder();
         $inner->writeInt32(1);
         $inner->writeUInt16(0);
@@ -781,6 +787,7 @@ class SessionService
         $ephemeral = $ms->generateEphemeralKeyPair($curveName);
         $senderNonce = substr($ephemeral['publicKeyBytes'], 1);
 
+        // Use the ECC server ephemeral key (from AdditionalHeader) as receiver nonce for ECDH
         $eccReceiverNonce = $this->currentEccServerEphemeralKey ?? $receiverNonce;
         $ephemeralKeyLen = $policy->getEphemeralKeyLength();
         $receiverEphemeralRawKey = substr($eccReceiverNonce, 0, $ephemeralKeyLen);
@@ -826,6 +833,7 @@ class SessionService
         $body->writeRawBytes(str_repeat("\x00", $signatureSize));
         $bodyBytes = $body->getBuffer();
 
+        // Build full ExtensionObject with signature placeholder
         $ext = new BinaryEncoder();
         $ext->writeNodeId(NodeId::numeric(0, 17546));
         $ext->writeByte(0x01);
@@ -833,6 +841,7 @@ class SessionService
         $ext->writeRawBytes($bodyBytes);
         $fullBlob = $ext->getBuffer();
 
+        // Sign the ENTIRE blob except the last signatureSize bytes
         $dataToSign = substr($fullBlob, 0, strlen($fullBlob) - $signatureSize);
         $derSig = $ms->asymmetricSign($dataToSign, $clientPrivateKey, $policy);
         $rawSig = $ms->ecdsaDerToRaw($derSig, $coordinateSize);

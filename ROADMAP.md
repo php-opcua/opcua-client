@@ -1,6 +1,6 @@
 # Roadmap
 
-## v4.1.0 - 2026-03-X
+## v4.2.0 - 2026-03-X
 
 ### Query Services
 `QueryFirst` / `QueryNext` — structured queries on the address space for servers where browse is too slow due to the size of the node tree.

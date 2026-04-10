@@ -26,7 +26,7 @@ A PHP library for connecting to OPC UA servers (industrial automation protocol).
 - Transfer & Recovery: transferSubscriptions() and republish() for session migration and notification re-delivery
 - History Read: raw, processed (aggregated), and at-time historical queries
 - Endpoint Discovery: discover available server endpoints and security policies
-- Security: 6 policies (None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss)
+- Security: 10 policies — 6 RSA (None, Basic128Rsa15, Basic256, Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss) + 4 ECC (EccNistP256, EccNistP384, EccBrainpoolP256r1, EccBrainpoolP384r1)
 - Authentication: Anonymous, Username/Password, X.509 Certificate
 - Auto-Retry: automatic reconnect on connection failures
 - Fluent Builder API: readMulti(), writeMulti(), createMonitoredItems(), and translateBrowsePaths() support a chainable builder when called without arguments
@@ -40,7 +40,7 @@ A PHP library for connecting to OPC UA servers (industrial automation protocol).
 - Connection State: lifecycle tracking (Disconnected, Connected, Broken) with reconnect()
 - MockClient: in-memory test double implementing OpcUaClientInterface — register handlers, assert calls, no TCP connection
 - Typed everywhere: all service responses return public readonly DTOs, not arrays
-- Thoroughly tested: 1290+ tests, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
+- Thoroughly tested: 1300+ tests, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
 
 ## Property access style
 
@@ -136,12 +136,20 @@ use PhpOpcua\Client\ClientBuilder;
 use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\Client\Security\SecurityMode;
 
+// RSA
 $client = ClientBuilder::create()
     ->setSecurityPolicy(SecurityPolicy::Basic256Sha256)
     ->setSecurityMode(SecurityMode::SignAndEncrypt)
     ->setClientCertificate('/certs/client.pem', '/certs/client.key', '/certs/ca.pem')
     ->setUserCredentials('operator', 'secret')
     ->connect('opc.tcp://192.168.1.100:4840');
+
+// ECC (auto-generates ECC certificate if none provided)
+$client = ClientBuilder::create()
+    ->setSecurityPolicy(SecurityPolicy::EccNistP256)
+    ->setSecurityMode(SecurityMode::SignAndEncrypt)
+    ->setUserCredentials('admin', 'admin123')
+    ->connect('opc.tcp://192.168.1.100:4848');
 ```
 
 ## Main classes
@@ -164,7 +172,7 @@ $client = ClientBuilder::create()
 - PhpOpcua\Client\Types\BrowseResultSet — public readonly: references, continuationPoint
 - PhpOpcua\Client\Types\BrowsePathResult — public readonly: statusCode, targets
 - PhpOpcua\Client\Types\BrowsePathTarget — public readonly: targetId, remainingPathIndex
-- PhpOpcua\Client\Security\SecurityPolicy — enum of 6 security policies
+- PhpOpcua\Client\Security\SecurityPolicy — enum of 10 security policies (6 RSA + 4 ECC)
 - PhpOpcua\Client\Security\SecurityMode — enum (None, Sign, SignAndEncrypt)
 - PhpOpcua\Client\Encoding\ExtensionObjectCodec — interface for custom type codecs
 - PhpOpcua\Client\Testing\MockClient — in-memory test double (no TCP); static create(), handler registration, call tracking
@@ -200,7 +208,7 @@ $client = ClientBuilder::create()
 
 - Only ext-openssl required (Composer deps are interface-only: psr/log, psr/simple-cache, psr/event-dispatcher)
 - PHP 8.2+ (wider compatibility than techdock which requires 8.4+)
-- 6 security policies, history read, auto-batching
+- 10 security policies (6 RSA + 4 ECC), history read, auto-batching
 - Typed returns (public readonly DTOs, not arrays)
 - Per-client codec isolation (no global state)
 - Cross-platform (Linux, macOS, Windows)
