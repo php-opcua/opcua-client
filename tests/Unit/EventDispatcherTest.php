@@ -445,4 +445,41 @@ describe('Alarm events', function () {
         expect($event->severity)->toBe(500);
     });
 
+    it('creates MonitoredItemModified', function () {
+        $client = MockClient::create();
+        $event = new \PhpOpcua\Client\Event\MonitoredItemModified($client, 1, 42, 0);
+        expect($event->client)->toBe($client);
+        expect($event->subscriptionId)->toBe(1);
+        expect($event->monitoredItemId)->toBe(42);
+        expect($event->statusCode)->toBe(0);
+    });
+
+    it('creates ServerCertificateManuallyTrusted', function () {
+        $client = MockClient::create();
+        $event = new \PhpOpcua\Client\Event\ServerCertificateManuallyTrusted($client, 'ab:cd:ef', 'CN=test');
+        expect($event->fingerprint)->toBe('ab:cd:ef');
+        expect($event->subject)->toBe('CN=test');
+    });
+
+    it('creates ServerCertificateManuallyTrusted with null subject', function () {
+        $client = MockClient::create();
+        $event = new \PhpOpcua\Client\Event\ServerCertificateManuallyTrusted($client, 'ab:cd:ef');
+        expect($event->subject)->toBeNull();
+    });
+
+    it('creates ServerCertificateRemoved', function () {
+        $client = MockClient::create();
+        $event = new \PhpOpcua\Client\Event\ServerCertificateRemoved($client, 'ab:cd:ef');
+        expect($event->fingerprint)->toBe('ab:cd:ef');
+    });
+
+    it('creates TriggeringConfigured', function () {
+        $client = MockClient::create();
+        $event = new \PhpOpcua\Client\Event\TriggeringConfigured($client, 1, 42, [0, 0], [0]);
+        expect($event->subscriptionId)->toBe(1);
+        expect($event->triggeringItemId)->toBe(42);
+        expect($event->addResults)->toBe([0, 0]);
+        expect($event->removeResults)->toBe([0]);
+    });
+
 });

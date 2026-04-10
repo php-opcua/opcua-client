@@ -102,9 +102,22 @@ describe('Exception thrown in correct context', function () {
     });
 
     it('throws EncodingException on unknown NodeId encoding', function () {
-        // Build a buffer with an invalid NodeId encoding byte (0xFF)
         $decoder = new BinaryDecoder("\xFF");
         expect(fn () => $decoder->readNodeId())
             ->toThrow(EncodingException::class);
+    });
+
+    it('WriteTypeMismatchException stores nodeId, expectedType, givenType, and message', function () {
+        $nodeId = \PhpOpcua\Client\Types\NodeId::numeric(2, 1001);
+        $ex = new \PhpOpcua\Client\Exception\WriteTypeMismatchException(
+            $nodeId,
+            \PhpOpcua\Client\Types\BuiltinType::Int32,
+            \PhpOpcua\Client\Types\BuiltinType::Double,
+            'Type mismatch: expected Int32, got Double',
+        );
+        expect($ex->nodeId)->toBe($nodeId);
+        expect($ex->expectedType)->toBe(\PhpOpcua\Client\Types\BuiltinType::Int32);
+        expect($ex->givenType)->toBe(\PhpOpcua\Client\Types\BuiltinType::Double);
+        expect($ex->getMessage())->toBe('Type mismatch: expected Int32, got Double');
     });
 });

@@ -459,3 +459,149 @@ describe('MessageSecurity key derivation', function () {
 
     });
 });
+
+describe('MessageSecurity error handling', function () {
+
+    beforeEach(function () {
+        $this->ms = new MessageSecurity();
+    });
+
+    it('generateEphemeralKeyPair throws for unsupported curve', function () {
+        expect(fn () => $this->ms->generateEphemeralKeyPair('secp521r1'))
+            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'Unsupported curve: secp521r1');
+    });
+
+    it('loadEcPublicKeyFromBytes throws for non-uncompressed format', function () {
+        $compressedKey = "\x02" . str_repeat("\x01", 32);
+        expect(fn () => $this->ms->loadEcPublicKeyFromBytes($compressedKey, 'prime256v1'))
+            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'uncompressed format');
+    });
+
+    it('loadEcPublicKeyFromBytes throws for unsupported curve', function () {
+        $fakeKey = "\x04" . str_repeat("\x01", 64);
+        expect(fn () => $this->ms->loadEcPublicKeyFromBytes($fakeKey, 'secp521r1'))
+            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'Unsupported curve: secp521r1');
+    });
+
+});
+
+describe('MessageSecurity ECDSA DER/Raw conversion', function () {
+
+    beforeEach(function () {
+        $this->ms = new MessageSecurity();
+    });
+
+    it('round-trips ecdsaRawToDer and ecdsaDerToRaw for P-256', function () {
+        $pair = $this->ms->generateEphemeralKeyPair('prime256v1');
+        $data = 'test data for ecdsa conversion';
+
+        $derSignature = '';
+        openssl_sign($data, $derSignature, $pair['privateKey'], 'sha256');
+
+        $raw = $this->ms->ecdsaDerToRaw($derSignature, 32);
+        expect(strlen($raw))->toBe(64);
+
+        $derAgain = $this->ms->ecdsaRawToDer($raw, 32);
+
+        $pubKey = $this->ms->loadEcPublicKeyFromBytes($pair['publicKeyBytes'], 'prime256v1');
+        $valid = openssl_verify($data, $derAgain, $pubKey, 'sha256');
+        expect($valid)->toBe(1);
+    });
+
+    it('round-trips ecdsaRawToDer and ecdsaDerToRaw for P-384', function () {
+        $pair = $this->ms->generateEphemeralKeyPair('secp384r1');
+        $data = 'test data for ecdsa 384';
+
+        $derSignature = '';
+        openssl_sign($data, $derSignature, $pair['privateKey'], 'sha384');
+
+        $raw = $this->ms->ecdsaDerToRaw($derSignature, 48);
+        expect(strlen($raw))->toBe(96);
+
+        $derAgain = $this->ms->ecdsaRawToDer($raw, 48);
+
+        $pubKey = $this->ms->loadEcPublicKeyFromBytes($pair['publicKeyBytes'], 'secp384r1');
+        $valid = openssl_verify($data, $derAgain, $pubKey, 'sha384');
+        expect($valid)->toBe(1);
+    });
+
+    it('ecdsaDerToRaw throws for missing SEQUENCE tag', function () {
+        expect(fn () => $this->ms->ecdsaDerToRaw("\x31\x00", 32))
+            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'missing SEQUENCE tag');
+    });
+
+    it('ecdsaDerToRaw throws for missing INTEGER tag for r', function () {
+        $invalid = "\x30\x04\x03\x01\x01\x02";
+        expect(fn () => $this->ms->ecdsaDerToRaw($invalid, 32))
+            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'missing INTEGER tag for r');
+    });
+
+    it('ecdsaDerToRaw throws for missing INTEGER tag for s', function () {
+        $invalid = "\x30\x06\x02\x01\x01\x03\x01\x01";
+        expect(fn () => $this->ms->ecdsaDerToRaw($invalid, 32))
+            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class, 'missing INTEGER tag for s');
+    });
+
+    it('ecdsaRawToDer handles high-bit r and s values', function () {
+        $r = "\x80" . str_repeat("\x01", 31);
+        $s = "\x90" . str_repeat("\x02", 31);
+        $raw = $r . $s;
+
+        $der = $this->ms->ecdsaRawToDer($raw, 32);
+        expect(ord($der[0]))->toBe(0x30);
+
+        $rawBack = $this->ms->ecdsaDerToRaw($der, 32);
+        expect($rawBack)->toBe($raw);
+    });
+
+});
+
+describe('MessageSecurity ensureNotFalse', function () {
+
+    it('symmetricEncrypt throws SecurityException for invalid cipher params', function () {
+        $ms = new MessageSecurity();
+        // AES-256-CBC requires 32-byte key and 16-byte IV; use wrong sizes to trigger OpenSSL failure
+        expect(fn () => $ms->symmetricEncrypt('data', 'short', 'x', SecurityPolicy::Basic256Sha256))
+            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class);
+    });
+
+    it('symmetricDecrypt throws SecurityException for invalid data', function () {
+        $ms = new MessageSecurity();
+        expect(fn () => $ms->symmetricDecrypt('not-encrypted', 'short', 'x', SecurityPolicy::Basic256Sha256))
+            ->toThrow(\PhpOpcua\Client\Exception\SecurityException::class);
+    });
+
+});
+
+describe('MessageSecurity derEncodeLength', function () {
+
+    beforeEach(function () {
+        $this->ms = new class extends MessageSecurity {
+            public function callDerEncodeLength(int $length): string
+            {
+                return $this->derEncodeLength($length);
+            }
+        };
+    });
+
+    it('encodes short length (< 128) as single byte', function () {
+        expect($this->ms->callDerEncodeLength(0))->toBe("\x00");
+        expect($this->ms->callDerEncodeLength(127))->toBe("\x7F");
+    });
+
+    it('encodes length 128 in long form', function () {
+        $encoded = $this->ms->callDerEncodeLength(128);
+        expect($encoded)->toBe("\x81\x80");
+    });
+
+    it('encodes length 256 in long form with two bytes', function () {
+        $encoded = $this->ms->callDerEncodeLength(256);
+        expect($encoded)->toBe("\x82\x01\x00");
+    });
+
+    it('encodes length 65535 in long form', function () {
+        $encoded = $this->ms->callDerEncodeLength(65535);
+        expect($encoded)->toBe("\x82\xFF\xFF");
+    });
+
+});

@@ -292,4 +292,18 @@ describe('ManagesTypeDiscoveryTrait via MockTransport', function () {
 
         expect($count)->toBe(0);
     });
+
+    it('discoverDataTypes returns 0 when browse returns empty refs', function () {
+        $mock = new MockTransport();
+        $mock->addResponse(buildMsgResponse(530, function (BinaryEncoder $e) {
+            $e->writeInt32(1);
+            $e->writeUInt32(0);
+            $e->writeByteString(null);
+            $e->writeInt32(0);
+            $e->writeInt32(0);
+        }));
+
+        $client = setupConnectedClient($mock);
+        expect($client->discoverDataTypes())->toBe(0);
+    });
 });

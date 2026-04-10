@@ -502,3 +502,60 @@ describe('DataValue factory methods', function () {
         expect($dv->statusCode)->toBe(StatusCode::BadNodeIdUnknown);
     });
 });
+
+describe('MockClient: trust and cache methods', function () {
+
+    it('onGetEndpoints registers handler', function () {
+        $mock = MockClient::create();
+        $mock->onGetEndpoints(fn (string $url) => [
+            new \PhpOpcua\Client\Types\EndpointDescription(
+                $url, null, 1, 'http://opcfoundation.org/UA/SecurityPolicy#None', [],
+                'http://opcfoundation.org/UA-Profile/Transport/uatcp-uasc-uabinary', 0,
+            ),
+        ]);
+        $endpoints = $mock->getEndpoints('opc.tcp://localhost:4840');
+        expect($endpoints)->toHaveCount(1);
+    });
+
+    it('getTrustStore returns null by default', function () {
+        expect(MockClient::create()->getTrustStore())->toBeNull();
+    });
+
+    it('getTrustPolicy returns null by default', function () {
+        expect(MockClient::create()->getTrustPolicy())->toBeNull();
+    });
+
+    it('trustCertificate records call', function () {
+        $mock = MockClient::create();
+        $mock->trustCertificate('cert-bytes');
+        expect($mock->callCount('trustCertificate'))->toBe(1);
+    });
+
+    it('untrustCertificate records call', function () {
+        $mock = MockClient::create();
+        $mock->untrustCertificate('ab:cd:ef');
+        expect($mock->callCount('untrustCertificate'))->toBe(1);
+    });
+
+    it('setTrustStore is fluent', function () {
+        $mock = MockClient::create();
+        $tmpDir = sys_get_temp_dir() . '/opcua-test-ts-' . uniqid();
+        $store = new \PhpOpcua\Client\TrustStore\FileTrustStore($tmpDir);
+        expect($mock->setTrustStore($store))->toBe($mock);
+        expect($mock->getTrustStore())->toBe($store);
+        @rmdir($tmpDir . '/trusted'); @rmdir($tmpDir . '/rejected'); @rmdir($tmpDir);
+    });
+
+    it('setTrustPolicy is fluent', function () {
+        $mock = MockClient::create();
+        expect($mock->setTrustPolicy(\PhpOpcua\Client\TrustStore\TrustPolicy::Fingerprint))->toBe($mock);
+    });
+
+    it('setCache is fluent', function () {
+        expect(MockClient::create()->setCache(new \PhpOpcua\Client\Cache\InMemoryCache()))->toBeInstanceOf(MockClient::class);
+    });
+
+    it('setCache with null disables cache', function () {
+        expect(MockClient::create()->setCache(null))->toBeInstanceOf(MockClient::class);
+    });
+});

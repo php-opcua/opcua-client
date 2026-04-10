@@ -263,3 +263,59 @@ describe('Trust Store Event classes', function () {
     });
 
 });
+
+describe('ManagesTrustStoreRuntimeTrait on Client', function () {
+
+    it('trustCertificate does nothing when trust store is null', function () {
+        $client = createClientWithoutConnect();
+        setClientProperty($client, 'trustStore', null);
+        $client->trustCertificate('cert-bytes');
+        expect(true)->toBeTrue();
+    });
+
+    it('trustCertificate trusts cert and dispatches event', function () {
+        $tmpDir = sys_get_temp_dir() . '/opcua-trust-test-' . uniqid();
+        $store = new PhpOpcua\Client\TrustStore\FileTrustStore($tmpDir);
+        $events = [];
+        $dispatcher = new class($events) implements Psr\EventDispatcher\EventDispatcherInterface {
+            public function __construct(private array &$events) {}
+            public function dispatch(object $event): object { $this->events[] = $event; return $event; }
+        };
+
+        $client = createClientWithoutConnect();
+        setClientProperty($client, 'trustStore', $store);
+        setClientProperty($client, 'eventDispatcher', $dispatcher);
+        $client->trustCertificate('fake-cert-der-bytes');
+        expect($events)->not->toBeEmpty();
+        expect($events[0])->toBeInstanceOf(\PhpOpcua\Client\Event\ServerCertificateManuallyTrusted::class);
+
+        array_map('unlink', glob($tmpDir . '/trusted/*') ?: []);
+        @rmdir($tmpDir . '/trusted'); @rmdir($tmpDir . '/rejected'); @rmdir($tmpDir);
+    });
+
+    it('untrustCertificate does nothing when trust store is null', function () {
+        $client = createClientWithoutConnect();
+        setClientProperty($client, 'trustStore', null);
+        $client->untrustCertificate('ab:cd:ef');
+        expect(true)->toBeTrue();
+    });
+
+    it('untrustCertificate calls untrust and dispatches event', function () {
+        $tmpDir = sys_get_temp_dir() . '/opcua-untrust-test-' . uniqid();
+        $store = new PhpOpcua\Client\TrustStore\FileTrustStore($tmpDir);
+        $events = [];
+        $dispatcher = new class($events) implements Psr\EventDispatcher\EventDispatcherInterface {
+            public function __construct(private array &$events) {}
+            public function dispatch(object $event): object { $this->events[] = $event; return $event; }
+        };
+
+        $client = createClientWithoutConnect();
+        setClientProperty($client, 'trustStore', $store);
+        setClientProperty($client, 'eventDispatcher', $dispatcher);
+        $client->untrustCertificate('ab:cd:ef:01:23');
+        expect($events)->not->toBeEmpty();
+        expect($events[0])->toBeInstanceOf(\PhpOpcua\Client\Event\ServerCertificateRemoved::class);
+
+        @rmdir($tmpDir . '/trusted'); @rmdir($tmpDir . '/rejected'); @rmdir($tmpDir);
+    });
+});

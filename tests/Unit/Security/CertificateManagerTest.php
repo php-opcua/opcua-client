@@ -236,6 +236,125 @@ describe('CertificateManager', function () {
 
     });
 
+    it('loadCertificateDer returns raw DER bytes', function () {
+        $cm = new CertificateManager();
+        $generated = $cm->generateSelfSignedCertificate();
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'opcua_test_der_');
+        file_put_contents($tmpFile, $generated['certDer']);
+
+        try {
+            $der = $cm->loadCertificateDer($tmpFile);
+            expect($der)->toBe($generated['certDer']);
+        } finally {
+            unlink($tmpFile);
+        }
+    });
+
+    it('getApplicationUri returns null for SAN without URI', function () {
+        // Create a cert with SAN containing only DNS, no URI
+        $privKey = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+
+        $configContent = "[req]\n"
+            . "distinguished_name = req_dn\n"
+            . "x509_extensions = v3_req\n"
+            . "prompt = no\n"
+            . "[req_dn]\n"
+            . "CN = Test\n"
+            . "[v3_req]\n"
+            . "subjectAltName = DNS:localhost\n";
+
+        $tmpConfig = tempnam(sys_get_temp_dir(), 'opcua_test_cnf_');
+        file_put_contents($tmpConfig, $configContent);
+
+        $csr = openssl_csr_new(['CN' => 'Test'], $privKey, ['config' => $tmpConfig]);
+        $cert = openssl_csr_sign($csr, null, $privKey, 365, ['config' => $tmpConfig, 'x509_extensions' => 'v3_req']);
+        openssl_x509_export($cert, $certPem);
+        unlink($tmpConfig);
+
+        $cm = new CertificateManager();
+        $tmpFile = tempnam(sys_get_temp_dir(), 'opcua_test_cert_');
+        file_put_contents($tmpFile, $certPem);
+
+        try {
+            $der = $cm->loadCertificatePem($tmpFile);
+            $result = $cm->getApplicationUri($der);
+            expect($result)->toBeNull();
+        } finally {
+            unlink($tmpFile);
+        }
+    });
+
+    it('getKeyType returns OPENSSL_KEYTYPE_RSA for RSA certificate', function () {
+        $cm = new CertificateManager();
+        $generated = $cm->generateSelfSignedCertificate();
+        $keyType = $cm->getKeyType($generated['certDer']);
+        expect($keyType)->toBe(OPENSSL_KEYTYPE_RSA);
+    });
+
+    it('getKeyType returns OPENSSL_KEYTYPE_EC for ECC certificate', function () {
+        $cm = new CertificateManager();
+        $generated = $cm->generateSelfSignedCertificate('urn:test-ecc', 'prime256v1');
+        $keyType = $cm->getKeyType($generated['certDer']);
+        expect($keyType)->toBe(OPENSSL_KEYTYPE_EC);
+    });
+
+    it('getKeyType throws SecurityException for invalid DER', function () {
+        $cm = new CertificateManager();
+        expect(fn () => $cm->getKeyType('invalid-der'))
+            ->toThrow(SecurityException::class);
+    });
+
+    describe('generateSelfSignedCertificate ECC', function () {
+
+        it('generates ECC P-256 certificate', function () {
+            $cm = new CertificateManager();
+            $result = $cm->generateSelfSignedCertificate('urn:ecc-test', 'prime256v1');
+
+            expect($result)->toHaveKeys(['certDer', 'privateKey']);
+            expect($result['privateKey'])->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+            expect(ord($result['certDer'][0]))->toBe(0x30);
+
+            $keyType = $cm->getKeyType($result['certDer']);
+            expect($keyType)->toBe(OPENSSL_KEYTYPE_EC);
+        });
+
+        it('generates ECC P-384 certificate with sha384 digest', function () {
+            $cm = new CertificateManager();
+            $result = $cm->generateSelfSignedCertificate('urn:ecc-384', 'secp384r1');
+
+            expect($result['privateKey'])->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+            $keyType = $cm->getKeyType($result['certDer']);
+            expect($keyType)->toBe(OPENSSL_KEYTYPE_EC);
+        });
+
+        it('generates ECC brainpoolP256r1 certificate', function () {
+            $cm = new CertificateManager();
+            $result = $cm->generateSelfSignedCertificate('urn:ecc-bp256', 'brainpoolP256r1');
+
+            expect($result['privateKey'])->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+            $keyType = $cm->getKeyType($result['certDer']);
+            expect($keyType)->toBe(OPENSSL_KEYTYPE_EC);
+        });
+
+        it('generates ECC brainpoolP384r1 certificate with sha384 digest', function () {
+            $cm = new CertificateManager();
+            $result = $cm->generateSelfSignedCertificate('urn:ecc-bp384', 'brainpoolP384r1');
+
+            expect($result['privateKey'])->toBeInstanceOf(OpenSSLAsymmetricKey::class);
+            $keyType = $cm->getKeyType($result['certDer']);
+            expect($keyType)->toBe(OPENSSL_KEYTYPE_EC);
+        });
+
+        it('includes application URI in ECC certificate SAN', function () {
+            $cm = new CertificateManager();
+            $result = $cm->generateSelfSignedCertificate('urn:my-ecc-app', 'prime256v1');
+            $uri = $cm->getApplicationUri($result['certDer']);
+            expect($uri)->toBe('urn:my-ecc-app');
+        });
+
+    });
+
     it('throws SecurityException for bad PEM in pemToDer', function () {
         $tmpFile = tempnam(sys_get_temp_dir(), 'opcua_test_badpem_');
         // Write invalid base64 content between PEM headers

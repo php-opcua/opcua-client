@@ -2,100 +2,17 @@
 
 declare(strict_types=1);
 
-use PhpOpcua\Client\Client;
+require_once __DIR__ . '/../Helpers/ClientTestHelpers.php';
+
 use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\ProtocolException;
 use PhpOpcua\Client\Protocol\MessageHeader;
-use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
-use PhpOpcua\Client\Transport\TcpTransport;
 use PhpOpcua\Client\Types\ConnectionState;
 use PhpOpcua\Client\Types\NodeId;
-
-require_once __DIR__ . '/ClientTraitsCoverageTest.php';
-require_once __DIR__ . '/../Helpers/SecurityTestHelpers.php';
-
-class FailingMockTransport extends TcpTransport
-{
-    private int $sendCount = 0;
-
-    private int $receiveCount = 0;
-
-    private int $failAfterSends;
-
-    private int $failAfterReceives;
-
-    public function __construct(int $failAfterSends = 0, int $failAfterReceives = 0)
-    {
-        $this->failAfterSends = $failAfterSends;
-        $this->failAfterReceives = $failAfterReceives;
-    }
-
-    public function connect(string $host, int $port, null|float $timeout = null): void
-    {
-    }
-
-    public function send(string $data): void
-    {
-        $this->sendCount++;
-        if ($this->failAfterSends > 0 && $this->sendCount > $this->failAfterSends) {
-            throw new ConnectionException('Mock send failure');
-        }
-    }
-
-    public function receive(): string
-    {
-        $this->receiveCount++;
-        if ($this->failAfterReceives > 0 && $this->receiveCount > $this->failAfterReceives) {
-            throw new ConnectionException('Mock receive failure');
-        }
-        throw new ConnectionException('Mock receive failure');
-    }
-
-    public function close(): void
-    {
-    }
-
-    public function isConnected(): bool
-    {
-        return true;
-    }
-}
-
-function setProperty(Client $client, string $name, mixed $value): void
-{
-    $ref = new ReflectionProperty($client, $name);
-    $ref->setValue($client, $value);
-}
-
-function invokeMethod(Client $client, string $name, array $args = []): mixed
-{
-    $ref = new ReflectionMethod($client, $name);
-
-    return $ref->invokeArgs($client, $args);
-}
-
-function makeConnectedClient(TcpTransport $transport, ?SecureChannel $sc = null): Client
-{
-    $client = createClientWithoutConnect();
-    $session = new SessionService(1, 1, $sc);
-
-    setProperty($client, 'transport', $transport);
-    setProperty($client, 'connectionState', ConnectionState::Connected);
-    setProperty($client, 'session', $session);
-    setProperty($client, 'authenticationToken', NodeId::numeric(0, 2));
-    setProperty($client, 'secureChannelId', 1);
-    setProperty($client, 'lastEndpointUrl', 'opc.tcp://mock:4840');
-    if ($sc !== null) {
-        setProperty($client, 'secureChannel', $sc);
-    }
-    invokeMethod($client, 'initServices', [$session]);
-
-    return $client;
-}
 
 describe('ManagesConnectionTrait disconnect catch paths', function () {
 
@@ -129,10 +46,10 @@ describe('ManagesSecureChannelTrait error paths', function () {
         $mock->addResponse($encoder->getBuffer());
 
         $client = createClientWithoutConnect();
-        setProperty($client, 'transport', $mock);
-        setProperty($client, 'connectionState', ConnectionState::Connected);
+        setClientProperty($client, 'transport', $mock);
+        setClientProperty($client, 'connectionState', ConnectionState::Connected);
 
-        expect(fn () => invokeMethod($client, 'openSecureChannelNoSecurity'))
+        expect(fn () => callClientMethod($client, 'openSecureChannelNoSecurity'))
             ->toThrow(ProtocolException::class, 'Expected OPN response');
     });
 
@@ -152,20 +69,19 @@ describe('ManagesSecureChannelTrait error paths', function () {
         $mock = new MockTransport();
 
         $client = createClientWithoutConnect();
-        setProperty($client, 'transport', $mock);
-        setProperty($client, 'securityPolicy', SecurityPolicy::Basic256Sha256);
-        setProperty($client, 'securityMode', SecurityMode::SignAndEncrypt);
-        setProperty($client, 'clientCertPath', $derPath);
-        setProperty($client, 'clientKeyPath', $keyPath);
-        setProperty($client, 'serverCertDer', $certDer);
+        setClientProperty($client, 'transport', $mock);
+        setClientProperty($client, 'securityPolicy', SecurityPolicy::Basic256Sha256);
+        setClientProperty($client, 'securityMode', SecurityMode::SignAndEncrypt);
+        setClientProperty($client, 'clientCertPath', $derPath);
+        setClientProperty($client, 'clientKeyPath', $keyPath);
+        setClientProperty($client, 'serverCertDer', $certDer);
 
         $sc = new SecureChannel(SecurityPolicy::Basic256Sha256, SecurityMode::SignAndEncrypt, $certDer, $privKey, $certDer);
         $sc->createOpenSecureChannelMessage();
 
         try {
-            invokeMethod($client, 'openSecureChannelWithSecurity');
+            callClientMethod($client, 'openSecureChannelWithSecurity');
         } catch (ConnectionException) {
-            // Expected — mock transport has no OPN response
         }
 
         cleanupTmpFiles();
@@ -189,16 +105,16 @@ describe('ManagesSecureChannelTrait error paths', function () {
         $mock = new MockTransport();
 
         $client = createClientWithoutConnect();
-        setProperty($client, 'transport', $mock);
-        setProperty($client, 'securityPolicy', SecurityPolicy::Basic256Sha256);
-        setProperty($client, 'securityMode', SecurityMode::SignAndEncrypt);
-        setProperty($client, 'clientCertPath', $certPath);
-        setProperty($client, 'clientKeyPath', $keyPath);
-        setProperty($client, 'caCertPath', $caPath);
-        setProperty($client, 'serverCertDer', $certDer);
+        setClientProperty($client, 'transport', $mock);
+        setClientProperty($client, 'securityPolicy', SecurityPolicy::Basic256Sha256);
+        setClientProperty($client, 'securityMode', SecurityMode::SignAndEncrypt);
+        setClientProperty($client, 'clientCertPath', $certPath);
+        setClientProperty($client, 'clientKeyPath', $keyPath);
+        setClientProperty($client, 'caCertPath', $caPath);
+        setClientProperty($client, 'serverCertDer', $certDer);
 
         try {
-            invokeMethod($client, 'openSecureChannelWithSecurity');
+            callClientMethod($client, 'openSecureChannelWithSecurity');
         } catch (ConnectionException) {
         }
 
@@ -207,36 +123,13 @@ describe('ManagesSecureChannelTrait error paths', function () {
     });
 });
 
-$_tempFiles = [];
-
-function writeTmpFile(string $content): string
-{
-    global $_tempFiles;
-    $path = tempnam(sys_get_temp_dir(), 'opcua_test_');
-    file_put_contents($path, $content);
-    $_tempFiles[] = $path;
-
-    return $path;
-}
-
-function cleanupTmpFiles(): void
-{
-    global $_tempFiles;
-    foreach ($_tempFiles as $path) {
-        if (file_exists($path)) {
-            @unlink($path);
-        }
-    }
-    $_tempFiles = [];
-}
-
 describe('ManagesSessionTrait coverage', function () {
 
     it('closeSession suppresses receive exception (line 102)', function () {
         $mock = new FailingMockTransport(failAfterSends: 999, failAfterReceives: 0);
         $client = makeConnectedClient($mock);
 
-        invokeMethod($client, 'closeSession');
+        callClientMethod($client, 'closeSession');
 
         expect(true)->toBeTrue();
     });
@@ -254,7 +147,7 @@ describe('ManagesSessionTrait coverage', function () {
         $mock = new FailingMockTransport(failAfterSends: 999, failAfterReceives: 0);
         $client = makeConnectedClient($mock, $sc);
 
-        invokeMethod($client, 'closeSessionSecure');
+        callClientMethod($client, 'closeSessionSecure');
 
         expect(true)->toBeTrue();
     });
@@ -294,10 +187,10 @@ describe('ManagesSessionTrait coverage', function () {
         $mock->addResponse($activateSessionResponse);
 
         $client = makeConnectedClient($mock);
-        setProperty($client, 'userCertPath', $derPath);
-        setProperty($client, 'userKeyPath', $keyPath);
+        setClientProperty($client, 'userCertPath', $derPath);
+        setClientProperty($client, 'userKeyPath', $keyPath);
 
-        invokeMethod($client, 'createAndActivateSession', ['opc.tcp://mock:4840']);
+        callClientMethod($client, 'createAndActivateSession', ['opc.tcp://mock:4840']);
 
         cleanupTmpFiles();
         expect(true)->toBeTrue();

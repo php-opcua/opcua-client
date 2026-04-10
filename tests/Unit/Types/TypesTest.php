@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\DataValue;
 use PhpOpcua\Client\Types\EndpointDescription;
+use PhpOpcua\Client\Types\ExtensionObject;
 use PhpOpcua\Client\Types\LocalizedText;
 use PhpOpcua\Client\Types\NodeClass;
 use PhpOpcua\Client\Types\NodeId;
@@ -88,6 +89,16 @@ describe('DataValue', function () {
         $dv = new DataValue($variant);
         expect($dv->getValue())->toBe(42);
         expect($dv->getVariant())->toBe($variant);
+    });
+
+    it('auto-extracts decoded ExtensionObject value', function () {
+        $decoded = ['field1' => 'hello', 'field2' => 123];
+        $extObj = new ExtensionObject(NodeId::numeric(2, 5001), 0x01, null, $decoded);
+        $variant = new Variant(BuiltinType::ExtensionObject, $extObj);
+        $dv = new DataValue($variant);
+
+        expect($extObj->isDecoded())->toBeTrue();
+        expect($dv->getValue())->toBe($decoded);
     });
 
     it('encoding mask reflects set fields', function () {

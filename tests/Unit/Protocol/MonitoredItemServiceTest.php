@@ -169,3 +169,142 @@ describe('MonitoredItemService decoding', function () {
         expect($result[2])->toBe(0x80700000);
     });
 });
+
+describe('MonitoredItemService ModifyMonitoredItems', function () {
+
+    it('encodes a ModifyMonitoredItems request', function () {
+        $session = new SessionService(1, 1);
+        $service = new MonitoredItemService($session);
+
+        $bytes = $service->encodeModifyMonitoredItemsRequest(
+            1,
+            NodeId::numeric(0, 0),
+            42,
+            [
+                ['monitoredItemId' => 100, 'samplingInterval' => 250.0, 'queueSize' => 5],
+                ['monitoredItemId' => 101, 'clientHandle' => 10, 'discardOldest' => false],
+            ],
+        );
+
+        $decoder = new BinaryDecoder($bytes);
+        $header = MessageHeader::decode($decoder);
+        expect($header->getMessageType())->toBe('MSG');
+        expect(strlen($bytes))->toBeGreaterThan(50);
+    });
+
+    it('encodes a ModifyMonitoredItems request with defaults', function () {
+        $session = new SessionService(1, 1);
+        $service = new MonitoredItemService($session);
+
+        $bytes = $service->encodeModifyMonitoredItemsRequest(
+            1,
+            NodeId::numeric(0, 0),
+            10,
+            [
+                ['monitoredItemId' => 200],
+            ],
+        );
+
+        expect(strlen($bytes))->toBeGreaterThan(20);
+    });
+
+    it('decodes a ModifyMonitoredItemsResponse', function () {
+        $session = new SessionService(1, 1);
+        $service = new MonitoredItemService($session);
+
+        $encoder = new BinaryEncoder();
+        writeMonitoredMessagePrefix($encoder);
+        $encoder->writeNodeId(NodeId::numeric(0, 769));
+        writeMonitoredResponseHeader($encoder);
+
+        $encoder->writeInt32(2);
+        // Result 1
+        $encoder->writeUInt32(0);         // StatusCode
+        $encoder->writeDouble(250.0);     // RevisedSamplingInterval
+        $encoder->writeUInt32(5);         // RevisedQueueSize
+        $encoder->writeNodeId(NodeId::numeric(0, 0));
+        $encoder->writeByte(0x00);
+        // Result 2
+        $encoder->writeUInt32(0x80730000); // Bad status
+        $encoder->writeDouble(1000.0);
+        $encoder->writeUInt32(1);
+        $encoder->writeNodeId(NodeId::numeric(0, 0));
+        $encoder->writeByte(0x00);
+
+        $encoder->writeInt32(0); // DiagnosticInfos
+
+        $decoder = new BinaryDecoder($encoder->getBuffer());
+        $result = $service->decodeModifyMonitoredItemsResponse($decoder);
+        expect($result)->toHaveCount(2);
+        expect($result[0]->statusCode)->toBe(0);
+        expect($result[0]->revisedSamplingInterval)->toBe(250.0);
+        expect($result[0]->revisedQueueSize)->toBe(5);
+        expect($result[1]->statusCode)->toBe(0x80730000);
+    });
+});
+
+describe('MonitoredItemService SetTriggering', function () {
+
+    it('encodes a SetTriggering request with add and remove links', function () {
+        $session = new SessionService(1, 1);
+        $service = new MonitoredItemService($session);
+
+        $bytes = $service->encodeSetTriggeringRequest(
+            1,
+            NodeId::numeric(0, 0),
+            42,
+            100,
+            [200, 201],
+            [300],
+        );
+
+        $decoder = new BinaryDecoder($bytes);
+        $header = MessageHeader::decode($decoder);
+        expect($header->getMessageType())->toBe('MSG');
+        expect(strlen($bytes))->toBeGreaterThan(30);
+    });
+
+    it('encodes a SetTriggering request with empty arrays', function () {
+        $session = new SessionService(1, 1);
+        $service = new MonitoredItemService($session);
+
+        $bytes = $service->encodeSetTriggeringRequest(
+            1,
+            NodeId::numeric(0, 0),
+            10,
+            50,
+        );
+
+        expect(strlen($bytes))->toBeGreaterThan(20);
+    });
+
+    it('decodes a SetTriggering response with remove results and trailing diagnostics', function () {
+        $session = new SessionService(1, 1);
+        $service = new MonitoredItemService($session);
+
+        $encoder = new BinaryEncoder();
+        writeMonitoredMessagePrefix($encoder);
+        $encoder->writeNodeId(NodeId::numeric(0, 778));
+        writeMonitoredResponseHeader($encoder);
+
+        // Add results
+        $encoder->writeInt32(2);
+        $encoder->writeUInt32(0);
+        $encoder->writeUInt32(0);
+
+        // Add diagnostics
+        $encoder->writeInt32(0);
+
+        // Remove results
+        $encoder->writeInt32(1);
+        $encoder->writeUInt32(0);
+
+        // Remove diagnostics
+        $encoder->writeInt32(0);
+
+        $decoder = new BinaryDecoder($encoder->getBuffer());
+        $result = $service->decodeSetTriggeringResponse($decoder);
+        expect($result->addResults)->toHaveCount(2);
+        expect($result->removeResults)->toHaveCount(1);
+    });
+});

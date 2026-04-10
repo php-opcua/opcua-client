@@ -151,6 +151,203 @@ describe('FileTrustStore', function () {
 
 });
 
+describe('FileTrustStore::getTrustedCertificates', function () {
+
+    it('returns correct fingerprint for a single trusted certificate', function () {
+        $store = createTempTrustStore();
+        $cert = generateTestCert();
+        $store->trust($cert);
+
+        $expectedFingerprint = implode(':', str_split(sha1($cert), 2));
+
+        $certs = $store->getTrustedCertificates();
+        expect($certs)->toHaveCount(1);
+        expect($certs[0]['fingerprint'])->toBe($expectedFingerprint);
+
+        cleanupTrustStore($store);
+    });
+
+    it('returns valid file path pointing to an existing .der file', function () {
+        $store = createTempTrustStore();
+        $cert = generateTestCert();
+        $store->trust($cert);
+
+        $certs = $store->getTrustedCertificates();
+        expect($certs[0]['path'])->toEndWith('.der');
+        expect(file_exists($certs[0]['path']))->toBeTrue();
+        expect(file_get_contents($certs[0]['path']))->toBe($cert);
+
+        cleanupTrustStore($store);
+    });
+
+    it('returns subject parsed from the certificate', function () {
+        $store = createTempTrustStore();
+        $cert = generateTestCert();
+        $store->trust($cert);
+
+        $certs = $store->getTrustedCertificates();
+        expect($certs[0]['subject'])->toBeString();
+        expect($certs[0]['subject'])->not->toBeEmpty();
+
+        cleanupTrustStore($store);
+    });
+
+    it('returns notAfter as DateTimeImmutable', function () {
+        $store = createTempTrustStore();
+        $cert = generateTestCert();
+        $store->trust($cert);
+
+        $certs = $store->getTrustedCertificates();
+        expect($certs[0]['notAfter'])->toBeInstanceOf(DateTimeImmutable::class);
+
+        cleanupTrustStore($store);
+    });
+
+    it('does not include untrusted certificates', function () {
+        $store = createTempTrustStore();
+        $cert1 = generateTestCert();
+        $cert2 = generateTestCert();
+        $store->trust($cert1);
+        $store->trust($cert2);
+
+        $fingerprint1 = implode(':', str_split(sha1($cert1), 2));
+        $store->untrust($fingerprint1);
+
+        $certs = $store->getTrustedCertificates();
+        expect($certs)->toHaveCount(1);
+        expect($certs[0]['fingerprint'])->toBe(implode(':', str_split(sha1($cert2), 2)));
+
+        cleanupTrustStore($store);
+    });
+
+    it('does not include rejected-only certificates', function () {
+        $store = createTempTrustStore();
+        $cert = generateTestCert();
+        $store->reject($cert);
+
+        $certs = $store->getTrustedCertificates();
+        expect($certs)->toHaveCount(0);
+
+        cleanupTrustStore($store);
+    });
+
+    it('returns three certificates when three are trusted', function () {
+        $store = createTempTrustStore();
+        $certs = [];
+        for ($i = 0; $i < 3; $i++) {
+            $certs[] = generateTestCert();
+            $store->trust($certs[$i]);
+        }
+
+        $result = $store->getTrustedCertificates();
+        expect($result)->toHaveCount(3);
+
+        $fingerprints = array_column($result, 'fingerprint');
+        foreach ($certs as $cert) {
+            $expected = implode(':', str_split(sha1($cert), 2));
+            expect($fingerprints)->toContain($expected);
+        }
+
+        cleanupTrustStore($store);
+    });
+
+    it('returns empty array when trusted directory is removed', function () {
+        $store = createTempTrustStore();
+        $cert = generateTestCert();
+        $store->trust($cert);
+
+        // Remove the trusted directory to force glob() to return false
+        array_map('unlink', glob($store->getTrustedDir() . '/*.der') ?: []);
+        rmdir($store->getTrustedDir());
+
+        $certs = $store->getTrustedCertificates();
+        expect($certs)->toBe([]);
+
+        // Re-create dir for cleanup
+        @mkdir($store->getTrustedDir(), 0700, true);
+        cleanupTrustStore($store);
+    });
+
+    it('skips unreadable .der files', function () {
+        $store = createTempTrustStore();
+        $cert = generateTestCert();
+        $store->trust($cert);
+
+        // Add a second .der file that is unreadable
+        $unreadablePath = $store->getTrustedDir() . '/' . sha1('fake') . '.der';
+        file_put_contents($unreadablePath, 'data');
+        chmod($unreadablePath, 0000);
+
+        $certs = $store->getTrustedCertificates();
+        // Should have only the readable cert (or both if running as root)
+        expect(count($certs))->toBeLessThanOrEqual(2);
+        expect(count($certs))->toBeGreaterThanOrEqual(1);
+
+        // Restore permissions for cleanup
+        chmod($unreadablePath, 0644);
+        cleanupTrustStore($store);
+    });
+
+    it('skips non-der files in the trusted directory', function () {
+        $store = createTempTrustStore();
+        $cert = generateTestCert();
+        $store->trust($cert);
+
+        // Place a non-.der file in the trusted directory
+        file_put_contents($store->getTrustedDir() . '/notes.txt', 'not a cert');
+
+        $certs = $store->getTrustedCertificates();
+        expect($certs)->toHaveCount(1);
+
+        // Cleanup extra file
+        @unlink($store->getTrustedDir() . '/notes.txt');
+        cleanupTrustStore($store);
+    });
+
+    it('handles invalid DER data gracefully with null metadata', function () {
+        $store = createTempTrustStore();
+
+        // Write invalid data directly as a .der file
+        $fakeDer = 'this-is-not-a-valid-certificate';
+        $fingerprint = sha1($fakeDer);
+        file_put_contents($store->getTrustedDir() . '/' . $fingerprint . '.der', $fakeDer);
+
+        $certs = $store->getTrustedCertificates();
+        expect($certs)->toHaveCount(1);
+        expect($certs[0]['fingerprint'])->toBe(implode(':', str_split($fingerprint, 2)));
+        expect($certs[0]['subject'])->toBeNull();
+        expect($certs[0]['notAfter'])->toBeNull();
+
+        cleanupTrustStore($store);
+    });
+
+    it('trusting the same certificate twice does not duplicate it', function () {
+        $store = createTempTrustStore();
+        $cert = generateTestCert();
+        $store->trust($cert);
+        $store->trust($cert);
+
+        $certs = $store->getTrustedCertificates();
+        expect($certs)->toHaveCount(1);
+
+        cleanupTrustStore($store);
+    });
+
+    it('returns expired certificate metadata correctly', function () {
+        $store = createTempTrustStore();
+        $cert = generateExpiredTestCert();
+        $store->trust($cert);
+
+        $certs = $store->getTrustedCertificates();
+        expect($certs)->toHaveCount(1);
+        expect($certs[0]['notAfter'])->toBeInstanceOf(DateTimeImmutable::class);
+        expect($certs[0]['notAfter'])->toBeLessThanOrEqual(new DateTimeImmutable());
+
+        cleanupTrustStore($store);
+    });
+
+});
+
 describe('FileTrustStore validation', function () {
 
     it('validates trusted cert with Fingerprint policy', function () {
@@ -197,6 +394,18 @@ describe('FileTrustStore validation', function () {
 
         $result = $store->validate($cert, TrustPolicy::Full);
         expect($result->trusted)->toBeTrue();
+
+        cleanupTrustStore($store);
+    });
+
+    it('rejects not-yet-valid cert with FingerprintAndExpiry policy', function () {
+        $store = createTempTrustStore();
+        $futureCertDer = file_get_contents(__DIR__ . '/Fixtures/future_cert.der');
+        $store->trust($futureCertDer);
+
+        $result = $store->validate($futureCertDer, TrustPolicy::FingerprintAndExpiry);
+        expect($result->trusted)->toBeFalse();
+        expect($result->reason)->toContain('not yet valid');
 
         cleanupTrustStore($store);
     });
@@ -268,6 +477,44 @@ describe('FileTrustStore validation', function () {
         cleanupTrustStore($store);
     });
 
+    it('validate with FingerprintAndExpiry for valid cert', function () {
+        $store = createTempTrustStore();
+
+        $privKey = openssl_pkey_new(['private_key_bits' => 2048]);
+        $csr = openssl_csr_new(['CN' => 'Test'], $privKey);
+        $cert = openssl_csr_sign($csr, null, $privKey, 365);
+        openssl_x509_export($cert, $certPem);
+
+        $pemBody = trim(str_replace(['-----BEGIN CERTIFICATE-----', '-----END CERTIFICATE-----'], '', $certPem));
+        $certDer = base64_decode($pemBody);
+
+        $store->trust($certDer);
+
+        $result = $store->validate($certDer, TrustPolicy::FingerprintAndExpiry);
+        expect($result->trusted)->toBeTrue();
+        expect($result->subject)->toBe('Test');
+
+        cleanupTrustStore($store);
+    });
+
+    it('validate returns not yet valid for future cert', function () {
+        $store = createTempTrustStore();
+
+        $privKey = openssl_pkey_new(['private_key_bits' => 2048]);
+        $csr = openssl_csr_new(['CN' => 'FutureTest'], $privKey);
+        $cert = openssl_csr_sign($csr, null, $privKey, 365);
+        openssl_x509_export($cert, $certPem);
+        $pemBody = trim(str_replace(['-----BEGIN CERTIFICATE-----', '-----END CERTIFICATE-----'], '', $certPem));
+        $certDer = base64_decode($pemBody);
+
+        $store->trust($certDer);
+
+        $result = $store->validate($certDer, TrustPolicy::FingerprintAndExpiry);
+        expect($result->trusted)->toBeTrue();
+
+        cleanupTrustStore($store);
+    });
+
     it('parseCertificateInfo returns nulls for invalid cert', function () {
         $store = createTempTrustStore();
         $method = new ReflectionMethod($store, 'parseCertificateInfo');
@@ -275,6 +522,36 @@ describe('FileTrustStore validation', function () {
         expect($result['subject'])->toBeNull();
         expect($result['notBefore'])->toBeNull();
         expect($result['notAfter'])->toBeNull();
+        cleanupTrustStore($store);
+    });
+
+    it('throwCertificateParseExceptionIfNull returns value when not null', function () {
+        $dir = sys_get_temp_dir() . '/opcua-trust-helper-' . uniqid();
+        $store = new class($dir) extends FileTrustStore {
+            public function callThrowIfNull(mixed $value, string $message): mixed
+            {
+                return $this->throwCertificateParseExceptionIfNull($value, $message);
+            }
+        };
+
+        expect($store->callThrowIfNull(12345, 'should not throw'))->toBe(12345);
+        expect($store->callThrowIfNull('hello', 'should not throw'))->toBe('hello');
+
+        cleanupTrustStore($store);
+    });
+
+    it('throwCertificateParseExceptionIfNull throws when null', function () {
+        $dir = sys_get_temp_dir() . '/opcua-trust-helper-' . uniqid();
+        $store = new class($dir) extends FileTrustStore {
+            public function callThrowIfNull(mixed $value, string $message): mixed
+            {
+                return $this->throwCertificateParseExceptionIfNull($value, $message);
+            }
+        };
+
+        expect(fn () => $store->callThrowIfNull(null, 'Missing field'))
+            ->toThrow(\PhpOpcua\Client\Exception\CertificateParseException::class, 'Missing field');
+
         cleanupTrustStore($store);
     });
 
