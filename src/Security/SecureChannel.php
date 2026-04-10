@@ -639,7 +639,7 @@ class SecureChannel
      * @param int $signatureSize
      * @param int $blockSize
      */
-    private function addSymmetricPadding(string $plaintext, int $signatureSize, int $blockSize): string
+    protected function addSymmetricPadding(string $plaintext, int $signatureSize, int $blockSize): string
     {
         $plaintextLen = strlen($plaintext);
 

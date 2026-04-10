@@ -464,7 +464,7 @@ class MessageSecurity
      * @param int $length
      * @return string DER-encoded length bytes.
      */
-    private function derEncodeLength(int $length): string
+    protected function derEncodeLength(int $length): string
     {
         if ($length < 128) {
             return chr($length);

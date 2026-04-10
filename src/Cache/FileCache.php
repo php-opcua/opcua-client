@@ -97,10 +97,7 @@ class FileCache implements CacheInterface
      */
     public function clear(): bool
     {
-        $files = glob($this->directory . '/*.cache');
-        if ($files === false) {
-            return false;
-        }
+        $files = glob($this->directory . '/*.cache') ?: [];
         foreach ($files as $file) {
             @unlink($file);
         }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpOpcua\Client\TrustStore;
 
 use DateTimeImmutable;
+use PhpOpcua\Client\Exception\CertificateParseException;
 
 /**
  * File-based trust store implementation.
@@ -86,10 +87,7 @@ class FileTrustStore implements TrustStoreInterface
      */
     public function getTrustedCertificates(): array
     {
-        $files = glob($this->trustedDir . '/*.der');
-        if ($files === false) {
-            return [];
-        }
+        $files = glob($this->trustedDir . '/*.der') ?: [];
 
         $certificates = [];
         foreach ($files as $path) {
@@ -208,7 +206,7 @@ class FileTrustStore implements TrustStoreInterface
      * @param string $certDer
      * @return array{subject: ?string, notBefore: ?DateTimeImmutable, notAfter: ?DateTimeImmutable}
      */
-    private function parseCertificateInfo(string $certDer): array
+    protected function parseCertificateInfo(string $certDer): array
     {
         $pem = "-----BEGIN CERTIFICATE-----\n" . chunk_split(base64_encode($certDer), 64) . "-----END CERTIFICATE-----\n";
         $parsed = @openssl_x509_parse($pem);
@@ -219,13 +217,15 @@ class FileTrustStore implements TrustStoreInterface
 
         $subject = $parsed['subject']['CN'] ?? ($parsed['name'] ?? null);
 
-        $notBefore = isset($parsed['validFrom_time_t'])
-            ? new DateTimeImmutable('@' . $parsed['validFrom_time_t'])
-            : null;
+        $notBefore = new DateTimeImmutable('@' . $this->throwCertificateParseExceptionIfNull(
+            $parsed['validFrom_time_t'] ?? null,
+            'Missing validFrom_time_t in parsed certificate',
+        ));
 
-        $notAfter = isset($parsed['validTo_time_t'])
-            ? new DateTimeImmutable('@' . $parsed['validTo_time_t'])
-            : null;
+        $notAfter = new DateTimeImmutable('@' . $this->throwCertificateParseExceptionIfNull(
+            $parsed['validTo_time_t'] ?? null,
+            'Missing validTo_time_t in parsed certificate',
+        ));
 
         return ['subject' => $subject, 'notBefore' => $notBefore, 'notAfter' => $notAfter];
     }
@@ -247,6 +247,24 @@ class FileTrustStore implements TrustStoreInterface
         $result = @openssl_x509_verify($certResource, openssl_pkey_get_public($caCertPem));
 
         return $result === 1;
+    }
+
+    /**
+     * @template T
+     *
+     * @param T|null $value
+     * @param string $message
+     * @return T
+     *
+     * @throws CertificateParseException
+     */
+    protected function throwCertificateParseExceptionIfNull(mixed $value, string $message): mixed
+    {
+        if ($value === null) {
+            throw new CertificateParseException($message);
+        }
+
+        return $value;
     }
 
     /**
