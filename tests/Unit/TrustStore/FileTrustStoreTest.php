@@ -516,9 +516,15 @@ describe('FileTrustStore validation', function () {
     });
 
     it('parseCertificateInfo returns nulls for invalid cert', function () {
-        $store = createTempTrustStore();
-        $method = new ReflectionMethod($store, 'parseCertificateInfo');
-        $result = $method->invoke($store, 'not-a-valid-cert');
+        $dir = sys_get_temp_dir() . '/opcua-trust-parse-' . uniqid();
+        $store = new class($dir) extends FileTrustStore {
+            public function callParseCertificateInfo(string $certDer): array
+            {
+                return $this->parseCertificateInfo($certDer);
+            }
+        };
+
+        $result = $store->callParseCertificateInfo('not-a-valid-cert');
         expect($result['subject'])->toBeNull();
         expect($result['notBefore'])->toBeNull();
         expect($result['notAfter'])->toBeNull();

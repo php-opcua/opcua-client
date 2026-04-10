@@ -270,20 +270,17 @@ describe('BrowseService encoding and decoding', function () {
 
         $encoder = new BinaryEncoder();
         writeDiagMessagePrefix($encoder);
-        $encoder->writeNodeId(NodeId::numeric(0, 530)); // BrowseResponse
+        $encoder->writeNodeId(NodeId::numeric(0, 530));
         writeDiagResponseHeader($encoder);
 
-        // Results: 1
         $encoder->writeInt32(1);
         $encoder->writeUInt32(0);
         $encoder->writeByteString(null);
-        $encoder->writeInt32(0); // 0 references
+        $encoder->writeInt32(0);
 
-        // DiagnosticInfos: 1
         $encoder->writeInt32(1);
-        $encoder->writeByte(0x01); // symbolicId only
-        // The browse service just does readByte() for skip, not full diagnostic parsing
-        // Actually looking at code: it just does $decoder->readByte() per diagnostic - not full parsing
+        $encoder->writeByte(0x01);
+        $encoder->writeInt32(42);
 
         $decoder = new BinaryDecoder($encoder->getBuffer());
         $result = $service->decodeBrowseResponseWithContinuation($decoder);

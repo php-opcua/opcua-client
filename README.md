@@ -30,13 +30,15 @@ This library implements the full OPC UA binary protocol stack in pure PHP: TCP t
 - **Subscribe** to data changes and events in real time — get notified when a sensor value changes or an alarm fires
 - **Call methods** on the server — trigger operations, run diagnostics, execute commands on the PLC
 - **Query historical data** — pull raw logs, aggregated trends (min, max, average), or interpolated values at specific timestamps
-- **Secure everything** — 10 security policies: 6 RSA (plaintext to AES-256 with RSA-PSS) + 4 ECC (NIST P-256/P-384 and Brainpool P-256/P-384 with ECDSA/ECDH), plus anonymous, username/password, or X.509 certificate authentication
+- **Secure everything** — 10 security policies: 6 RSA (plaintext to AES-256 with RSA-PSS) + 4 ECC (NIST P-256/P-384 and Brainpool P-256/P-384 with ECDSA/ECDH), plus anonymous, username/password, or X.509 certificate authentication <sup>*</sup>
 
 All of this with zero external dependencies beyond `ext-openssl`, and full support for PHP 8.2 through 8.5.
 
 > **Note:** OPC UA relies on persistent sessions and long-lived connections. PHP's request/response model means connections are short-lived by default. For use cases like continuous monitoring or subscription polling, pair this with [`opcua-session-manager`](https://github.com/php-opcua/opcua-session-manager) to persist sessions across requests — or use it in a long-running worker process.
 >
 > The session manager is a **separate package by design** — it runs as a daemon process using ReactPHP and Unix sockets, which would break this library's zero-dependency, cross-platform philosophy if bundled here. See the [Ecosystem](#ecosystem) section for details.
+
+<sup>*</sup> **ECC note:** The 4 ECC policies are implemented per OPC UA 1.05 spec but should be considered **experimental**. No commercial OPC UA server vendor has released devices with ECC endpoints yet — this is an ecosystem-wide gap. ECC support has been developed and tested exclusively against [UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) (the OPC Foundation reference implementation). The implementation follows the 1.05.3 specification and is aligned with 1.05.4 regarding `ReceiverCertificateThumbprint` and HKDF salt encoding. Two ECC-specific changes from 1.05.4 (per-message IV and LegacySequenceNumbers) are not yet implemented — see the [ECC 1.05.4 Compliance](ROADMAP.md#ecc-1054-compliance) section in the roadmap for a detailed analysis. For production deployments, use the RSA policies. If you ever manage to connect this library to a real industrial device with ECC OPC UA, let us know — we owe you a coffee :) See the [Security documentation](doc/10-security.md) for details.
 
 <table>
 <tr>
@@ -46,7 +48,7 @@ All of this with zero external dependencies beyond `ext-openssl`, and full suppo
 
 This library is integration-tested against **[UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard)** — the **reference implementation** maintained by the OPC Foundation, the organization that defines the OPC UA specification. This is the same stack used by major industrial vendors to certify their products.
 
-1200+ integration tests run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec.
+1300+ tests (1040+ unit, 250+ integration) run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec — with 99%+ unit test code coverage.
 
 **This library is already used in production with real industrial equipment** in factory automation and process control environments.
 
@@ -412,7 +414,7 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 - **Industrial-ready** — server certificate trust management, alarm event deduction, subscription recovery, auto-retry — built for certified industrial deployments.
 - **Batteries included** — browse, read, write, call, subscriptions, events, history, path resolution, batching, retry, CLI tool.
 - **Cross-platform** — Linux, macOS, Windows. No FFI, no COM.
-- **Thoroughly tested** — 1300+ tests, 99%+ code coverage across PHP 8.2, 8.3, 8.4, and 8.5.
+- **Thoroughly tested** — 1300+ tests (1040+ unit, 250+ integration), 99%+ unit test code coverage across PHP 8.2, 8.3, 8.4, and 8.5.
 - **Typed everywhere** — all service responses return `public readonly` DTOs, not arrays.
 - **Session persistence** — keep OPC UA connections alive across PHP requests via [`opcua-session-manager`](https://github.com/php-opcua/opcua-session-manager).
 - **Laravel-ready** — drop-in via [`opcua-laravel-client`](https://github.com/php-opcua/laravel-opcua).

@@ -4,7 +4,7 @@
 
 ### Added
 
-- **ECC security policies: `ECC_nistP256`, `ECC_nistP384`, `ECC_brainpoolP256r1`, and `ECC_brainpoolP384r1`.** Full Elliptic Curve Cryptography support for OPC UA secure channels, including:
+- **ECC security policies: `ECC_nistP256`, `ECC_nistP384`, `ECC_brainpoolP256r1`, and `ECC_brainpoolP384r1`.** Full Elliptic Curve Cryptography support for OPC UA secure channels, including (see [ECC disclaimer](doc/10-security.md) and [1.05.4 compliance roadmap](ROADMAP.md#ecc-1054-compliance)):
   - ECDSA signatures (SHA-256 / SHA-384) for OpenSecureChannel (sign-only, no asymmetric encryption)
   - ECDH ephemeral key agreement for symmetric key derivation
   - HKDF-SHA256 / HKDF-SHA384 key derivation with mode-dependent salt (replaces P_SHA for ECC)
@@ -20,6 +20,18 @@
 - **New `CertificateManager` methods:** `getKeyType()`, ECC certificate generation via optional `$eccCurveName` parameter on `generateSelfSignedCertificate()`.
 - **7 new NIST ECC integration tests** against the `uanetstandard-test-suite` ECC server (port 4848): P-256 Sign, P-256 SignAndEncrypt (anonymous + admin + read), P-384 SignAndEncrypt (anonymous + admin), P-384 Sign.
 - **7 new Brainpool ECC integration tests** against the `uanetstandard-test-suite` Brainpool server (port 4849): brainpoolP256r1 Sign, brainpoolP256r1 SignAndEncrypt (anonymous + admin + read), brainpoolP384r1 SignAndEncrypt (anonymous + admin), brainpoolP384r1 Sign.
+
+### Changed
+
+- **Unit test coverage raised to 99%+.** Added 200+ unit tests across all source files. Every `src/` class and trait now has dedicated coverage — Client traits, Security (SecureChannel, MessageSecurity, CertificateManager), Protocol (SessionService, MonitoredItemService), TrustStore (FileTrustStore), Cache (FileCache), and Types (DataValue).
+- **Test infrastructure reorganized.** Eliminated `*BoostTest.php` files. Extracted shared test helpers into `tests/Unit/Helpers/ClientTestHelpers.php`. Each source class now has its tests in the matching path (`src/Foo/Bar.php` → `tests/Unit/Foo/BarTest.php`).
+- **`EnsuresOpenSslSuccess` trait.** Extracted the duplicated `ensureNotFalse()` method from `CertificateManager` and `MessageSecurity` into a shared trait in `src/Security/EnsuresOpenSslSuccess.php`.
+- **`MessageSecurity::getCoordinateSize()`.** Extracted duplicated EC coordinate size match expression into a reusable private method.
+- **Diagnostic info parsing in `BrowseService` and `WriteService`.** Replaced manual byte-reading loops with `$decoder->skipDiagnosticInfoArray()` for correct OPC UA DiagnosticInfo format parsing.
+- **Removed all inline comments from function bodies** per CONTRIBUTING.md guidelines. Extracted `SessionService::readEccServerEphemeralKey()` to replace commented ECC key parsing logic.
+- **Removed `glob() === false` dead branches** in `FileTrustStore` and `FileCache` — `glob()` never returns `false` on Linux with a valid pattern.
+- **`FileTrustStore::parseCertificateInfo` changed from `private` to `protected`** to enable proper subclass-based testing.
+- **`FileTrustStore::throwCertificateParseExceptionIfNull`** — new protected method replacing nullable ternary operators for certificate date fields, with dedicated `CertificateParseException`.
 
 ## [v4.0.3] - 2026-04-07
 

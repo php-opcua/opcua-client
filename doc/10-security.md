@@ -30,6 +30,14 @@ The Brainpool curves are the European alternative to NIST curves. They provide e
 
 > **Tip:** For new deployments, use `Basic256Sha256`, `Aes256Sha256RsaPss`, or any ECC policy for modern security. Choose NIST curves for maximum interoperability or Brainpool curves for European regulatory compliance. The older policies (`Basic128Rsa15`, `Basic256`) exist for legacy server compatibility.
 
+> **ECC support disclaimer:** The ECC security policies (ECC_nistP256, ECC_nistP384, ECC_brainpoolP256r1, ECC_brainpoolP384r1) are implemented following the OPC UA 1.05.3 specification, but should be considered **experimental**. The implementation is aligned with 1.05.4 regarding `ReceiverCertificateThumbprint` and HKDF salt encoding. Two ECC-specific changes from 1.05.4 (per-message IV derivation and LegacySequenceNumbers) are not yet implemented. See the [ECC 1.05.4 Compliance](../ROADMAP.md#ecc-1054-compliance) section in the roadmap for a detailed technical analysis of each point, its impact, and the planned fix.
+>
+> As of today, no commercial OPC UA server vendor — not Siemens, not Beckhoff, not Kepware, not any other — has released firmware or hardware with ECC OPC UA endpoints. This is not a limitation of this library: it is the current reality of the OPC UA ecosystem. The specification defines ECC support, but the industrial market has not yet adopted it in production devices.
+>
+> The ECC implementation in this library has been developed and tested exclusively against **[UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard)**, the OPC Foundation's reference implementation, used as the counterpart for integration testing. It has not been validated against any physical industrial device or commercial server product.
+>
+> If you are evaluating ECC for a production deployment, be aware that you will likely need a UA-.NETStandard-based server (or a custom server built on it) as the only available counterpart. The RSA policies are the proven, battle-tested choice for real-world industrial deployments today.
+
 ## Certificate Setup
 
 ### RSA Certificates

@@ -59,10 +59,7 @@ class BrowseService extends AbstractProtocolService
             }
         }
 
-        $diagCount = $decoder->readInt32();
-        for ($i = 0; $i < $diagCount; $i++) {
-            $decoder->readByte();
-        }
+        $decoder->skipDiagnosticInfoArray();
 
         return new BrowseResultSet($references, $continuationPoint);
     }
@@ -113,10 +110,7 @@ class BrowseService extends AbstractProtocolService
             }
         }
 
-        $diagCount = $decoder->readInt32();
-        for ($i = 0; $i < $diagCount; $i++) {
-            $decoder->readByte();
-        }
+        $decoder->skipDiagnosticInfoArray();
 
         return new BrowseResultSet($references, $continuationPoint);
     }

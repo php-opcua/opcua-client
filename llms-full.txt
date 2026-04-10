@@ -45,7 +45,7 @@ composer require php-opcua/opcua-client
 - Typed everywhere — all responses return public readonly DTOs, not arrays
 - MockClient — in-memory test double implementing OpcUaClientInterface; register handlers, assert calls, no TCP connection
 - DataValue factory methods — ofInt32(), ofDouble(), ofString(), ofBoolean(), of($value, BuiltinType), bad(StatusCode), etc.
-- 1300+ tests, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
+- 1300+ tests (1040+ unit, 250+ integration), 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
 
 ### Property access style
 

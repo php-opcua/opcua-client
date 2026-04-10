@@ -801,8 +801,6 @@ class SecureChannel
 
         $algorithm = $this->policy->getKeyDerivationAlgorithm();
 
-        // HKDF key derivation matching UA-.NETStandard UaSCBinaryChannel.Symmetric.cs
-        // Salt = uint16_le(encKeyLen+blockSize) + label + clientNonce + serverNonce
         $clientSalt = pack('v', $saltKeyLen) . 'opcua-client' . $this->clientNonce . $this->serverNonce;
         $clientDerived = hash_hkdf($algorithm, $sharedSecret, $totalLen, $clientSalt, $clientSalt);
         $this->clientSigningKey = substr($clientDerived, 0, $sigKeyLen);

@@ -175,7 +175,7 @@ describe('PublishService skipDiagnosticInfo with inner diagnostic', function () 
 });
 
 describe('BrowseService diagnostic with multiple bytes', function () {
-    it('reads diagnostic bytes in BrowseNextResponse', function () {
+    it('reads diagnostic info in BrowseNextResponse', function () {
         $session = new SessionService(1, 1);
         $service = new BrowseService($session);
 
@@ -189,7 +189,7 @@ describe('BrowseService diagnostic with multiple bytes', function () {
         $e->writeInt32(0);
         $e->writeInt32(1);
         $e->writeByte(0x01);
-        $e->writeByte(0x02);
+        $e->writeInt32(42);
 
         $decoder = new BinaryDecoder($e->getBuffer());
         $result = $service->decodeBrowseNextResponse($decoder);

@@ -12,6 +12,8 @@ use PhpOpcua\Client\Exception\SecurityException;
  */
 class MessageSecurity
 {
+    use EnsuresOpenSslSuccess;
+
     private CertificateManager $certManager;
 
     /**
@@ -335,11 +337,7 @@ class MessageSecurity
 
         $x = $details['ec']['x'];
         $y = $details['ec']['y'];
-        $coordinateSize = match ($curveName) {
-            'prime256v1', 'brainpoolP256r1' => 32,
-            'secp384r1', 'brainpoolP384r1' => 48,
-            default => throw new SecurityException("Unsupported curve: {$curveName}"),
-        };
+        $coordinateSize = self::getCoordinateSize($curveName);
 
         $publicKeyBytes = "\x04"
             . str_pad($x, $coordinateSize, "\x00", STR_PAD_LEFT)
@@ -363,11 +361,7 @@ class MessageSecurity
             throw new SecurityException('EC public key must be in uncompressed format (0x04 prefix)');
         }
 
-        $coordinateSize = match ($curveName) {
-            'prime256v1', 'brainpoolP256r1' => 32,
-            'secp384r1', 'brainpoolP384r1' => 48,
-            default => throw new SecurityException("Unsupported curve: {$curveName}"),
-        };
+        $coordinateSize = self::getCoordinateSize($curveName);
 
         $x = substr($publicKeyBytes, 1, $coordinateSize);
         $y = substr($publicKeyBytes, 1 + $coordinateSize, $coordinateSize);
@@ -461,6 +455,20 @@ class MessageSecurity
     }
 
     /**
+     * @param string $curveName OpenSSL curve name.
+     * @return int The coordinate size in bytes (32 for P-256/BP-256, 48 for P-384/BP-384).
+     * @throws SecurityException
+     */
+    private static function getCoordinateSize(string $curveName): int
+    {
+        return match ($curveName) {
+            'prime256v1', 'brainpoolP256r1' => 32,
+            'secp384r1', 'brainpoolP384r1' => 48,
+            default => throw new SecurityException("Unsupported curve: {$curveName}"),
+        };
+    }
+
+    /**
      * @param int $length
      * @return string DER-encoded length bytes.
      */
@@ -480,19 +488,4 @@ class MessageSecurity
         return chr(0x80 | strlen($bytes)) . $bytes;
     }
 
-    /**
-     * @template T
-     * @param T|false $result
-     * @param string $message
-     * @return T
-     * @throws SecurityException
-     */
-    private static function ensureNotFalse(mixed $result, string $message): mixed
-    {
-        if ($result === false) {
-            throw new SecurityException("{$message}: " . openssl_error_string());
-        }
-
-        return $result;
-    }
 }

@@ -13,6 +13,7 @@ use PhpOpcua\Client\Exception\SecurityException;
  */
 class CertificateManager
 {
+    use EnsuresOpenSslSuccess;
     /**
      * @param string $path
      * @return string DER-encoded certificate bytes.
@@ -254,19 +255,4 @@ class CertificateManager
             . "-----END CERTIFICATE-----\n";
     }
 
-    /**
-     * @template T
-     * @param T|false $result
-     * @param string $message
-     * @return T
-     * @throws SecurityException
-     */
-    private static function ensureNotFalse(mixed $result, string $message): mixed
-    {
-        if ($result === false) {
-            throw new SecurityException("{$message}: " . openssl_error_string());
-        }
-
-        return $result;
-    }
 }

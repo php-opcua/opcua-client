@@ -50,10 +50,7 @@ class WriteService extends AbstractProtocolService
             $results[] = $decoder->readUInt32();
         }
 
-        $diagCount = $decoder->readInt32();
-        for ($i = 0; $i < $diagCount; $i++) {
-            $decoder->readByte();
-        }
+        $decoder->skipDiagnosticInfoArray();
 
         return $results;
     }
