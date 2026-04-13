@@ -706,6 +706,48 @@ describe('Cache serialization with restricted allowed_classes', function () {
         expect($nodeId2)->toBeInstanceOf(NodeId::class);
         expect($nodeId2->getIdentifier())->toBe(2253);
     });
+
+    it('handles corrupted wrapped value gracefully', function () {
+        $mock = new CacheMockTransport();
+        $mock->addResponse(cacheBrowseResponseMsg());
+        $mock->addResponse(cacheBrowseResponseMsg());
+        $client = setupCacheConnectedClient($mock);
+
+        // Store a value with the correct prefix but invalid base64 payload
+        $cache = $client->getCache();
+        $key = 'opcua:' . md5('opc.tcp://mock:4840') . ':browse:i=85:0:1:0';
+        $cache->set($key, "\x00opcua\x00" . '!!!not-valid-base64!!!');
+
+        // Browse should treat it as a cache miss and fetch from server
+        $refs = $client->browse(NodeId::numeric(0, 85), useCache: true);
+        expect($refs)->toHaveCount(1);
+        expect($refs[0])->toBeInstanceOf(PhpOpcua\Client\Types\ReferenceDescription::class);
+    });
+
+    it('handles legacy unwrapped cached values transparently', function () {
+        $mock = new CacheMockTransport();
+        $client = setupCacheConnectedClient($mock);
+
+        // Store a legacy (pre-fix) unwrapped value directly in the cache
+        $cache = $client->getCache();
+        $key = 'opcua:' . md5('opc.tcp://mock:4840') . ':browse:i=85:0:1:0';
+        $legacyRefs = [new PhpOpcua\Client\Types\ReferenceDescription(
+            NodeId::numeric(0, 35),
+            true,
+            NodeId::numeric(0, 2253),
+            new PhpOpcua\Client\Types\QualifiedName(0, 'Server'),
+            new PhpOpcua\Client\Types\LocalizedText(null, 'Server'),
+            PhpOpcua\Client\Types\NodeClass::Object,
+            NodeId::numeric(0, 2004),
+        )];
+        $cache->set($key, $legacyRefs);
+
+        // Browse should use the legacy value as-is (backward compatibility)
+        $refs = $client->browse(NodeId::numeric(0, 85), useCache: true);
+        expect($refs)->toHaveCount(1);
+        expect($refs[0])->toBeInstanceOf(PhpOpcua\Client\Types\ReferenceDescription::class);
+        expect($refs[0]->browseName->name)->toBe('Server');
+    });
 });
 
 describe('discoverDataTypes caching', function () {
