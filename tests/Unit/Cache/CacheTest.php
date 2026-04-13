@@ -629,6 +629,85 @@ describe('ManagesCacheTrait / Client integration', function () {
     });
 });
 
+/**
+ * Issue: cachedFetch() stores raw PHP objects in PSR-16 cache.
+ * When the cache backend restricts allowed_classes (e.g. Laravel 13
+ * defaults to serializable_classes => false), unserialize() restores
+ * every object as __PHP_Incomplete_Class and property access throws.
+ *
+ * These tests simulate the full Laravel 13 roundtrip:
+ * 1. Client stores a wrapped string in the PSR-16 cache
+ * 2. Laravel serializes it to disk with serialize()
+ * 3. Laravel reads it back with unserialize($data, ['allowed_classes' => false])
+ * 4. Client reads the (still intact) string and unwraps the original objects
+ *
+ * @see https://github.com/php-opcua/laravel-opcua/issues/1
+ */
+describe('Cache serialization with restricted allowed_classes', function () {
+
+    it('browse results survive cache roundtrip with allowed_classes=false', function () {
+        $mock = new CacheMockTransport();
+        $mock->addResponse(cacheBrowseResponseMsg());
+        $client = setupCacheConnectedClient($mock);
+
+        // First browse: cache miss, fetches from server
+        $refs = $client->browse(NodeId::numeric(0, 85), useCache: true);
+        expect($refs)->toHaveCount(1);
+
+        // Read the raw wrapped value from the cache
+        $cache = $client->getCache();
+        $key = 'opcua:' . md5('opc.tcp://mock:4840') . ':browse:i=85:0:1:0';
+        $raw = $cache->get($key);
+        expect($raw)->toBeString();
+
+        // Simulate Laravel 13 roundtrip: serialize to disk, then read back
+        // with restricted allowed_classes — this is where the old code broke
+        $afterLaravel = unserialize(serialize($raw), ['allowed_classes' => false]);
+
+        // The wrapped string must survive intact (it's a plain string, not an object)
+        expect($afterLaravel)->toBe($raw);
+
+        // Put the Laravel-roundtripped value back into cache and browse again
+        $cache->set($key, $afterLaravel);
+        $refs2 = $client->browse(NodeId::numeric(0, 85), useCache: true);
+
+        expect($refs2)->toHaveCount(1);
+        expect($refs2[0])->toBeInstanceOf(PhpOpcua\Client\Types\ReferenceDescription::class);
+        expect($refs2[0]->nodeId)->toBeInstanceOf(NodeId::class);
+        expect($refs2[0]->browseName->name)->toBe('Server');
+        expect($refs2[0]->isForward)->toBeTrue();
+    });
+
+    it('resolveNodeId result survives cache roundtrip with allowed_classes=false', function () {
+        $mock = new CacheMockTransport();
+        $mock->addResponse(cacheResolveResponseMsg());
+        $client = setupCacheConnectedClient($mock);
+
+        // First resolve: cache miss, fetches from server
+        $nodeId = $client->resolveNodeId('/Objects/Server', useCache: true);
+        expect($nodeId->getIdentifier())->toBe(2253);
+
+        // Read the raw wrapped value from the cache
+        $endpointHash = md5('opc.tcp://mock:4840');
+        $pathHash = md5('Objects/Server');
+        $key = "opcua:{$endpointHash}:resolve:i=84:{$pathHash}";
+        $cache = $client->getCache();
+        $raw = $cache->get($key);
+        expect($raw)->toBeString();
+
+        // Simulate Laravel 13 roundtrip
+        $afterLaravel = unserialize(serialize($raw), ['allowed_classes' => false]);
+        expect($afterLaravel)->toBe($raw);
+
+        // Put the Laravel-roundtripped value back and resolve again from cache
+        $cache->set($key, $afterLaravel);
+        $nodeId2 = $client->resolveNodeId('/Objects/Server', useCache: true);
+
+        expect($nodeId2)->toBeInstanceOf(NodeId::class);
+        expect($nodeId2->getIdentifier())->toBe(2253);
+    });
+});
+
 describe('discoverDataTypes caching', function () {
 
     it('replays discovered types from cache on second call', function () {

@@ -127,7 +127,22 @@ trait ManagesCacheRuntimeTrait
     }
 
     /**
+     * Binary prefix that marks values wrapped by {@see cachedFetch()}.
+     *
+     * Values are stored as plain strings (prefix + base64-encoded serialized
+     * data) so that the PSR-16 backend never sees raw PHP objects. This
+     * prevents failures when the backend calls {@code unserialize()} with a
+     * restricted {@code allowed_classes} list (e.g. Laravel 13 defaults to
+     * {@code serializable_classes => false}).
+     */
+    private const CACHE_SAFE_PREFIX = "\x00opcua\x00";
+
+    /**
      * Fetch a value from cache or compute it via the fetcher callable.
+     *
+     * Cached values are stored as safe strings (base64-encoded serialized
+     * data) so that any PSR-16 backend can store and retrieve them regardless
+     * of its {@code allowed_classes} configuration.
      *
      * @param string $key The cache key.
      * @param callable $fetcher The callable that produces the value on cache miss.
@@ -139,7 +154,7 @@ trait ManagesCacheRuntimeTrait
         $this->ensureCacheInitialized();
 
         if ($useCache && $this->cache !== null) {
-            $cached = $this->cache->get($key);
+            $cached = $this->unwrapCacheValue($this->cache->get($key));
             if ($cached !== null) {
                 $this->dispatch(fn () => new CacheHit($this, $key));
 
@@ -151,10 +166,52 @@ trait ManagesCacheRuntimeTrait
         $result = $fetcher();
 
         if ($useCache && $this->cache !== null) {
-            $this->cache->set($key, $result);
+            $this->cache->set($key, $this->wrapCacheValue($result));
         }
 
         return $result;
+    }
+
+    /**
+     * Wrap a value as a safe string for cache storage.
+     *
+     * @param mixed $value
+     * @return string
+     */
+    private function wrapCacheValue(mixed $value): string
+    {
+        return self::CACHE_SAFE_PREFIX . base64_encode(serialize($value));
+    }
+
+    /**
+     * Unwrap a value previously stored by {@see wrapCacheValue()}.
+     *
+     * Returns null if the raw value is null or cannot be decoded,
+     * and transparently handles legacy (unwrapped) cached values.
+     *
+     * @param mixed $raw
+     * @return mixed
+     */
+    private function unwrapCacheValue(mixed $raw): mixed
+    {
+        if ($raw === null) {
+            return null;
+        }
+
+        if (is_string($raw) && str_starts_with($raw, self::CACHE_SAFE_PREFIX)) {
+            $decoded = base64_decode(substr($raw, strlen(self::CACHE_SAFE_PREFIX)), true);
+
+            if ($decoded === false) {
+                return null;
+            }
+
+            $result = @unserialize($decoded);
+
+            return $result !== false ? $result : null;
+        }
+
+        // Legacy: unwrapped value stored before this fix.
+        return $raw;
     }
 
     /**

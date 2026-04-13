@@ -1,5 +1,11 @@
 # Changelog
 
+## [v4.1.1] - 2026-04-13
+
+### Fixed
+
+- **Cache serialization compatibility with restricted `allowed_classes`.** `cachedFetch()` now wraps values as safe strings (base64-encoded serialized data) before storing them in the PSR-16 cache. The cache backend only ever sees plain strings, which are not subject to `allowed_classes` restrictions. This fixes the `__PHP_Incomplete_Class` error that occurred on cache hit when the backend called `unserialize()` with `allowed_classes => false` — most notably the default behavior in **Laravel 13** (`serializable_classes => false` in `config/cache.php`). Legacy (unwrapped) cached values are handled transparently for backward compatibility. ([#1](https://github.com/php-opcua/opcua-client/issues/1), [php-opcua/laravel-opcua#1](https://github.com/php-opcua/laravel-opcua/issues/1))
+
 ## [v4.1.0] - 2026-04-13
 
 ### Added
