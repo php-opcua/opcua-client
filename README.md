@@ -499,6 +499,12 @@ CI runs on PHP 8.2, 8.3, 8.4, and 8.5 via GitHub Actions.
 | [laravel-opcua](https://github.com/php-opcua/laravel-opcua) | Laravel integration — service provider, facade, config |
 | [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) | Docker-based OPC UA test servers (UA-.NETStandard) for integration testing |
 
+## Community
+
+Have questions, ideas, or want to share what you've built? Join the [GitHub Discussions](https://github.com/php-opcua/opcua-client/discussions).
+
+**Connected a PLC, SCADA system, or OPC UA server?** We're building a community-driven list of tested hardware and software. Share your experience in [Tested Hardware & Software](https://github.com/php-opcua/opcua-client/discussions/categories/tested-hardware-software) — even a one-liner like "Siemens S7-1500, works fine" helps other users know what to expect.
+
 ## AI-Ready
 
 This package ships with machine-readable documentation designed for AI coding assistants (Claude, Cursor, Copilot, ChatGPT, and others). Feed these files to your AI so it knows how to use the library correctly:
