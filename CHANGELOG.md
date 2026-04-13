@@ -1,6 +1,6 @@
 # Changelog
 
-## [v4.1.0] - 2026-04-x
+## [v4.1.0] - 2026-04-13
 
 ### Added
 
@@ -30,7 +30,6 @@
 - **`CertificateParseException`** (extends `SecurityException`) — thrown for missing fields in parsed certificates.
 - **ECC disclaimer** in README and Security documentation noting that no commercial OPC UA vendor supports ECC endpoints yet, and the implementation is tested exclusively against UA-.NETStandard.
 - **ECC 1.05.4 compliance section** in ROADMAP with detailed analysis of `LegacySequenceNumbers` and per-message IV requirements.
-- **`todo/ecc-1054-compliance.md`** — implementation guide with exact code changes needed for full 1.05.6 alignment.
 
 ### Changed
 
