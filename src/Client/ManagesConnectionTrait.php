@@ -234,6 +234,7 @@ trait ManagesConnectionTrait
         $this->publishService = null;
         $this->historyReadService = null;
         $this->translateBrowsePathService = null;
+        $this->nodeManagementService = null;
         $this->authenticationToken = null;
         $this->secureChannelId = 0;
         $this->secureChannel = null;

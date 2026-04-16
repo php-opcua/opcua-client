@@ -45,6 +45,14 @@ final class ServiceTypeId
 
     public const BROWSE_NEXT_REQUEST = 533;
 
+    public const ADD_NODES_REQUEST = 486;
+
+    public const ADD_REFERENCES_REQUEST = 492;
+
+    public const DELETE_NODES_REQUEST = 498;
+
+    public const DELETE_REFERENCES_REQUEST = 504;
+
     public const TRANSLATE_BROWSE_PATHS_REQUEST = 554;
 
     public const READ_REQUEST = 631;

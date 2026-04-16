@@ -14,6 +14,15 @@
 - **New `BuildInfo` readonly DTO** (`PhpOpcua\Client\Types\BuildInfo`) with five public properties: `productName`, `manufacturerName`, `softwareVersion`, `buildNumber`, `buildDate`.
 - **New `ManagesServerInfoTrait`** (`src/Client/ManagesServerInfoTrait.php`) encapsulating the server info logic.
 - **MockClient** supports all six server info methods with **pre-populated defaults** (`MockServer`, `php-opcua`, `1.0.0`, `1`, `2026-01-01`). Override any field via `onRead('i=2262', ...)` — same pattern as all other mock nodes.
+- **NodeManagement Services.** Four new methods on `OpcUaClientInterface` for dynamic address space modification on servers that support it:
+  - `addNodes(array $nodesToAdd)` — add one or more nodes, returns `AddNodesResult[]` (status code + server-assigned NodeId per node). Supports all 8 node classes (Object, Variable, Method, ObjectType, VariableType, ReferenceType, DataType, View) with class-specific attributes encoded automatically as ExtensionObject.
+  - `deleteNodes(array $nodesToDelete)` — delete nodes, returns `int[]` status codes.
+  - `addReferences(array $referencesToAdd)` — add references between nodes, returns `int[]` status codes.
+  - `deleteReferences(array $referencesToDelete)` — delete references, returns `int[]` status codes.
+- **New `AddNodesResult` readonly DTO** (`PhpOpcua\Client\Types\AddNodesResult`) with `statusCode` and `addedNodeId` properties.
+- **New `NodeManagementService`** protocol class (`src/Protocol/NodeManagementService.php`) handling binary encoding/decoding for all four services.
+- **New `ManagesNodeManagementTrait`** (`src/Client/ManagesNodeManagementTrait.php`) encapsulating node management operations.
+- **MockClient** supports all four node management methods with sensible defaults (Good status codes, echoed NodeIds).
 
 ### Fixed
 

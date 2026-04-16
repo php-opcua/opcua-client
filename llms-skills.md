@@ -194,6 +194,77 @@ $client->getServerBuildDate();          // ?DateTimeImmutable
 
 ---
 
+## Skill: Add and Remove Nodes at Runtime
+
+### When to use
+The user wants to dynamically create or delete nodes and references in the server's address space — e.g., creating temporary variables, folders, or configuring custom structures at runtime.
+
+### Code
+
+```php
+use PhpOpcua\Client\Types\NodeClass;
+use PhpOpcua\Client\Types\QualifiedName;
+use PhpOpcua\Client\Types\NodeId;
+use PhpOpcua\Client\Types\StatusCode;
+
+// Add a Variable node
+$results = $client->addNodes([
+    [
+        'parentNodeId'       => 'i=85',                              // Objects folder
+        'referenceTypeId'    => 'i=35',                              // Organizes
+        'requestedNewNodeId' => 'ns=2;s=MyVariable',
+        'browseName'         => new QualifiedName(2, 'MyVariable'),
+        'nodeClass'          => NodeClass::Variable,
+        'typeDefinition'     => 'i=63',                              // BaseDataVariableType
+        'dataType'           => NodeId::numeric(0, 6),               // Int32
+        'accessLevel'        => 3,                                   // CurrentRead | CurrentWrite
+    ],
+]);
+
+if (StatusCode::isGood($results[0]->statusCode)) {
+    echo "Created: {$results[0]->addedNodeId}\n";
+}
+
+// Delete nodes
+$statusCodes = $client->deleteNodes([
+    ['nodeId' => 'ns=2;s=MyVariable', 'deleteTargetReferences' => true],
+]);
+
+// Add a reference between existing nodes
+$statusCodes = $client->addReferences([
+    [
+        'sourceNodeId'    => 'ns=2;s=FolderA',
+        'referenceTypeId' => NodeId::numeric(0, 35),   // Organizes
+        'isForward'       => true,
+        'targetNodeId'    => 'ns=2;s=NodeB',
+        'targetNodeClass' => NodeClass::Variable,
+    ],
+]);
+
+// Delete a reference
+$statusCodes = $client->deleteReferences([
+    [
+        'sourceNodeId'       => 'ns=2;s=FolderA',
+        'referenceTypeId'    => NodeId::numeric(0, 35),
+        'isForward'          => true,
+        'targetNodeId'       => 'ns=2;s=NodeB',
+        'deleteBidirectional' => true,
+    ],
+]);
+```
+
+### Important rules
+- **Not all servers support node management.** Servers that do not will return `BadServiceUnsupported` (0x800B0000). Check your server's capabilities.
+- All 8 node classes are supported: Object, Variable, Method, ObjectType, VariableType, ReferenceType, DataType, View.
+- Class-specific attributes (e.g., `dataType`, `accessLevel` for Variable; `executable` for Method) are encoded automatically.
+- `addNodes()` returns `AddNodesResult[]` — each result has `statusCode` and `addedNodeId`.
+- `deleteNodes()`, `addReferences()`, `deleteReferences()` return `int[]` status codes.
+- If `displayName` is omitted, the browse name is used automatically.
+- Always clean up created nodes in tests/temporary scenarios.
+- String NodeIds work everywhere: `'i=85'`, `'ns=2;s=MyNode'`.
+
+---
+
 ## Skill: Write Values to a Server
 
 ### When to use

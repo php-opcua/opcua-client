@@ -557,6 +557,21 @@ Returned per subscription by `transferSubscriptions()`. See [Subscriptions](06-s
 
 ---
 
+### AddNodesResult
+
+Returned per node by `addNodes()`. See [Node Management](16-node-management.md).
+
+```php
+use PhpOpcua\Client\Types\AddNodesResult;
+```
+
+| Property | Type | Description |
+|---|---|---|
+| `$result->statusCode` | `int` | OPC UA status code for this node creation |
+| `$result->addedNodeId` | `NodeId` | The server-assigned NodeId of the new node |
+
+---
+
 ### BuildInfo
 
 Returned by `getServerBuildInfo()`. Contains metadata about the connected server's software.

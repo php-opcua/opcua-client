@@ -13,6 +13,7 @@ use PhpOpcua\Client\Exception\WriteTypeDetectionException;
 use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\TrustStore\TrustPolicy;
 use PhpOpcua\Client\TrustStore\TrustStoreInterface;
+use PhpOpcua\Client\Types\AddNodesResult;
 use PhpOpcua\Client\Types\AttributeId;
 use PhpOpcua\Client\Types\BrowseDirection;
 use PhpOpcua\Client\Types\BrowseNode;
@@ -705,4 +706,78 @@ interface OpcUaClientInterface
         NodeId|string $nodeId,
         array $timestamps,
     ): array;
+
+    /**
+     * Add one or more nodes to the server's address space.
+     *
+     * @param array<array{
+     *     parentNodeId: NodeId|string,
+     *     referenceTypeId: NodeId|string,
+     *     requestedNewNodeId: NodeId|string,
+     *     browseName: QualifiedName,
+     *     nodeClass: NodeClass,
+     *     typeDefinition: NodeId|string,
+     *     displayName?: ?string,
+     *     description?: ?string,
+     *     writeMask?: int,
+     *     userWriteMask?: int,
+     * }> $nodesToAdd
+     * @return AddNodesResult[]
+     *
+     * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     *
+     * @see AddNodesResult
+     */
+    public function addNodes(array $nodesToAdd): array;
+
+    /**
+     * Delete one or more nodes from the server's address space.
+     *
+     * @param array<array{nodeId: NodeId|string, deleteTargetReferences?: bool}> $nodesToDelete
+     * @return int[] OPC UA status codes for each deletion.
+     *
+     * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     */
+    public function deleteNodes(array $nodesToDelete): array;
+
+    /**
+     * Add one or more references between nodes.
+     *
+     * @param array<array{
+     *     sourceNodeId: NodeId|string,
+     *     referenceTypeId: NodeId|string,
+     *     isForward: bool,
+     *     targetNodeId: NodeId|string,
+     *     targetNodeClass: NodeClass,
+     *     targetServerUri?: ?string,
+     * }> $referencesToAdd
+     * @return int[] OPC UA status codes for each addition.
+     *
+     * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     */
+    public function addReferences(array $referencesToAdd): array;
+
+    /**
+     * Delete one or more references between nodes.
+     *
+     * @param array<array{
+     *     sourceNodeId: NodeId|string,
+     *     referenceTypeId: NodeId|string,
+     *     isForward: bool,
+     *     targetNodeId: NodeId|string,
+     *     deleteBidirectional?: bool,
+     * }> $referencesToDelete
+     * @return int[] OPC UA status codes for each deletion.
+     *
+     * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     */
+    public function deleteReferences(array $referencesToDelete): array;
 }

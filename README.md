@@ -203,6 +203,34 @@ foreach ($values as $dv) {
 }
 ```
 
+### Manage nodes at runtime
+
+```php
+use PhpOpcua\Client\Types\NodeClass;
+use PhpOpcua\Client\Types\QualifiedName;
+use PhpOpcua\Client\Types\StatusCode;
+
+// Add a variable node
+$results = $client->addNodes([
+    [
+        'parentNodeId'       => 'i=85',                              // Objects folder
+        'referenceTypeId'    => 'i=35',                              // Organizes
+        'requestedNewNodeId' => 'ns=2;s=MyVariable',
+        'browseName'         => new QualifiedName(2, 'MyVariable'),
+        'nodeClass'          => NodeClass::Variable,
+        'typeDefinition'     => 'i=63',                              // BaseDataVariableType
+    ],
+]);
+
+echo StatusCode::getName($results[0]->statusCode); // Good
+echo $results[0]->addedNodeId;                     // ns=2;s=MyVariable
+
+// Clean up when done
+$client->deleteNodes([['nodeId' => 'ns=2;s=MyVariable']]);
+```
+
+Supports all 8 node classes. See [Node Management documentation](doc/16-node-management.md) for adding references, class-specific attributes, and error handling.
+
 ### Connect with full security
 
 ```php
@@ -448,6 +476,7 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 | **Path Resolution** | Resolve `/Objects/MyPLC/Temperature` to a NodeId in one call |
 | **Read / Write** | Single and multi operations, all OPC UA data types, automatic type detection with caching |
 | **Server BuildInfo** | `getServerBuildInfo()` returns product name, manufacturer, version, build number, and build date in one call |
+| **Node Management** | Add/delete nodes and references at runtime — all 8 node classes, automatic attribute encoding |
 | **Method Call** | Invoke server methods with typed arguments and results |
 | **Subscriptions** | Data change and event monitoring with publish/acknowledge, modify monitored items, conditional triggering |
 | **Transfer & Recovery** | Transfer subscriptions across sessions and republish unacknowledged notifications |
@@ -486,6 +515,7 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 | 13 | [Testing](doc/13-testing.md) | MockClient, DataValue factories, call tracking, test examples |
 | 14 | [Events](doc/14-events.md) | PSR-14 event system, 47 events, alarm deduction, Laravel integration, examples |
 | 15 | [Trust Store](doc/15-trust-store.md) | Server certificate trust management, policies, TOFU |
+| 16 | [Node Management](doc/16-node-management.md) | Add/delete nodes and references at runtime |
 
 ## Testing
 

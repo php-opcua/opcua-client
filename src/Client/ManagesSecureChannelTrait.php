@@ -17,6 +17,7 @@ use PhpOpcua\Client\Protocol\GetEndpointsService;
 use PhpOpcua\Client\Protocol\HistoryReadService;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Protocol\MonitoredItemService;
+use PhpOpcua\Client\Protocol\NodeManagementService;
 use PhpOpcua\Client\Protocol\PublishService;
 use PhpOpcua\Client\Protocol\ReadService;
 use PhpOpcua\Client\Protocol\SecureChannelRequest;
@@ -282,5 +283,6 @@ trait ManagesSecureChannelTrait
         $this->publishService = new PublishService($session);
         $this->historyReadService = new HistoryReadService($session);
         $this->translateBrowsePathService = new TranslateBrowsePathService($session);
+        $this->nodeManagementService = new NodeManagementService($session);
     }
 }

@@ -11,6 +11,7 @@ use PhpOpcua\Client\Client\ManagesConnectionTrait;
 use PhpOpcua\Client\Client\ManagesEventDispatchTrait;
 use PhpOpcua\Client\Client\ManagesHandshakeTrait;
 use PhpOpcua\Client\Client\ManagesHistoryTrait;
+use PhpOpcua\Client\Client\ManagesNodeManagementTrait;
 use PhpOpcua\Client\Client\ManagesReadWriteTrait;
 use PhpOpcua\Client\Client\ManagesSecureChannelTrait;
 use PhpOpcua\Client\Client\ManagesServerInfoTrait;
@@ -27,6 +28,7 @@ use PhpOpcua\Client\Protocol\GetEndpointsService;
 use PhpOpcua\Client\Protocol\HistoryReadService;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Protocol\MonitoredItemService;
+use PhpOpcua\Client\Protocol\NodeManagementService;
 use PhpOpcua\Client\Protocol\PublishService;
 use PhpOpcua\Client\Protocol\ReadService;
 use PhpOpcua\Client\Protocol\SessionService;
@@ -69,6 +71,7 @@ class Client implements OpcUaClientInterface
     use ManagesBrowseTrait;
     use ManagesReadWriteTrait;
     use ManagesServerInfoTrait;
+    use ManagesNodeManagementTrait;
     use ManagesSubscriptionsTrait;
     use ManagesHistoryTrait;
     use ManagesTypeDiscoveryTrait;
@@ -97,6 +100,8 @@ class Client implements OpcUaClientInterface
     private ?HistoryReadService $historyReadService = null;
 
     private ?TranslateBrowsePathService $translateBrowsePathService = null;
+
+    private ?NodeManagementService $nodeManagementService = null;
 
     private ?NodeId $authenticationToken = null;
 

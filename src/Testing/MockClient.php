@@ -16,6 +16,7 @@ use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\Repository\GeneratedTypeRegistrar;
 use PhpOpcua\Client\TrustStore\TrustPolicy;
 use PhpOpcua\Client\TrustStore\TrustStoreInterface;
+use PhpOpcua\Client\Types\AddNodesResult;
 use PhpOpcua\Client\Types\AttributeId;
 use PhpOpcua\Client\Types\BrowseDirection;
 use PhpOpcua\Client\Types\BrowseResultSet;
@@ -808,6 +809,49 @@ class MockClient implements OpcUaClientInterface
         $this->record('historyReadAtTime', [$nodeId]);
 
         return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function addNodes(array $nodesToAdd): array
+    {
+        $this->record('addNodes', [$nodesToAdd]);
+
+        return array_map(
+            fn ($item) => new AddNodesResult(0, is_string($item['requestedNewNodeId']) ? NodeId::parse($item['requestedNewNodeId']) : $item['requestedNewNodeId']),
+            $nodesToAdd,
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function deleteNodes(array $nodesToDelete): array
+    {
+        $this->record('deleteNodes', [$nodesToDelete]);
+
+        return array_fill(0, count($nodesToDelete), 0);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function addReferences(array $referencesToAdd): array
+    {
+        $this->record('addReferences', [$referencesToAdd]);
+
+        return array_fill(0, count($referencesToAdd), 0);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function deleteReferences(array $referencesToDelete): array
+    {
+        $this->record('deleteReferences', [$referencesToDelete]);
+
+        return array_fill(0, count($referencesToDelete), 0);
     }
 
     /**

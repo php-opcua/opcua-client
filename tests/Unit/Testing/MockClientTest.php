@@ -471,6 +471,68 @@ describe('MockClient', function () {
         expect($mock->getServerSoftwareVersion())->toBe('1.0.0');
     });
 
+    it('addNodes returns default results with requested NodeIds', function () {
+        $mock = MockClient::create();
+        $results = $mock->addNodes([
+            [
+                'parentNodeId' => 'i=85',
+                'referenceTypeId' => 'i=35',
+                'requestedNewNodeId' => 'ns=2;i=1001',
+                'browseName' => new PhpOpcua\Client\Types\QualifiedName(2, 'Test'),
+                'nodeClass' => PhpOpcua\Client\Types\NodeClass::Object,
+                'typeDefinition' => 'i=58',
+            ],
+        ]);
+
+        expect($results)->toHaveCount(1);
+        expect($results[0])->toBeInstanceOf(PhpOpcua\Client\Types\AddNodesResult::class);
+        expect($results[0]->statusCode)->toBe(0);
+        expect((string) $results[0]->addedNodeId)->toBe('ns=2;i=1001');
+        expect($mock->callCount('addNodes'))->toBe(1);
+    });
+
+    it('deleteNodes returns status codes', function () {
+        $mock = MockClient::create();
+        $results = $mock->deleteNodes([
+            ['nodeId' => 'ns=2;i=1001'],
+            ['nodeId' => 'ns=2;i=1002'],
+        ]);
+
+        expect($results)->toBe([0, 0]);
+        expect($mock->callCount('deleteNodes'))->toBe(1);
+    });
+
+    it('addReferences returns status codes', function () {
+        $mock = MockClient::create();
+        $results = $mock->addReferences([
+            [
+                'sourceNodeId' => 'ns=2;i=1001',
+                'referenceTypeId' => 'i=35',
+                'isForward' => true,
+                'targetNodeId' => 'ns=2;i=1002',
+                'targetNodeClass' => PhpOpcua\Client\Types\NodeClass::Variable,
+            ],
+        ]);
+
+        expect($results)->toBe([0]);
+        expect($mock->callCount('addReferences'))->toBe(1);
+    });
+
+    it('deleteReferences returns status codes', function () {
+        $mock = MockClient::create();
+        $results = $mock->deleteReferences([
+            [
+                'sourceNodeId' => 'ns=2;i=1001',
+                'referenceTypeId' => 'i=35',
+                'isForward' => true,
+                'targetNodeId' => 'ns=2;i=1002',
+            ],
+        ]);
+
+        expect($results)->toBe([0]);
+        expect($mock->callCount('deleteReferences'))->toBe(1);
+    });
+
     it('onRead overrides BuildInfo in getServerBuildInfo', function () {
         $date = new DateTimeImmutable('2026-06-15T00:00:00Z');
         $mock = MockClient::create()

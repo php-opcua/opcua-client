@@ -29,6 +29,7 @@ composer require php-opcua/opcua-client
 - Path Resolution — resolve paths like /Objects/MyPLC/Temperature to NodeIds
 - Read/Write — single and multi operations with all OPC UA data types, automatic write type detection (read-before-write) with PSR-16 caching and type mismatch validation, configurable via setAutoDetectWriteType()
 - Server BuildInfo — getServerBuildInfo() returns BuildInfo DTO (productName, manufacturerName, softwareVersion, buildNumber, buildDate) in a single readMulti(). Individual methods: getServerProductName(), getServerManufacturerName(), getServerSoftwareVersion(), getServerBuildNumber(), getServerBuildDate()
+- Node Management — addNodes(), deleteNodes(), addReferences(), deleteReferences() for dynamic address space modification. addNodes() supports all 8 node classes with automatic ExtensionObject attribute encoding, returns AddNodesResult[]. Other methods return int[] status codes.
 - Method Call — invoke OPC UA methods, returns CallResult DTO
 - Subscriptions — data change and event monitoring, returns typed DTOs
 - History Read — raw, processed, and at-time historical queries
@@ -406,6 +407,45 @@ StatusCode::isGood($code);      // true if 0x0XXXXXXX
 StatusCode::isBad($code);       // true if 0x8XXXXXXX
 StatusCode::getName($code);     // e.g. "BadNodeIdUnknown"
 ```
+
+### Node Management
+
+For servers that support dynamic address space modification:
+
+```php
+use PhpOpcua\Client\Types\NodeClass;
+use PhpOpcua\Client\Types\QualifiedName;
+use PhpOpcua\Client\Types\NodeId;
+
+// Add nodes (supports all 8 node classes)
+$results = $client->addNodes([
+    [
+        'parentNodeId'       => 'i=85',
+        'referenceTypeId'    => 'i=35',
+        'requestedNewNodeId' => 'ns=2;s=MyVar',
+        'browseName'         => new QualifiedName(2, 'MyVar'),
+        'nodeClass'          => NodeClass::Variable,
+        'typeDefinition'     => 'i=63',
+        'dataType'           => NodeId::numeric(0, 6), // Int32
+    ],
+]);
+// $results[0]->statusCode, $results[0]->addedNodeId
+
+// Delete nodes
+$statusCodes = $client->deleteNodes([
+    ['nodeId' => 'ns=2;s=MyVar', 'deleteTargetReferences' => true],
+]);
+
+// Add/delete references
+$statusCodes = $client->addReferences([
+    ['sourceNodeId' => 'ns=2;s=A', 'referenceTypeId' => 'i=35', 'isForward' => true, 'targetNodeId' => 'ns=2;s=B', 'targetNodeClass' => NodeClass::Variable],
+]);
+$statusCodes = $client->deleteReferences([
+    ['sourceNodeId' => 'ns=2;s=A', 'referenceTypeId' => 'i=35', 'isForward' => true, 'targetNodeId' => 'ns=2;s=B', 'deleteBidirectional' => true],
+]);
+```
+
+AddNodesResult: public readonly statusCode (int), addedNodeId (NodeId).
 
 ---
 

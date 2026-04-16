@@ -1,12 +1,9 @@
 # Roadmap
 
-## v4.2.0 - 2026-03-X
+## v4.2.0 - 2026-04-X
 
-### Query Services
-`QueryFirst` / `QueryNext` — structured queries on the address space for servers where browse is too slow due to the size of the node tree.
-
-### NodeManagement Services
-`AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences` — for OPC UA servers that support dynamic address space modification at runtime. Requires adding a custom `HistoryReadRawModified`-style override in the test suite to support these services.
+### ~~NodeManagement Services~~ — Done
+`AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences` — implemented. See [CHANGELOG.md](CHANGELOG.md).
 
 > **Note:** The CLI tool has been extracted to a separate package: [`php-opcua/opcua-cli`](https://github.com/php-opcua/opcua-cli). CLI-related roadmap items are tracked there.
 
@@ -16,11 +13,41 @@
 
 - [ ] **PHPStan level 5** — static analysis with `phpstan/phpstan` as dev dependency, CI integration, and `composer analyse` script
 
+- [ ] **Kernel + ServiceModule architecture** — replace the trait-based Client with a modular system where each OPC UA service set (Browse, Read/Write, Subscriptions, History, NodeManagement, etc.) is a self-contained `ServiceModule` class. Breaking change.
+
+  **Why:** Today, adding a new service set (e.g., NodeManagement) requires touching 8 files: the module itself, Client.php (property + use trait), `initServices()`, `resetConnectionState()`, OpcUaClientInterface, and MockClient. Most of these changes are mechanical boilerplate. The trait-based service modules are already independent of each other — they just share a common infrastructure layer (transport, session, retry, encoding). This refactor makes that separation explicit.
+
+  **How it works:**
+  - **`ClientKernel`** — extracts the shared infrastructure that every service needs into a public API: `executeWithRetry()`, `ensureConnected()`, `nextRequestId()`, `send()`, `receive()`, `unwrapResponse()`, `createDecoder()`, `resolveNodeId()`, `getAuthToken()`, `dispatch()`, `logContext()`. The kernel traits (Connection, Handshake, SecureChannel, Session, EventDispatch, Cache, Batching, TrustStore) remain internal to the kernel.
+  - **`ServiceModule`** — abstract base class. Each module receives the kernel, implements `boot(SessionService)` to create its protocol service, `reset()` to clean up on disconnect, and exposes its public methods. One class = one OPC UA service set, fully self-contained.
+  - **`ModuleRegistry`** — manages module lifecycle. On connect, calls `boot()` on all modules. On disconnect, calls `reset()`. No more manual `initServices()` / `resetConnectionState()` lists to maintain.
+  - **`Client`** — becomes a thin proxy: `OpcUaClientInterface` methods are one-liner delegations to the appropriate module. The interface itself does not change — zero breaking change for consumers.
+  - **`MockClient`** — can internally use the same module system, or remain a standalone implementation of the interface.
+
+  **What changes for adding a new service set:**
+  - Today: 8 files (DTO, protocol service, trait, Client.php property + use, initServices, resetConnectionState, interface, MockClient).
+  - After: 3–4 files (DTO, protocol service, module class, interface signatures + Client one-liners).
+
+  **What changes for external developers:**
+  - `ClientBuilder::replaceModule(ReadWriteModule::class, MyCustomReadWrite::class)` — swap any built-in module with a custom implementation.
+  - `ClientBuilder::addModule(new MyQueryServiceModule())` — add entirely new service sets without forking.
+  - `$client->module(MyModule::class)->customMethod()` — access custom module methods.
+
 ---
 
-## TODO — outside this repository
+## v6.0.0
 
-- [ ] Symfony integration like Laravel — `php-opcua/symfony-opcua` (right after v4.0.0 release)
+### Query Services
+
+`QueryFirst` / `QueryNext` (OPC UA Part 4, Section 5.9) — structured queries on the server's address space, conceptually similar to a SQL `SELECT` with `WHERE` filters.
+
+**What it does:** Instead of browsing the address space node by node and filtering client-side, Query Services let the client describe a filter (node class, type definition, attribute constraints) and the server returns only the matching nodes. `QueryFirst` executes the query and returns the first page of results; `QueryNext` retrieves subsequent pages using a continuation point — the same pagination pattern as `Browse`/`BrowseNext`.
+
+**Example use case:** "Find all Variable nodes under `ns=2;s=Plant1` whose DataType is Double and DisplayName contains 'Temperature'." With Browse, this requires a recursive walk of potentially thousands of nodes and client-side filtering. With QueryFirst, the server does the work and returns only the matches.
+
+**When it matters:** Large address spaces with tens of thousands of nodes (typical in big industrial plants with hundreds of PLCs) where `browseRecursive` would be too slow or memory-intensive.
+
+**Why deferred:** Very few OPC UA servers implement Query Services in practice — most return `BadServiceUnsupported`. Even the OPC Foundation's UA-.NETStandard reference implementation has limited support. The `browseRecursive()` + client-side filtering approach covers the vast majority of real-world use cases. This will be implemented when server adoption makes it practically useful.
 
 ---
 

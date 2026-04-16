@@ -62,6 +62,7 @@ $client->disconnect();
 
 **Advanced**
 - Method calls on the server
+- Node management — add/delete nodes and references at runtime on servers that support it
 - Subscriptions with data change and event monitoring
 - History reads (raw, processed, at-time)
 - Endpoint discovery

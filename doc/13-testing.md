@@ -237,6 +237,10 @@ Operations without registered handlers return sensible defaults:
 | `historyRead*()` | `[]` |
 | `transferSubscriptions()` | `[TransferResult(0, [])]` per subscription ID |
 | `republish()` | `[]` |
+| `addNodes()` | `AddNodesResult[]` with Good status and echoed NodeIds |
+| `deleteNodes()` | `[0, ...]` (Good) |
+| `addReferences()` | `[0, ...]` (Good) |
+| `deleteReferences()` | `[0, ...]` (Good) |
 | `getServerProductName()` | `null` (delegates to `read('i=2262')`) |
 | `getServerManufacturerName()` | `null` (delegates to `read('i=2263')`) |
 | `getServerSoftwareVersion()` | `null` (delegates to `read('i=2264')`) |
