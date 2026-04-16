@@ -314,11 +314,11 @@ class MockClient implements OpcUaClientInterface
     /**
      * {@inheritDoc}
      */
-    public function getServerBuildDate(): ?\DateTimeImmutable
+    public function getServerBuildDate(): ?DateTimeImmutable
     {
         $value = $this->read(NodeId::numeric(0, 2266), AttributeId::Value)->getValue();
 
-        return $value instanceof \DateTimeImmutable ? $value : null;
+        return $value instanceof DateTimeImmutable ? $value : null;
     }
 
     /**
@@ -345,7 +345,7 @@ class MockClient implements OpcUaClientInterface
             manufacturerName: is_string($manufacturerName) ? $manufacturerName : null,
             softwareVersion: is_string($softwareVersion) ? $softwareVersion : null,
             buildNumber: is_string($buildNumber) ? $buildNumber : null,
-            buildDate: $buildDate instanceof \DateTimeImmutable ? $buildDate : null,
+            buildDate: $buildDate instanceof DateTimeImmutable ? $buildDate : null,
         );
     }
 
@@ -960,7 +960,7 @@ class MockClient implements OpcUaClientInterface
 
     private function registerDefaultBuildInfoHandlers(): void
     {
-        $buildDate = new \DateTimeImmutable('2026-01-01T00:00:00Z');
+        $buildDate = new DateTimeImmutable('2026-01-01T00:00:00Z');
 
         $this->readHandlers['i=2262'] = fn () => DataValue::ofString('MockServer');
         $this->readHandlers['i=2263'] = fn () => DataValue::ofString('php-opcua');

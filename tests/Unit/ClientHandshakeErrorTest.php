@@ -68,7 +68,10 @@ describe('Client handshake error handling', function () {
         } finally {
             pcntl_waitpid($pid, $status);
         }
-    });
+    })
+        // pcntl_fork() is a Unix-only extension, not available on Windows.
+        // This test spawns a child process to act as a mock OPC UA server.
+        ->skipOnWindows();
 
     it('throws ProtocolException when server sends unexpected message type during handshake', function () {
         [$server, $host, $port] = startMockServer(fn () => null);
@@ -97,7 +100,10 @@ describe('Client handshake error handling', function () {
         } finally {
             pcntl_waitpid($pid, $status);
         }
-    });
+    })
+        // pcntl_fork() is a Unix-only extension, not available on Windows.
+        // This test spawns a child process to act as a mock OPC UA server.
+        ->skipOnWindows();
 
     it('sets state to Broken when connect fails with ConnectionException', function () {
         $builder = new ClientBuilder();

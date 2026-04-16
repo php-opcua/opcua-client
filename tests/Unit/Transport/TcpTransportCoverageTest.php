@@ -138,5 +138,10 @@ describe('TcpTransport additional coverage', function () {
             ->toThrow(ConnectionException::class);
 
         $transport->close();
-    });
+    })
+        // On Windows, fwrite() to a socket whose remote end was closed does not
+        // fail immediately — the OS buffers the data and reports success. The
+        // ConnectionException is only raised on Linux/macOS where the broken pipe
+        // is detected synchronously.
+        ->skipOnWindows();
 });

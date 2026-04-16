@@ -298,4 +298,7 @@ describe('discoverServerCertificate error paths', function () {
             expect(true)->toBeTrue();
         }
     });
-});
+})
+    // All tests in this describe use discRunServer() which relies on pcntl_fork(),
+    // a Unix-only extension not available on Windows.
+    ->skipOnWindows();
