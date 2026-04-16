@@ -18,9 +18,9 @@
 </p>
 
 <p align="center">
-  <img src="https://custom-icon-badges.demolab.com/badge/Linux-✓-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux">
-  <img src="https://custom-icon-badges.demolab.com/badge/macOS-✓-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS">
-  <img src="https://custom-icon-badges.demolab.com/badge/Windows-✓-0078D4?style=flat-square&logo=windows11&logoColor=white" alt="Windows">
+  <img src="https://custom-icon-badges.demolab.com/badge/Linux-✓-2ea44f?style=flat-square&logo=linux&logoColor=white" alt="Linux">
+  <img src="https://custom-icon-badges.demolab.com/badge/macOS-✓-2ea44f?style=flat-square&logo=apple&logoColor=white" alt="macOS">
+  <img src="https://custom-icon-badges.demolab.com/badge/Windows-✓-2ea44f?style=flat-square&logo=windows11&logoColor=white" alt="Windows">
 </p>
 
 ---
