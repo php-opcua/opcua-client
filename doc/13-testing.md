@@ -237,6 +237,12 @@ Operations without registered handlers return sensible defaults:
 | `historyRead*()` | `[]` |
 | `transferSubscriptions()` | `[TransferResult(0, [])]` per subscription ID |
 | `republish()` | `[]` |
+| `getServerProductName()` | `null` (delegates to `read('i=2262')`) |
+| `getServerManufacturerName()` | `null` (delegates to `read('i=2263')`) |
+| `getServerSoftwareVersion()` | `null` (delegates to `read('i=2264')`) |
+| `getServerBuildNumber()` | `null` (delegates to `read('i=2265')`) |
+| `getServerBuildDate()` | `null` (delegates to `read('i=2266')`) |
+| `getServerBuildInfo()` | `BuildInfo(null, null, null, null, null)` (delegates to `readMulti()`) |
 
 ## Example: Testing a Service Class
 

@@ -429,6 +429,64 @@ describe('MockClient', function () {
         expect($result['sequenceNumber'])->toBe(5);
         expect($result['notifications'])->toBe([]);
     });
+
+    it('getServerProductName returns default', function () {
+        expect(MockClient::create()->getServerProductName())->toBe('MockServer');
+    });
+
+    it('getServerManufacturerName returns default', function () {
+        expect(MockClient::create()->getServerManufacturerName())->toBe('php-opcua');
+    });
+
+    it('getServerSoftwareVersion returns default', function () {
+        expect(MockClient::create()->getServerSoftwareVersion())->toBe('1.0.0');
+    });
+
+    it('getServerBuildNumber returns default', function () {
+        expect(MockClient::create()->getServerBuildNumber())->toBe('1');
+    });
+
+    it('getServerBuildDate returns default', function () {
+        expect(MockClient::create()->getServerBuildDate())->toBeInstanceOf(DateTimeImmutable::class);
+    });
+
+    it('getServerBuildInfo returns pre-populated BuildInfo', function () {
+        $info = MockClient::create()->getServerBuildInfo();
+
+        expect($info)->toBeInstanceOf(PhpOpcua\Client\Types\BuildInfo::class);
+        expect($info->productName)->toBe('MockServer');
+        expect($info->manufacturerName)->toBe('php-opcua');
+        expect($info->softwareVersion)->toBe('1.0.0');
+        expect($info->buildNumber)->toBe('1');
+        expect($info->buildDate)->toBeInstanceOf(DateTimeImmutable::class);
+    });
+
+    it('onRead overrides default BuildInfo handlers', function () {
+        $mock = MockClient::create()
+            ->onRead('i=2262', fn () => DataValue::ofString('CustomServer'))
+            ->onRead('i=2263', fn () => DataValue::ofString('Acme Corp'));
+
+        expect($mock->getServerProductName())->toBe('CustomServer');
+        expect($mock->getServerManufacturerName())->toBe('Acme Corp');
+        expect($mock->getServerSoftwareVersion())->toBe('1.0.0');
+    });
+
+    it('onRead overrides BuildInfo in getServerBuildInfo', function () {
+        $date = new DateTimeImmutable('2026-06-15T00:00:00Z');
+        $mock = MockClient::create()
+            ->onRead('i=2262', fn () => DataValue::ofString('CustomServer'))
+            ->onRead('i=2263', fn () => DataValue::ofString('Acme Corp'))
+            ->onRead('i=2264', fn () => DataValue::ofString('2.5.0'))
+            ->onRead('i=2265', fn () => DataValue::ofString('9876'))
+            ->onRead('i=2266', fn () => DataValue::ofDateTime($date));
+
+        $info = $mock->getServerBuildInfo();
+        expect($info->productName)->toBe('CustomServer');
+        expect($info->manufacturerName)->toBe('Acme Corp');
+        expect($info->softwareVersion)->toBe('2.5.0');
+        expect($info->buildNumber)->toBe('9876');
+        expect($info->buildDate)->toBe($date);
+    });
 });
 
 describe('DataValue factory methods', function () {
@@ -548,8 +606,8 @@ describe('MockClient: trust and cache methods', function () {
         $store = new PhpOpcua\Client\TrustStore\FileTrustStore($tmpDir);
         expect($mock->setTrustStore($store))->toBe($mock);
         expect($mock->getTrustStore())->toBe($store);
-        @rmdir($tmpDir . '/trusted');
-        @rmdir($tmpDir . '/rejected');
+        @rmdir($tmpDir . DIRECTORY_SEPARATOR . 'trusted');
+        @rmdir($tmpDir . DIRECTORY_SEPARATOR . 'rejected');
         @rmdir($tmpDir);
     });
 

@@ -18,6 +18,7 @@ use PhpOpcua\Client\Types\BrowseDirection;
 use PhpOpcua\Client\Types\BrowseNode;
 use PhpOpcua\Client\Types\BrowsePathResult;
 use PhpOpcua\Client\Types\BrowseResultSet;
+use PhpOpcua\Client\Types\BuildInfo;
 use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\CallResult;
 use PhpOpcua\Client\Types\ConnectionState;
@@ -210,6 +211,68 @@ interface OpcUaClientInterface
      * @see Encoding\DynamicCodec
      */
     public function discoverDataTypes(?int $namespaceIndex = null, bool $useCache = true): int;
+
+    /**
+     * Read the server's product name (ns=0;i=2262).
+     *
+     * @return ?string The product name, or null if the server returned no value.
+     *
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     */
+    public function getServerProductName(): ?string;
+
+    /**
+     * Read the server's manufacturer name (ns=0;i=2263).
+     *
+     * @return ?string The manufacturer name, or null if the server returned no value.
+     *
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     */
+    public function getServerManufacturerName(): ?string;
+
+    /**
+     * Read the server's software version string (ns=0;i=2264).
+     *
+     * @return ?string The software version, or null if the server returned no value.
+     *
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     */
+    public function getServerSoftwareVersion(): ?string;
+
+    /**
+     * Read the server's build number (ns=0;i=2265).
+     *
+     * @return ?string The build number, or null if the server returned no value.
+     *
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     */
+    public function getServerBuildNumber(): ?string;
+
+    /**
+     * Read the server's build date (ns=0;i=2266).
+     *
+     * @return ?DateTimeImmutable The build date, or null if the server returned no value.
+     *
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     */
+    public function getServerBuildDate(): ?DateTimeImmutable;
+
+    /**
+     * Read all BuildInfo fields in a single readMulti request.
+     *
+     * @return BuildInfo
+     *
+     * @throws ConnectionException If the connection is lost during the request.
+     * @throws ServiceException If the server returns an error response.
+     *
+     * @see BuildInfo
+     */
+    public function getServerBuildInfo(): BuildInfo;
 
     /**
      * Discover endpoints available at the given server URL.

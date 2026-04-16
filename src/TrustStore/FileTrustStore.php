@@ -20,15 +20,15 @@ class FileTrustStore implements TrustStoreInterface
     private string $rejectedDir;
 
     /**
-     * @param ?string $basePath Base directory for the trust store. Defaults to ~/.opcua.
+     * @param ?string $basePath Base directory for the trust store. Defaults to ~/.opcua on Unix, %APPDATA%\opcua on Windows.
      */
     public function __construct(?string $basePath = null)
     {
         $basePath ??= $this->defaultBasePath();
-        $basePath = rtrim($basePath, '/');
+        $basePath = rtrim($basePath, '/\\');
 
-        $this->trustedDir = $basePath . '/trusted';
-        $this->rejectedDir = $basePath . '/rejected';
+        $this->trustedDir = $basePath . DIRECTORY_SEPARATOR . 'trusted';
+        $this->rejectedDir = $basePath . DIRECTORY_SEPARATOR . 'rejected';
 
         $this->ensureDirectory($this->trustedDir);
         $this->ensureDirectory($this->rejectedDir);
@@ -87,7 +87,7 @@ class FileTrustStore implements TrustStoreInterface
      */
     public function getTrustedCertificates(): array
     {
-        $files = glob($this->trustedDir . '/*.der') ?: [];
+        $files = glob($this->trustedDir . DIRECTORY_SEPARATOR . '*.der') ?: [];
 
         $certificates = [];
         foreach ($files as $path) {
@@ -190,7 +190,7 @@ class FileTrustStore implements TrustStoreInterface
      */
     private function trustedPath(string $fingerprint): string
     {
-        return $this->trustedDir . '/' . $this->normalizeFingerprint($fingerprint) . '.der';
+        return $this->trustedDir . DIRECTORY_SEPARATOR . $this->normalizeFingerprint($fingerprint) . '.der';
     }
 
     /**
@@ -199,7 +199,7 @@ class FileTrustStore implements TrustStoreInterface
      */
     private function rejectedPath(string $fingerprint): string
     {
-        return $this->rejectedDir . '/' . $this->normalizeFingerprint($fingerprint) . '.der';
+        return $this->rejectedDir . DIRECTORY_SEPARATOR . $this->normalizeFingerprint($fingerprint) . '.der';
     }
 
     /**
@@ -282,6 +282,14 @@ class FileTrustStore implements TrustStoreInterface
      */
     private function defaultBasePath(): string
     {
-        return ($_SERVER['HOME'] ?? getenv('HOME') ?: sys_get_temp_dir()) . '/.opcua';
+        if (PHP_OS_FAMILY === 'Windows') {
+            $base = getenv('APPDATA') ?: getenv('LOCALAPPDATA') ?: sys_get_temp_dir();
+
+            return $base . DIRECTORY_SEPARATOR . 'opcua';
+        }
+
+        $base = $_SERVER['HOME'] ?? getenv('HOME') ?: sys_get_temp_dir();
+
+        return $base . DIRECTORY_SEPARATOR . '.opcua';
     }
 }

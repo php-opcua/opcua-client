@@ -28,6 +28,7 @@ composer require php-opcua/opcua-client
 - Browse — navigate the server address space, recursive browsing with automatic continuation
 - Path Resolution — resolve paths like /Objects/MyPLC/Temperature to NodeIds
 - Read/Write — single and multi operations with all OPC UA data types, automatic write type detection (read-before-write) with PSR-16 caching and type mismatch validation, configurable via setAutoDetectWriteType()
+- Server BuildInfo — getServerBuildInfo() returns BuildInfo DTO (productName, manufacturerName, softwareVersion, buildNumber, buildDate) in a single readMulti(). Individual methods: getServerProductName(), getServerManufacturerName(), getServerSoftwareVersion(), getServerBuildNumber(), getServerBuildDate()
 - Method Call — invoke OPC UA methods, returns CallResult DTO
 - Subscriptions — data change and event monitoring, returns typed DTOs
 - History Read — raw, processed, and at-time historical queries
@@ -335,6 +336,25 @@ $client->flushCache();
 
 ## 4. Reading & Writing Values
 
+### Server BuildInfo
+
+```php
+// All at once — single readMulti() call, returns BuildInfo DTO
+$info = $client->getServerBuildInfo();
+echo $info->productName;        // ?string  (ns=0;i=2262)
+echo $info->manufacturerName;   // ?string  (ns=0;i=2263)
+echo $info->softwareVersion;    // ?string  (ns=0;i=2264)
+echo $info->buildNumber;        // ?string  (ns=0;i=2265)
+echo $info->buildDate;          // ?DateTimeImmutable (ns=0;i=2266)
+
+// Individual fields
+$client->getServerProductName();        // ?string
+$client->getServerManufacturerName();   // ?string
+$client->getServerSoftwareVersion();    // ?string
+$client->getServerBuildNumber();        // ?string
+$client->getServerBuildDate();          // ?DateTimeImmutable
+```
+
 ### Read Single Value
 
 ```php
@@ -593,6 +613,7 @@ MonitoredItemResult: statusCode (int), monitoredItemId (int), revisedSamplingInt
 PublishResult: subscriptionId (int), sequenceNumber (int), moreNotifications (bool), notifications (array), availableSequenceNumbers (int[])
 TransferResult: statusCode (int), availableSequenceNumbers (int[])
 ExtensionObject: typeId (NodeId), encoding (int), body (?string), value (mixed); methods: isDecoded(), isRaw(). DataValue::getValue() auto-extracts decoded value when codec is registered.
+BuildInfo: productName (?string), manufacturerName (?string), softwareVersion (?string), buildNumber (?string), buildDate (?DateTimeImmutable)
 
 ---
 
@@ -877,6 +898,7 @@ Alarm-specific events are deduced from event notification fields:
 - PhpOpcua\Client\Types\BrowseResultSet — public readonly: references, continuationPoint
 - PhpOpcua\Client\Types\BrowsePathResult — public readonly: statusCode, targets
 - PhpOpcua\Client\Types\BrowsePathTarget — public readonly: targetId, remainingPathIndex
+- PhpOpcua\Client\Types\BuildInfo — public readonly: productName, manufacturerName, softwareVersion, buildNumber, buildDate
 - PhpOpcua\Client\Event\NullEventDispatcher — no-op PSR-14 dispatcher (default, zero overhead)
 - PhpOpcua\Client\Exception\WriteTypeDetectionException — thrown when write type cannot be auto-detected
 - PhpOpcua\Client\Exception\WriteTypeMismatchException — thrown when explicit write type mismatches detected type (public readonly: nodeId, expectedType, givenType)

@@ -1,4 +1,4 @@
-name: Integration Tests
+name: Tests
 
 on:
   push:
@@ -7,14 +7,45 @@ on:
     branches: [ main, master ]
 
 jobs:
+  unit:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        php-version: [ '8.2', '8.3', '8.4', '8.5' ]
+
+    name: Unit — PHP ${{ matrix.php-version }} (${{ matrix.os }})
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: openssl, sockets
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Check code style
+        if: matrix.os == 'ubuntu-latest' && matrix.php-version == '8.5'
+        run: composer format:check
+
+      - name: Run unit tests
+        run: vendor/bin/pest --exclude-group=integration
+
   integration:
     runs-on: ubuntu-latest
+    needs: unit
     strategy:
       fail-fast: false
       matrix:
         php-version: [ '8.2', '8.3', '8.4', '8.5' ]
 
-    name: PHP ${{ matrix.php-version }}
+    name: Integration — PHP ${{ matrix.php-version }}
 
     steps:
       - uses: actions/checkout@v6
@@ -28,10 +59,6 @@ jobs:
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist
-
-      - name: Check code style
-        if: matrix.php-version == '8.5'
-        run: composer format:check
 
       - name: Start OPC UA test servers
         id: opcua

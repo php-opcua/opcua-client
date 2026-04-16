@@ -158,6 +158,39 @@ $results = $client->readMulti([
 - Always check `$dv->statusCode` — `0` means Good, non-zero means the read failed or the value is uncertain
 - Use `StatusCode::isGood($dv->statusCode)` for proper status checking
 - Common well-known nodes: `i=2259` (ServerState), `i=2258` (CurrentTime), `i=2256` (ServerStatus), `i=85` (Objects folder)
+- Use `getServerBuildInfo()` to read all server build metadata in one call (see Server BuildInfo skill below)
+
+---
+
+## Skill: Server BuildInfo
+
+### When to use
+The user wants to identify the OPC UA server — product name, manufacturer, version, build number, or build date.
+
+### Code
+
+```php
+// All at once — single readMulti() call, returns BuildInfo DTO
+$info = $client->getServerBuildInfo();
+echo $info->productName;        // ?string  (ns=0;i=2262)
+echo $info->manufacturerName;   // ?string  (ns=0;i=2263)
+echo $info->softwareVersion;    // ?string  (ns=0;i=2264)
+echo $info->buildNumber;        // ?string  (ns=0;i=2265)
+echo $info->buildDate;          // ?DateTimeImmutable (ns=0;i=2266)
+
+// Individual fields (one server read each)
+$client->getServerProductName();        // ?string
+$client->getServerManufacturerName();   // ?string
+$client->getServerSoftwareVersion();    // ?string
+$client->getServerBuildNumber();        // ?string
+$client->getServerBuildDate();          // ?DateTimeImmutable
+```
+
+### Important rules
+- These nodes are **mandatory on every OPC UA server** — they always exist
+- `getServerBuildInfo()` is more efficient than calling individual methods — it reads all 5 nodes in a single `readMulti()` request
+- Returns `null` for any field the server does not populate
+- `BuildInfo` is a `readonly` DTO with 5 public properties
 
 ---
 

@@ -13,6 +13,7 @@ use PhpOpcua\Client\Client\ManagesHandshakeTrait;
 use PhpOpcua\Client\Client\ManagesHistoryTrait;
 use PhpOpcua\Client\Client\ManagesReadWriteTrait;
 use PhpOpcua\Client\Client\ManagesSecureChannelTrait;
+use PhpOpcua\Client\Client\ManagesServerInfoTrait;
 use PhpOpcua\Client\Client\ManagesSessionTrait;
 use PhpOpcua\Client\Client\ManagesSubscriptionsTrait;
 use PhpOpcua\Client\Client\ManagesTranslateBrowsePathTrait;
@@ -67,6 +68,7 @@ class Client implements OpcUaClientInterface
     use ManagesSessionTrait;
     use ManagesBrowseTrait;
     use ManagesReadWriteTrait;
+    use ManagesServerInfoTrait;
     use ManagesSubscriptionsTrait;
     use ManagesHistoryTrait;
     use ManagesTypeDiscoveryTrait;

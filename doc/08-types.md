@@ -557,6 +557,24 @@ Returned per subscription by `transferSubscriptions()`. See [Subscriptions](06-s
 
 ---
 
+### BuildInfo
+
+Returned by `getServerBuildInfo()`. Contains metadata about the connected server's software.
+
+```php
+use PhpOpcua\Client\Types\BuildInfo;
+```
+
+| Property | Type | Description |
+|---|---|---|
+| `$info->productName` | `?string` | Server product name (ns=0;i=2262) |
+| `$info->manufacturerName` | `?string` | Server manufacturer (ns=0;i=2263) |
+| `$info->softwareVersion` | `?string` | Software version string (ns=0;i=2264) |
+| `$info->buildNumber` | `?string` | Build number (ns=0;i=2265) |
+| `$info->buildDate` | `?DateTimeImmutable` | Build date (ns=0;i=2266) |
+
+---
+
 ## Type Discovery
 
 ### StructureField

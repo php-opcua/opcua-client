@@ -25,7 +25,7 @@ class FileCache implements CacheInterface
      */
     public function __construct(string $directory, int $defaultTtl = 300)
     {
-        $this->directory = rtrim($directory, '/');
+        $this->directory = rtrim($directory, '/\\');
         $this->defaultTtl = $defaultTtl;
 
         if (! is_dir($this->directory)) {
@@ -97,7 +97,7 @@ class FileCache implements CacheInterface
      */
     public function clear(): bool
     {
-        $files = glob($this->directory . '/*.cache') ?: [];
+        $files = glob($this->directory . DIRECTORY_SEPARATOR . '*.cache') ?: [];
         foreach ($files as $file) {
             @unlink($file);
         }
@@ -191,7 +191,7 @@ class FileCache implements CacheInterface
      */
     private function path(string $key): string
     {
-        return $this->directory . '/' . sha1($key) . '.cache';
+        return $this->directory . DIRECTORY_SEPARATOR . sha1($key) . '.cache';
     }
 
     /**

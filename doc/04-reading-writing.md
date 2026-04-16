@@ -1,5 +1,29 @@
 # Reading & Writing Values
 
+## Server BuildInfo
+
+Every OPC UA server exposes build metadata under standard well-known nodes. The client provides convenience methods to read them without memorizing NodeIds:
+
+```php
+// Individual fields
+$client->getServerProductName();        // ?string  (ns=0;i=2262)
+$client->getServerManufacturerName();   // ?string  (ns=0;i=2263)
+$client->getServerSoftwareVersion();    // ?string  (ns=0;i=2264)
+$client->getServerBuildNumber();        // ?string  (ns=0;i=2265)
+$client->getServerBuildDate();          // ?DateTimeImmutable (ns=0;i=2266)
+
+// All at once — single readMulti() call
+$info = $client->getServerBuildInfo();
+
+echo $info->productName;        // e.g. "UA-.NETStandard"
+echo $info->manufacturerName;   // e.g. "OPC Foundation"
+echo $info->softwareVersion;    // e.g. "1.5.374.126"
+echo $info->buildNumber;        // e.g. "1.5.374.126"
+echo $info->buildDate;          // DateTimeImmutable
+```
+
+`getServerBuildInfo()` returns a `BuildInfo` readonly DTO. Individual methods return `null` when the server provides no value for that field.
+
 ## Reading a Value
 
 ```php

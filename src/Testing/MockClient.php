@@ -19,6 +19,7 @@ use PhpOpcua\Client\TrustStore\TrustStoreInterface;
 use PhpOpcua\Client\Types\AttributeId;
 use PhpOpcua\Client\Types\BrowseDirection;
 use PhpOpcua\Client\Types\BrowseResultSet;
+use PhpOpcua\Client\Types\BuildInfo;
 use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\CallResult;
 use PhpOpcua\Client\Types\ConnectionState;
@@ -106,6 +107,8 @@ class MockClient implements OpcUaClientInterface
         $this->logger = new NullLogger();
         $this->eventDispatcher = new NullEventDispatcher();
         $this->repository = new ExtensionObjectRepository();
+
+        $this->registerDefaultBuildInfoHandlers();
     }
 
     /**
@@ -266,6 +269,84 @@ class MockClient implements OpcUaClientInterface
     public function getConnectionState(): ConnectionState
     {
         return $this->state;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getServerProductName(): ?string
+    {
+        $value = $this->read(NodeId::numeric(0, 2262), AttributeId::Value)->getValue();
+
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getServerManufacturerName(): ?string
+    {
+        $value = $this->read(NodeId::numeric(0, 2263), AttributeId::Value)->getValue();
+
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getServerSoftwareVersion(): ?string
+    {
+        $value = $this->read(NodeId::numeric(0, 2264), AttributeId::Value)->getValue();
+
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getServerBuildNumber(): ?string
+    {
+        $value = $this->read(NodeId::numeric(0, 2265), AttributeId::Value)->getValue();
+
+        return is_string($value) ? $value : null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getServerBuildDate(): ?\DateTimeImmutable
+    {
+        $value = $this->read(NodeId::numeric(0, 2266), AttributeId::Value)->getValue();
+
+        return $value instanceof \DateTimeImmutable ? $value : null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getServerBuildInfo(): BuildInfo
+    {
+        $results = $this->readMulti([
+            ['nodeId' => NodeId::numeric(0, 2262)],
+            ['nodeId' => NodeId::numeric(0, 2263)],
+            ['nodeId' => NodeId::numeric(0, 2264)],
+            ['nodeId' => NodeId::numeric(0, 2265)],
+            ['nodeId' => NodeId::numeric(0, 2266)],
+        ]);
+
+        $productName = $results[0]->getValue();
+        $manufacturerName = $results[1]->getValue();
+        $softwareVersion = $results[2]->getValue();
+        $buildNumber = $results[3]->getValue();
+        $buildDate = $results[4]->getValue();
+
+        return new BuildInfo(
+            productName: is_string($productName) ? $productName : null,
+            manufacturerName: is_string($manufacturerName) ? $manufacturerName : null,
+            softwareVersion: is_string($softwareVersion) ? $softwareVersion : null,
+            buildNumber: is_string($buildNumber) ? $buildNumber : null,
+            buildDate: $buildDate instanceof \DateTimeImmutable ? $buildDate : null,
+        );
     }
 
     /**
@@ -875,5 +956,16 @@ class MockClient implements OpcUaClientInterface
         }
 
         return $nodeId->__toString();
+    }
+
+    private function registerDefaultBuildInfoHandlers(): void
+    {
+        $buildDate = new \DateTimeImmutable('2026-01-01T00:00:00Z');
+
+        $this->readHandlers['i=2262'] = fn () => DataValue::ofString('MockServer');
+        $this->readHandlers['i=2263'] = fn () => DataValue::ofString('php-opcua');
+        $this->readHandlers['i=2264'] = fn () => DataValue::ofString('1.0.0');
+        $this->readHandlers['i=2265'] = fn () => DataValue::ofString('1');
+        $this->readHandlers['i=2266'] = fn () => DataValue::ofDateTime($buildDate);
     }
 }

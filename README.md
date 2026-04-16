@@ -115,6 +115,21 @@ foreach ($results as $dataValue) {
 
 > **Tip:** You can also pass an array to `readMulti([...])` -- the builder is just a fluent alternative.
 
+### Get server info
+
+```php
+// All at once
+$info = $client->getServerBuildInfo();
+echo $info->productName;        // e.g. "UA-.NETStandard"
+echo $info->manufacturerName;   // e.g. "OPC Foundation"
+echo $info->softwareVersion;    // e.g. "1.5.374.126"
+
+// Or individual fields
+$client->getServerProductName();        // ?string
+$client->getServerSoftwareVersion();    // ?string
+$client->getServerBuildDate();          // ?DateTimeImmutable
+```
+
 ### Resolve a path and read a value
 
 ```php
@@ -426,6 +441,7 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 | **Browse** | Navigate the address space — recursive, automatic continuation, tree building |
 | **Path Resolution** | Resolve `/Objects/MyPLC/Temperature` to a NodeId in one call |
 | **Read / Write** | Single and multi operations, all OPC UA data types, automatic type detection with caching |
+| **Server BuildInfo** | `getServerBuildInfo()` returns product name, manufacturer, version, build number, and build date in one call |
 | **Method Call** | Invoke server methods with typed arguments and results |
 | **Subscriptions** | Data change and event monitoring with publish/acknowledge, modify monitored items, conditional triggering |
 | **Transfer & Recovery** | Transfer subscriptions across sessions and republish unacknowledged notifications |

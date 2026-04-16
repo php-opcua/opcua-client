@@ -39,7 +39,7 @@ function cleanupTrustStore(FileTrustStore $store): void
 {
     $dirs = [$store->getTrustedDir(), $store->getRejectedDir()];
     foreach ($dirs as $dir) {
-        $files = glob($dir . '/*.der') ?: [];
+        $files = glob($dir . DIRECTORY_SEPARATOR . '*.der') ?: [];
         foreach ($files as $file) {
             @unlink($file);
         }
@@ -105,7 +105,7 @@ describe('FileTrustStore', function () {
         $store->reject($cert);
 
         $fingerprint = sha1($cert);
-        $rejectedPath = $store->getRejectedDir() . '/' . $fingerprint . '.der';
+        $rejectedPath = $store->getRejectedDir() . DIRECTORY_SEPARATOR . $fingerprint . '.der';
         expect(file_exists($rejectedPath))->toBeTrue();
 
         cleanupTrustStore($store);
@@ -117,7 +117,7 @@ describe('FileTrustStore', function () {
         $store->reject($cert);
 
         $fingerprint = sha1($cert);
-        $rejectedPath = $store->getRejectedDir() . '/' . $fingerprint . '.der';
+        $rejectedPath = $store->getRejectedDir() . DIRECTORY_SEPARATOR . $fingerprint . '.der';
         expect(file_exists($rejectedPath))->toBeTrue();
 
         $store->trust($cert);
@@ -257,7 +257,7 @@ describe('FileTrustStore::getTrustedCertificates', function () {
         $store->trust($cert);
 
         // Remove the trusted directory to force glob() to return false
-        array_map('unlink', glob($store->getTrustedDir() . '/*.der') ?: []);
+        array_map('unlink', glob($store->getTrustedDir() . DIRECTORY_SEPARATOR . '*.der') ?: []);
         rmdir($store->getTrustedDir());
 
         $certs = $store->getTrustedCertificates();
@@ -274,7 +274,7 @@ describe('FileTrustStore::getTrustedCertificates', function () {
         $store->trust($cert);
 
         // Add a second .der file that is unreadable
-        $unreadablePath = $store->getTrustedDir() . '/' . sha1('fake') . '.der';
+        $unreadablePath = $store->getTrustedDir() . DIRECTORY_SEPARATOR . sha1('fake') . '.der';
         file_put_contents($unreadablePath, 'data');
         chmod($unreadablePath, 0000);
 
@@ -294,13 +294,13 @@ describe('FileTrustStore::getTrustedCertificates', function () {
         $store->trust($cert);
 
         // Place a non-.der file in the trusted directory
-        file_put_contents($store->getTrustedDir() . '/notes.txt', 'not a cert');
+        file_put_contents($store->getTrustedDir() . DIRECTORY_SEPARATOR . 'notes.txt', 'not a cert');
 
         $certs = $store->getTrustedCertificates();
         expect($certs)->toHaveCount(1);
 
         // Cleanup extra file
-        @unlink($store->getTrustedDir() . '/notes.txt');
+        @unlink($store->getTrustedDir() . DIRECTORY_SEPARATOR . 'notes.txt');
         cleanupTrustStore($store);
     });
 
@@ -310,7 +310,7 @@ describe('FileTrustStore::getTrustedCertificates', function () {
         // Write invalid data directly as a .der file
         $fakeDer = 'this-is-not-a-valid-certificate';
         $fingerprint = sha1($fakeDer);
-        file_put_contents($store->getTrustedDir() . '/' . $fingerprint . '.der', $fakeDer);
+        file_put_contents($store->getTrustedDir() . DIRECTORY_SEPARATOR . $fingerprint . '.der', $fakeDer);
 
         $certs = $store->getTrustedCertificates();
         expect($certs)->toHaveCount(1);
@@ -416,7 +416,7 @@ describe('FileTrustStore validation', function () {
         $store->trust($cert);
 
         $fingerprint = sha1($cert);
-        $trustedPath = $store->getTrustedDir() . '/' . $fingerprint . '.der';
+        $trustedPath = $store->getTrustedDir() . DIRECTORY_SEPARATOR . $fingerprint . '.der';
 
         $expiredCert = generateExpiredTestCert();
         $store->trust($expiredCert);
@@ -563,8 +563,13 @@ describe('FileTrustStore validation', function () {
 
     it('uses default base path when none provided', function () {
         $store = new FileTrustStore();
-        $home = $_SERVER['HOME'] ?? getenv('HOME') ?: sys_get_temp_dir();
-        expect($store->getTrustedDir())->toContain('.opcua/trusted');
+        if (PHP_OS_FAMILY === 'Windows') {
+            $home = getenv('APPDATA') ?: getenv('LOCALAPPDATA') ?: sys_get_temp_dir();
+            expect($store->getTrustedDir())->toContain('opcua' . DIRECTORY_SEPARATOR . 'trusted');
+        } else {
+            $home = $_SERVER['HOME'] ?? getenv('HOME') ?: sys_get_temp_dir();
+            expect($store->getTrustedDir())->toContain('.opcua' . DIRECTORY_SEPARATOR . 'trusted');
+        }
         expect(str_starts_with($store->getTrustedDir(), $home))->toBeTrue();
     });
 

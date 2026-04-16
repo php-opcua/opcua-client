@@ -26,7 +26,7 @@ function createTestTrustStore(): FileTrustStore
 function cleanupStore(FileTrustStore $store): void
 {
     foreach ([$store->getTrustedDir(), $store->getRejectedDir()] as $dir) {
-        foreach (glob($dir . '/*.der') ?: [] as $f) {
+        foreach (glob($dir . DIRECTORY_SEPARATOR . '*.der') ?: [] as $f) {
             @unlink($f);
         }
         @rmdir($dir);
@@ -151,7 +151,7 @@ describe('ManagesTrustStoreTrait on Client', function () {
         expect($dispatcher->hasEvent(ServerCertificateRejected::class))->toBeTrue();
 
         $fingerprint = sha1($cert);
-        $rejectedPath = $store->getRejectedDir() . '/' . $fingerprint . '.der';
+        $rejectedPath = $store->getRejectedDir() . DIRECTORY_SEPARATOR . $fingerprint . '.der';
         expect(file_exists($rejectedPath))->toBeTrue();
 
         cleanupStore($store);
@@ -298,8 +298,8 @@ describe('ManagesTrustStoreRuntimeTrait on Client', function () {
         expect($events[0])->toBeInstanceOf(PhpOpcua\Client\Event\ServerCertificateManuallyTrusted::class);
 
         array_map('unlink', glob($tmpDir . '/trusted/*') ?: []);
-        @rmdir($tmpDir . '/trusted');
-        @rmdir($tmpDir . '/rejected');
+        @rmdir($tmpDir . DIRECTORY_SEPARATOR . 'trusted');
+        @rmdir($tmpDir . DIRECTORY_SEPARATOR . 'rejected');
         @rmdir($tmpDir);
     });
 
@@ -334,8 +334,8 @@ describe('ManagesTrustStoreRuntimeTrait on Client', function () {
         expect($events)->not->toBeEmpty();
         expect($events[0])->toBeInstanceOf(PhpOpcua\Client\Event\ServerCertificateRemoved::class);
 
-        @rmdir($tmpDir . '/trusted');
-        @rmdir($tmpDir . '/rejected');
+        @rmdir($tmpDir . DIRECTORY_SEPARATOR . 'trusted');
+        @rmdir($tmpDir . DIRECTORY_SEPARATOR . 'rejected');
         @rmdir($tmpDir);
     });
 });

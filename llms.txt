@@ -21,6 +21,7 @@ A PHP library for connecting to OPC UA servers (industrial automation protocol).
 - Browse: recursive browsing, automatic continuation, tree building
 - Path Resolution: resolve human-readable paths like /Objects/MyPLC/Temperature to NodeIds
 - Read/Write: single and multi operations with all OPC UA data types, automatic write type detection (read-before-write) with PSR-16 caching and type mismatch validation
+- Server BuildInfo: getServerBuildInfo() returns BuildInfo DTO (productName, manufacturerName, softwareVersion, buildNumber, buildDate) in a single readMulti() call. Individual methods: getServerProductName(), getServerManufacturerName(), getServerSoftwareVersion(), getServerBuildNumber(), getServerBuildDate()
 - Method Call: invoke OPC UA methods with typed arguments, returns CallResult DTO
 - Subscriptions: data change and event monitoring, returns SubscriptionResult/PublishResult DTOs
 - Transfer & Recovery: transferSubscriptions() and republish() for session migration and notification re-delivery
@@ -172,6 +173,7 @@ $client = ClientBuilder::create()
 - PhpOpcua\Client\Types\BrowseResultSet — public readonly: references, continuationPoint
 - PhpOpcua\Client\Types\BrowsePathResult — public readonly: statusCode, targets
 - PhpOpcua\Client\Types\BrowsePathTarget — public readonly: targetId, remainingPathIndex
+- PhpOpcua\Client\Types\BuildInfo — public readonly: productName, manufacturerName, softwareVersion, buildNumber, buildDate
 - PhpOpcua\Client\Security\SecurityPolicy — enum of 10 security policies (6 RSA + 4 ECC)
 - PhpOpcua\Client\Security\SecurityMode — enum (None, Sign, SignAndEncrypt)
 - PhpOpcua\Client\Encoding\ExtensionObjectCodec — interface for custom type codecs

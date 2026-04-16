@@ -1,5 +1,24 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **Server BuildInfo convenience methods.** Six new methods on `OpcUaClientInterface` for quick access to standard OPC UA Server BuildInfo nodes (mandatory on every server):
+  - `getServerProductName()` — reads `ns=0;i=2262`, returns `?string`
+  - `getServerManufacturerName()` — reads `ns=0;i=2263`, returns `?string`
+  - `getServerSoftwareVersion()` — reads `ns=0;i=2264`, returns `?string`
+  - `getServerBuildNumber()` — reads `ns=0;i=2265`, returns `?string`
+  - `getServerBuildDate()` — reads `ns=0;i=2266`, returns `?DateTimeImmutable`
+  - `getServerBuildInfo()` — reads all five nodes in a single `readMulti()` call, returns a `BuildInfo` DTO
+- **New `BuildInfo` readonly DTO** (`PhpOpcua\Client\Types\BuildInfo`) with five public properties: `productName`, `manufacturerName`, `softwareVersion`, `buildNumber`, `buildDate`.
+- **New `ManagesServerInfoTrait`** (`src/Client/ManagesServerInfoTrait.php`) encapsulating the server info logic.
+- **MockClient** supports all six server info methods — they delegate to `read()`/`readMulti()` handlers, so existing `onRead('i=2262', ...)` registrations work automatically.
+
+### Fixed
+
+- **Windows compatibility for `FileTrustStore` and `FileCache`.** Replaced all hardcoded `/` path separators with `DIRECTORY_SEPARATOR` in both classes. `FileTrustStore::defaultBasePath()` now detects Windows via `PHP_OS_FAMILY` and uses `%APPDATA%\opcua` (with `%LOCALAPPDATA%` and `sys_get_temp_dir()` fallbacks) instead of the Unix-only `~/.opcua`. `rtrim()` calls now strip both `/` and `\` to handle paths from either OS. All affected test files updated accordingly.
+
 ## [v4.1.1] - 2026-04-13
 
 ### Fixed

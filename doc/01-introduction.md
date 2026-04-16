@@ -56,6 +56,7 @@ $client->disconnect();
 
 **Read & Write**
 - Read and write node attributes, single or multi
+- Server BuildInfo — `getServerBuildInfo()` returns product name, manufacturer, version, build number, and build date in one call
 - Automatic batching when the server imposes per-request limits
 - Human-readable NodeId strings — all methods accept `'i=2259'` or `'ns=2;s=MyNode'` in addition to NodeId objects
 

@@ -317,7 +317,7 @@ describe('FileCache', function () {
     });
 
     afterEach(function () {
-        $files = glob($this->cacheDir . '/*.cache');
+        $files = glob($this->cacheDir . DIRECTORY_SEPARATOR . '*.cache');
         if ($files) {
             foreach ($files as $file) {
                 @unlink($file);
@@ -399,7 +399,7 @@ describe('FileCache', function () {
 
     it('handles corrupted cache files gracefully', function () {
         $this->cache->set('corrupt', 'good-value');
-        $path = $this->cacheDir . '/' . sha1('corrupt') . '.cache';
+        $path = $this->cacheDir . DIRECTORY_SEPARATOR . sha1('corrupt') . '.cache';
         file_put_contents($path, 'not-valid-serialized-data');
         expect($this->cache->get('corrupt', 'default-val'))->toBe('default-val');
     });
@@ -410,7 +410,7 @@ describe('FileCache', function () {
 
     it('expires entries after TTL', function () {
         $this->cache->set('expiring', 'value', 1);
-        $path = $this->cacheDir . '/' . sha1('expiring') . '.cache';
+        $path = $this->cacheDir . DIRECTORY_SEPARATOR . sha1('expiring') . '.cache';
         $entry = unserialize(file_get_contents($path));
         $entry['expiresAt'] = time() - 10;
         file_put_contents($path, serialize($entry));
@@ -454,7 +454,7 @@ describe('ManagesCacheTrait / Client integration', function () {
         setCacheClientProperty($client, 'cache', $fileCache);
         setCacheClientProperty($client, 'cacheInitialized', true);
         expect($client->getCache())->toBe($fileCache);
-        @array_map('unlink', glob($cacheDir . '/*.cache') ?: []);
+        @array_map('unlink', glob($cacheDir . DIRECTORY_SEPARATOR . '*.cache') ?: []);
         @rmdir($cacheDir);
     });
 
@@ -574,7 +574,7 @@ describe('ManagesCacheTrait / Client integration', function () {
         $client->browse(NodeId::numeric(0, 85), useCache: true);
         $client->invalidateCache(NodeId::numeric(0, 85));
 
-        @array_map('unlink', glob($cacheDir . '/*.cache') ?: []);
+        @array_map('unlink', glob($cacheDir . DIRECTORY_SEPARATOR . '*.cache') ?: []);
         @rmdir($cacheDir);
         expect(true)->toBeTrue();
     });
@@ -584,7 +584,7 @@ describe('ManagesCacheTrait / Client integration', function () {
         $cache = new FileCache($newDir, 300);
         $cache->set('testKey', 'testValue');
         expect($cache->get('testKey'))->toBe('testValue');
-        @array_map('unlink', glob($newDir . '/*.cache') ?: []);
+        @array_map('unlink', glob($newDir . DIRECTORY_SEPARATOR . '*.cache') ?: []);
         @rmdir($newDir);
     });
 
@@ -617,7 +617,7 @@ describe('ManagesCacheTrait / Client integration', function () {
         $cache->set('testKey', 'testValue');
         expect(is_dir($dir))->toBeTrue();
         expect($cache->get('testKey'))->toBe('testValue');
-        @array_map('unlink', glob($dir . '/*.cache') ?: []);
+        @array_map('unlink', glob($dir . DIRECTORY_SEPARATOR . '*.cache') ?: []);
         @rmdir($dir);
     });
 
