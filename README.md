@@ -17,6 +17,12 @@
   <a href="LICENSE"><img src="https://img.shields.io/github/license/php-opcua/opcua-client?style=flat-square" alt="License"></a>
 </p>
 
+<p align="center">
+  <img src="https://custom-icon-badges.demolab.com/badge/Linux-✓-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux">
+  <img src="https://custom-icon-badges.demolab.com/badge/macOS-✓-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS">
+  <img src="https://custom-icon-badges.demolab.com/badge/Windows-✓-0078D4?style=flat-square&logo=windows11&logoColor=white" alt="Windows">
+</p>
+
 ---
 
 Connect your PHP application directly to industrial PLCs, SCADA systems, sensors, historians, and IoT devices using the [OPC UA](https://opcfoundation.org/about/opc-technologies/opc-ua/) standard — without any C/C++ extensions, HTTP gateways, or middleware in between.
@@ -48,7 +54,7 @@ All of this with zero external dependencies beyond `ext-openssl`, and full suppo
 
 This library is integration-tested against **[UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard)** — the **reference implementation** maintained by the OPC Foundation, the organization that defines the OPC UA specification. This is the same stack used by major industrial vendors to certify their products.
 
-1300+ tests (1040+ unit, 250+ integration) run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec — with 99%+ unit test code coverage.
+1300+ tests (1040+ unit, 250+ integration) run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec — with 99%+ unit test code coverage. Unit tests run on **Linux, macOS, and Windows** across PHP 8.2–8.5.
 
 **This library is already used in production with real industrial equipment** in factory automation and process control environments.
 
@@ -428,8 +434,8 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 - **Full security stack** — 10 policies: 6 RSA up to Aes256Sha256RsaPss + 4 ECC (NIST and Brainpool), 3 auth modes, auto-generated certs, persistent certificate trust store with TOFU.
 - **Industrial-ready** — server certificate trust management, alarm event deduction, subscription recovery, auto-retry — built for certified industrial deployments.
 - **Batteries included** — browse, read, write, call, subscriptions, events, history, path resolution, batching, retry, CLI tool.
-- **Cross-platform** — Linux, macOS, Windows. No FFI, no COM.
-- **Thoroughly tested** — 1300+ tests (1040+ unit, 250+ integration), 99%+ unit test code coverage across PHP 8.2, 8.3, 8.4, and 8.5.
+- **Cross-platform** — tested on Linux, macOS, and Windows via CI. No FFI, no COM. Uses `DIRECTORY_SEPARATOR` and platform-aware defaults throughout.
+- **Thoroughly tested** — 1300+ tests (1040+ unit, 250+ integration), 99%+ unit test code coverage across PHP 8.2, 8.3, 8.4, and 8.5 on all three platforms.
 - **Typed everywhere** — all service responses return `public readonly` DTOs, not arrays.
 - **Session persistence** — keep OPC UA connections alive across PHP requests via [`opcua-session-manager`](https://github.com/php-opcua/opcua-session-manager).
 - **Laravel-ready** — drop-in via [`opcua-laravel-client`](https://github.com/php-opcua/laravel-opcua).

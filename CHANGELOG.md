@@ -13,11 +13,17 @@
   - `getServerBuildInfo()` — reads all five nodes in a single `readMulti()` call, returns a `BuildInfo` DTO
 - **New `BuildInfo` readonly DTO** (`PhpOpcua\Client\Types\BuildInfo`) with five public properties: `productName`, `manufacturerName`, `softwareVersion`, `buildNumber`, `buildDate`.
 - **New `ManagesServerInfoTrait`** (`src/Client/ManagesServerInfoTrait.php`) encapsulating the server info logic.
-- **MockClient** supports all six server info methods — they delegate to `read()`/`readMulti()` handlers, so existing `onRead('i=2262', ...)` registrations work automatically.
+- **MockClient** supports all six server info methods with **pre-populated defaults** (`MockServer`, `php-opcua`, `1.0.0`, `1`, `2026-01-01`). Override any field via `onRead('i=2262', ...)` — same pattern as all other mock nodes.
 
 ### Fixed
 
 - **Windows compatibility for `FileTrustStore` and `FileCache`.** Replaced all hardcoded `/` path separators with `DIRECTORY_SEPARATOR` in both classes. `FileTrustStore::defaultBasePath()` now detects Windows via `PHP_OS_FAMILY` and uses `%APPDATA%\opcua` (with `%LOCALAPPDATA%` and `sys_get_temp_dir()` fallbacks) instead of the Unix-only `~/.opcua`. `rtrim()` calls now strip both `/` and `\` to handle paths from either OS. All affected test files updated accordingly.
+- **Windows test compatibility.** Added `->skipOnWindows()` to 8 unit tests that rely on `pcntl_fork()` (Unix-only extension) or platform-specific socket behavior (`fwrite()` on a closed socket does not fail immediately on Windows). Affected files: `ClientHandshakeErrorTest.php` (2 tests), `ClientDiscoveryCoverageTest.php` (5 tests), `TcpTransportCoverageTest.php` (1 test).
+
+### Changed
+
+- **CI workflow now tests on macOS and Windows.** Unit tests run on `ubuntu-latest`, `macos-latest`, and `windows-latest` across PHP 8.2–8.5 (12 combinations). Integration tests remain Ubuntu-only (require Docker for OPC UA test servers).
+- **Updated `codecov/codecov-action` from v5 to v6** to resolve Node.js 20 deprecation warnings on GitHub Actions runners.
 
 ## [v4.1.1] - 2026-04-13
 
