@@ -179,15 +179,23 @@ describe('Core + module DTO round-trip', function () {
 
     it('BrowseNode with children', function () {
         $rd = new ReferenceDescription(
-            NodeId::numeric(0, 35), true, NodeId::numeric(0, 85),
-            new QualifiedName(0, 'Objects'), new LocalizedText('en', 'Objects'),
-            NodeClass::Object, null,
+            NodeId::numeric(0, 35),
+            true,
+            NodeId::numeric(0, 85),
+            new QualifiedName(0, 'Objects'),
+            new LocalizedText('en', 'Objects'),
+            NodeClass::Object,
+            null,
         );
         $parent = new BrowseNode($rd);
         $child = new BrowseNode(new ReferenceDescription(
-            NodeId::numeric(0, 35), true, NodeId::numeric(0, 2253),
-            new QualifiedName(0, 'Server'), new LocalizedText('en', 'Server'),
-            NodeClass::Object, null,
+            NodeId::numeric(0, 35),
+            true,
+            NodeId::numeric(0, 2253),
+            new QualifiedName(0, 'Server'),
+            new LocalizedText('en', 'Server'),
+            NodeClass::Object,
+            null,
         ));
         $parent->addChild($child);
 
@@ -285,9 +293,13 @@ describe('Core + module DTO round-trip', function () {
 
     it('BrowseResultSet with references + continuationPoint bytes', function () {
         $refs = [new ReferenceDescription(
-            NodeId::numeric(0, 35), true, NodeId::numeric(0, 85),
-            new QualifiedName(0, 'Objects'), new LocalizedText('en', 'Objects'),
-            NodeClass::Object, null,
+            NodeId::numeric(0, 35),
+            true,
+            NodeId::numeric(0, 85),
+            new QualifiedName(0, 'Objects'),
+            new LocalizedText('en', 'Objects'),
+            NodeClass::Object,
+            null,
         )];
         $bs = new BrowseResultSet($refs, "\x01\x02\x03");
         $r = roundTrip($this->registry, $bs);
