@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Types;
 
+use PhpOpcua\Client\Exception\EncodingException;
+use PhpOpcua\Client\Wire\WireSerializable;
+
 /**
  * Represents an OPC UA QualifiedName, consisting of a namespace index and a name string.
  */
-readonly class QualifiedName
+readonly class QualifiedName implements WireSerializable
 {
     /**
      * @param int $namespaceIndex
@@ -51,5 +54,35 @@ readonly class QualifiedName
         }
 
         return $this->namespaceIndex . ':' . $this->name;
+    }
+
+    /**
+     * @return array{ns: int, n: string}
+     */
+    public function jsonSerialize(): array
+    {
+        return ['ns' => $this->namespaceIndex, 'n' => $this->name];
+    }
+
+    /**
+     * @param array{ns: int, n: string} $data
+     * @return static
+     * @throws EncodingException
+     */
+    public static function fromWireArray(array $data): static
+    {
+        if (! isset($data['ns'], $data['n']) || ! is_int($data['ns']) || ! is_string($data['n'])) {
+            throw new EncodingException('QualifiedName wire payload: missing or invalid "ns" (int) / "n" (string) fields.');
+        }
+
+        return new self($data['ns'], $data['n']);
+    }
+
+    /**
+     * @return string
+     */
+    public static function wireTypeId(): string
+    {
+        return 'QualifiedName';
     }
 }

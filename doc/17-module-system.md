@@ -448,6 +448,63 @@ if ($client->hasMethod('discoverDataTypes')) {
 }
 ```
 
+List the live method / module surface (used by IPC peers such as `opcua-session-manager`'s `ManagedClient`):
+
+```php
+$client->getRegisteredMethods();  // string[] — every method name registered by loaded modules
+$client->getLoadedModules();      // class-string[] — FQCNs of loaded modules
+```
+
+## Wire Serialization for Cross-Process IPC
+
+`src/Wire/` provides a JSON-based, gadget-chain-free serialization layer that turns every core and module DTO into a payload with an explicit `__t` type discriminator. It is used by `opcua-session-manager`'s `ManagedClient` to marshal values across the IPC boundary, and is available to any consumer that needs the same guarantee.
+
+**Contract.** A DTO implements `WireSerializable`:
+
+```php
+interface WireSerializable extends \JsonSerializable {
+    public function jsonSerialize(): array;               // emit payload (no __t)
+    public static function fromWireArray(array $data): static;
+    public static function wireTypeId(): string;          // stable short id
+}
+```
+
+**Registry.** `WireTypeRegistry` is the security gate: `encode()` wraps every `WireSerializable`, `BackedEnum`, pure `UnitEnum`, and `DateTimeImmutable` value with `{"__t": "<id>", ...}`; `decode()` rejects any `__t` id that was not explicitly registered.
+
+**Build from loaded modules.** `ModuleRegistry::buildWireTypeRegistry()` returns a registry populated with the cross-cutting core types (via `CoreWireTypes::register()`) plus every loaded module's contribution.
+
+```php
+use PhpOpcua\Client\Wire\CoreWireTypes;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
+
+$registry = $client->moduleRegistry()->buildWireTypeRegistry();
+$wireValue = $registry->encode($someDataValue);            // {"__t": "DataValue", ...}
+$json = json_encode($wireValue);
+$rehydrated = $registry->decode(json_decode($json, true));  // DataValue instance
+```
+
+**Module hook.** A module declares the DTOs it emits by overriding `ServiceModule::registerWireTypes()`:
+
+```php
+use PhpOpcua\Client\Module\ServiceModule;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
+
+class PingModule extends ServiceModule
+{
+    public function register(): void
+    {
+        $this->client->registerMethod('ping', $this->ping(...));
+    }
+
+    public function registerWireTypes(WireTypeRegistry $registry): void
+    {
+        $registry->register(PingResult::class);
+    }
+}
+```
+
+The default implementation is a no-op — modules without custom DTOs do not need to override it.
+
 ## Error Handling
 
 Three exceptions relate to the module system:

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Types;
 
+use PhpOpcua\Client\Wire\WireSerializable;
+
 /**
  * Represents an OPC UA UserTokenPolicy describing an accepted user identity token type.
  */
-readonly class UserTokenPolicy
+readonly class UserTokenPolicy implements WireSerializable
 {
     /**
      * @param ?string $policyId
@@ -73,5 +75,42 @@ readonly class UserTokenPolicy
     public function getSecurityPolicyUri(): ?string
     {
         return $this->securityPolicyUri;
+    }
+
+    /**
+     * @return array{policyId: ?string, tokenType: int, issuedType: ?string, issuer: ?string, policy: ?string}
+     */
+    public function jsonSerialize(): array
+    {
+        return [
+            'policyId' => $this->policyId,
+            'tokenType' => $this->tokenType,
+            'issuedType' => $this->issuedTokenType,
+            'issuer' => $this->issuerEndpointUrl,
+            'policy' => $this->securityPolicyUri,
+        ];
+    }
+
+    /**
+     * @param array{policyId?: ?string, tokenType?: int, issuedType?: ?string, issuer?: ?string, policy?: ?string} $data
+     * @return static
+     */
+    public static function fromWireArray(array $data): static
+    {
+        return new self(
+            $data['policyId'] ?? null,
+            $data['tokenType'] ?? 0,
+            $data['issuedType'] ?? null,
+            $data['issuer'] ?? null,
+            $data['policy'] ?? null,
+        );
+    }
+
+    /**
+     * @return string
+     */
+    public static function wireTypeId(): string
+    {
+        return 'UserTokenPolicy';
     }
 }

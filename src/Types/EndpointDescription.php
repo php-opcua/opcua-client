@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Types;
 
+use PhpOpcua\Client\Wire\WireSerializable;
+
 /**
  * Represents an OPC UA EndpointDescription describing a server endpoint and its security configuration.
  */
-readonly class EndpointDescription
+readonly class EndpointDescription implements WireSerializable
 {
     /**
      * @param string $endpointUrl
@@ -97,5 +99,51 @@ readonly class EndpointDescription
     public function getSecurityLevel(): int
     {
         return $this->securityLevel;
+    }
+
+    /**
+     * @return array{url: string, cert: ?string, mode: int, policy: string, tokens: UserTokenPolicy[], profile: string, level: int}
+     */
+    public function jsonSerialize(): array
+    {
+        return [
+            'url' => $this->endpointUrl,
+            'cert' => $this->serverCertificate !== null ? base64_encode($this->serverCertificate) : null,
+            'mode' => $this->securityMode,
+            'policy' => $this->securityPolicyUri,
+            'tokens' => $this->userIdentityTokens,
+            'profile' => $this->transportProfileUri,
+            'level' => $this->securityLevel,
+        ];
+    }
+
+    /**
+     * @param array{url?: string, cert?: ?string, mode?: int, policy?: string, tokens?: array, profile?: string, level?: int} $data
+     * @return static
+     */
+    public static function fromWireArray(array $data): static
+    {
+        $cert = null;
+        if (isset($data['cert']) && is_string($data['cert'])) {
+            $cert = base64_decode($data['cert'], true) ?: null;
+        }
+
+        return new self(
+            $data['url'] ?? '',
+            $cert,
+            $data['mode'] ?? 0,
+            $data['policy'] ?? '',
+            $data['tokens'] ?? [],
+            $data['profile'] ?? '',
+            $data['level'] ?? 0,
+        );
+    }
+
+    /**
+     * @return string
+     */
+    public static function wireTypeId(): string
+    {
+        return 'EndpointDescription';
     }
 }

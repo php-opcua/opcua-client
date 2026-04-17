@@ -742,8 +742,8 @@ Connection flow with ECC security:
 src/
 ├── ClientBuilder.php             # Builder / entry point (config traits, addModule, replaceModule)
 ├── ClientBuilderInterface.php    # Builder interface
-├── Client.php                    # Connected client (proxy to modules, hasMethod, hasModule, __call)
-├── OpcUaClientInterface.php      # Public API contract (all built-in methods + hasMethod + hasModule)
+├── Client.php                    # Connected client (proxy to modules, hasMethod, hasModule, getRegisteredMethods, getLoadedModules, __call)
+├── OpcUaClientInterface.php      # Public API contract (all built-in methods + hasMethod + hasModule + getRegisteredMethods + getLoadedModules)
 ├── ClientBuilder/*.php           # Builder traits (configuration: cache, events, timeout, trust, modules, etc.)
 ├── Kernel/ClientKernel.php       # Shared infrastructure for modules
 ├── Kernel/ClientKernelInterface.php  # Kernel contract for modules
@@ -772,11 +772,26 @@ src/
 ├── Cache/InMemoryCache.php        # PSR-16 in-memory cache
 ├── Cache/FileCache.php            # PSR-16 file-based cache
 ├── Repository/ExtensionObjectRepository.php  # Per-client codec registry
+├── Wire/WireSerializable.php     # Interface for JSON-IPC-safe value-objects (jsonSerialize + fromWireArray + wireTypeId)
+├── Wire/WireTypeRegistry.php     # Registry / encoder / decoder, security gate for __t discriminators (rejects unregistered ids at decode)
+├── Wire/CoreWireTypes.php        # Registers the cross-cutting core types on a WireTypeRegistry
 ├── Testing/MockClient.php        # In-memory test double (no TCP, hasMethod, hasModule)
 └── Exception/*.php               # Exception classes (includes ModuleConflictException, MissingModuleDependencyException)
 ```
 
 Binary encoding: little-endian, length-prefixed strings, NodeId compact encoding, DateTime as 100ns intervals since 1601-01-01 UTC.
+
+### Wire serialization for cross-process IPC (v4.2.0)
+
+`PhpOpcua\Client\Wire\WireTypeRegistry` + `WireSerializable` interface implement a JSON-based, gadget-chain-free serialization layer used by `opcua-session-manager` and future transports.
+
+- Every core / module DTO implements `WireSerializable` with `jsonSerialize()` (pure associative array, no `__t`), `fromWireArray(array)` (inverse), and `wireTypeId()` (stable short id). The registry wraps each emitted value with `{"__t": "<id>", ...}` at encode time and rejects unknown `__t` ids at decode time.
+- `CoreWireTypes::register()` installs NodeId, QualifiedName, LocalizedText, DataValue, Variant (with base64 ByteString), ExtensionObject (with base64 body), BrowseNode, ReferenceDescription, EndpointDescription, UserTokenPolicy plus enums BuiltinType, NodeClass, BrowseDirection, ConnectionState.
+- Each `ServiceModule::registerWireTypes(WireTypeRegistry)` override contributes its module-specific DTOs (SubscriptionResult, TransferResult, MonitoredItemResult, MonitoredItemModifyResult, PublishResult, SetTriggeringResult, CallResult, BrowsePathResult, BrowsePathTarget, BrowseResultSet, AddNodesResult, BuildInfo).
+- `ModuleRegistry::buildWireTypeRegistry()` composes core + module contributions — the single method a remote peer uses to mirror the allowlist.
+- Both backed enums (`::from($scalar)`) and pure unit enums (case-name scan) are supported.
+- `DateTimeImmutable` is a built-in special case (`{"__t": "DateTime", "v": "<ISO 8601 with microseconds>"}`).
+- Security: no `unserialize()` anywhere on the wire path — only explicitly registered classes can be instantiated, gadget-chain surface is zero by construction.
 
 ---
 
@@ -964,8 +979,8 @@ Alarm-specific events are deduced from event notification fields:
 
 - PhpOpcua\Client\ClientBuilder — builder / entry point, implements ClientBuilderInterface, static create() factory, addModule(), replaceModule()
 - PhpOpcua\Client\ClientBuilderInterface — builder interface (configuration methods + connect + addModule + replaceModule)
-- PhpOpcua\Client\Client — connected client (proxy to modules), implements OpcUaClientInterface, hasMethod(), hasModule(), __call() for custom module methods
-- PhpOpcua\Client\OpcUaClientInterface — public API contract (all built-in service methods + hasMethod(string): bool + hasModule(string): bool)
+- PhpOpcua\Client\Client — connected client (proxy to modules), implements OpcUaClientInterface, hasMethod(), hasModule(), getRegisteredMethods(), getLoadedModules(), __call() for custom module methods
+- PhpOpcua\Client\OpcUaClientInterface — public API contract (all built-in service methods + hasMethod(string): bool + hasModule(string): bool + getRegisteredMethods(): string[] + getLoadedModules(): class-string[])
 - PhpOpcua\Client\Kernel\ClientKernel — shared infrastructure for modules (executeWithRetry, ensureConnected, send, receive, createDecoder, dispatch, logContext)
 - PhpOpcua\Client\Kernel\ClientKernelInterface — kernel contract that modules depend on
 - PhpOpcua\Client\Kernel\ModuleRegistry — module lifecycle, topological dependency sort, method conflict detection
@@ -994,6 +1009,9 @@ Alarm-specific events are deduced from event notification fields:
 - PhpOpcua\Client\Event\* — 42 readonly event classes with $client property (ClientConnecting, ClientConnected, ConnectionFailed, SessionCreated, SessionActivated, SubscriptionCreated, DataChangeReceived, EventNotificationReceived, AlarmEventReceived, AlarmActivated, AlarmDeactivated, NodeValueRead, NodeValueWritten, NodeBrowsed, WriteTypeDetecting, WriteTypeDetected, CacheHit, CacheMiss, RetryAttempt, etc.)
 - PhpOpcua\Client\Testing\MockClient — in-memory test double (static create(), onRead/onWrite/onBrowse/onCall/onResolveNodeId, getCalls/getCallsFor/callCount/resetCalls, hasMethod, hasModule)
 - PhpOpcua\Client\Repository\ExtensionObjectRepository — per-client codec registry (instance-level)
+- PhpOpcua\Client\Wire\WireSerializable — interface (jsonSerialize, fromWireArray, wireTypeId) implemented by every core / module DTO
+- PhpOpcua\Client\Wire\WireTypeRegistry — security gate + encoder/decoder; rejects unregistered __t discriminators at decode time, uniform for BackedEnum + pure UnitEnum + DateTimeImmutable
+- PhpOpcua\Client\Wire\CoreWireTypes — installs cross-cutting core types (NodeId, QualifiedName, LocalizedText, DataValue, Variant, ExtensionObject, BrowseNode, ReferenceDescription, EndpointDescription, UserTokenPolicy + 4 enums) on a WireTypeRegistry
 - PhpOpcua\Client\Encoding\DynamicCodec — auto-generated codec from StructureDefinition
 - PhpOpcua\Client\Encoding\DataTypeMapping — maps DataType NodeIds to BuiltinTypes
 - PhpOpcua\Client\Encoding\StructureDefinitionParser — parses DataTypeDefinition attributes

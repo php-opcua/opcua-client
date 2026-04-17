@@ -6,6 +6,7 @@ namespace PhpOpcua\Client\Module;
 
 use PhpOpcua\Client\Kernel\ClientKernelInterface;
 use PhpOpcua\Client\Protocol\SessionService;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
 
 /**
  * Base class for all OPC UA service modules.
@@ -86,6 +87,17 @@ abstract class ServiceModule
      * @return void
      */
     public function reset(): void
+    {
+    }
+
+    /**
+     * Register the module's DTOs and enums on the shared {@see WireTypeRegistry}
+     * so that remote peers can safely encode/decode them over IPC.
+     *
+     * @param WireTypeRegistry $registry
+     * @return void
+     */
+    public function registerWireTypes(WireTypeRegistry $registry): void
     {
     }
 }

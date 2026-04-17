@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpOpcua\Client\Module\ServerInfo;
 
 use DateTimeImmutable;
+use PhpOpcua\Client\Wire\WireSerializable;
 
 /**
  * Represents the OPC UA Server BuildInfo structure (ns=0;i=2260).
@@ -15,7 +16,7 @@ use DateTimeImmutable;
  *
  * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/12.4
  */
-readonly class BuildInfo
+readonly class BuildInfo implements WireSerializable
 {
     /**
      * @param ?string $productName The name of the server product (ns=0;i=2262).
@@ -31,5 +32,42 @@ readonly class BuildInfo
         public ?string $buildNumber,
         public ?DateTimeImmutable $buildDate,
     ) {
+    }
+
+    /**
+     * @return array{product: ?string, manufacturer: ?string, version: ?string, build: ?string, date: ?DateTimeImmutable}
+     */
+    public function jsonSerialize(): array
+    {
+        return [
+            'product' => $this->productName,
+            'manufacturer' => $this->manufacturerName,
+            'version' => $this->softwareVersion,
+            'build' => $this->buildNumber,
+            'date' => $this->buildDate,
+        ];
+    }
+
+    /**
+     * @param array{product?: ?string, manufacturer?: ?string, version?: ?string, build?: ?string, date?: ?DateTimeImmutable} $data
+     * @return static
+     */
+    public static function fromWireArray(array $data): static
+    {
+        return new self(
+            $data['product'] ?? null,
+            $data['manufacturer'] ?? null,
+            $data['version'] ?? null,
+            $data['build'] ?? null,
+            $data['date'] ?? null,
+        );
+    }
+
+    /**
+     * @return string
+     */
+    public static function wireTypeId(): string
+    {
+        return 'BuildInfo';
     }
 }

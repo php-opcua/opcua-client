@@ -15,6 +15,7 @@ use PhpOpcua\Client\Types\EndpointDescription;
 use PhpOpcua\Client\Types\NodeClass;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\ReferenceDescription;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
 
 /**
  * Provides browse, browseAll, browseRecursive, browseWithContinuation, browseNext, and getEndpoints operations.
@@ -55,6 +56,11 @@ class BrowseModule extends ServiceModule
     {
         $this->browseService = null;
         $this->getEndpointsService = null;
+    }
+
+    public function registerWireTypes(WireTypeRegistry $registry): void
+    {
+        $registry->register(BrowseResultSet::class);
     }
 
     /**

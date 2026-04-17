@@ -264,16 +264,9 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
     }
 
     /**
-     * Register a method handler provided by a module.
-     *
-     * Re-registration by the same owner module class is allowed so that handlers
-     * installed on the initial boot survive a disconnect/reconnect cycle: the module
-     * re-binds its handler to the freshly booted service instance without triggering
-     * a spurious {@see ModuleConflictException}. Handlers kept alive across disconnect
-     * also preserve the thin-proxy surface on {@see Client}, so that post-disconnect
-     * calls go through the module closure and surface a proper
-     * {@see Exception\ConnectionException} via {@see ensureConnected()}
-     * instead of a null-callable {@see \Error}.
+     * Register a method handler provided by a module. Re-registration by the
+     * same owner module class is allowed so that handlers survive a
+     * disconnect/reconnect cycle without a spurious {@see ModuleConflictException}.
      *
      * @param string $name The method name.
      * @param callable $handler The handler callable.
@@ -314,6 +307,22 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
     public function hasMethod(string $name): bool
     {
         return isset($this->methodHandlers[$name]);
+    }
+
+    /**
+     * @return string[]
+     */
+    public function getRegisteredMethods(): array
+    {
+        return array_keys($this->methodHandlers);
+    }
+
+    /**
+     * @return class-string[]
+     */
+    public function getLoadedModules(): array
+    {
+        return $this->moduleRegistry->getModuleClasses();
     }
 
     /**

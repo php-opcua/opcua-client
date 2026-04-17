@@ -11,6 +11,7 @@ use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\QualifiedName;
 use PhpOpcua\Client\Types\StatusCode;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
 
 /**
  * Provides translateBrowsePaths and resolveNodeId operations.
@@ -41,6 +42,12 @@ class TranslateBrowsePathModule extends ServiceModule
     public function reset(): void
     {
         $this->translateBrowsePathService = null;
+    }
+
+    public function registerWireTypes(WireTypeRegistry $registry): void
+    {
+        $registry->register(BrowsePathResult::class);
+        $registry->register(BrowsePathTarget::class);
     }
 
     /**

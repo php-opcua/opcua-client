@@ -216,6 +216,21 @@ interface OpcUaClientInterface
     public function hasModule(string $moduleClass): bool;
 
     /**
+     * List every method name currently reachable on this client
+     * (built-in service set + any methods added by third-party modules).
+     *
+     * @return string[]
+     */
+    public function getRegisteredMethods(): array;
+
+    /**
+     * List the fully-qualified class names of every module currently loaded.
+     *
+     * @return class-string[]
+     */
+    public function getLoadedModules(): array;
+
+    /**
      * Discover server-defined structured data types and register dynamic codecs for them.
      *
      * @param ?int $namespaceIndex Only discover types in this namespace. Null for all non-zero namespaces.

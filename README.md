@@ -517,6 +517,8 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 | **ExtensionObject Codecs** | Pluggable per-client codec system for custom structures |
 | **Auto-Discovery** | `discoverDataTypes()` auto-detects custom structures without manual codecs |
 | **Modular Architecture** | 8 built-in service modules (ReadWrite, Browse, Subscription, History, NodeManagement, TranslateBrowsePath, ServerInfo, TypeDiscovery). Add custom modules with `addModule()`, swap built-ins with `replaceModule()` |
+| **Wire Serialization** | Every core / module DTO implements `WireSerializable` for safe JSON-based IPC (`opcua-session-manager` + future transports). Registry-gated `__t` discriminators enforce an explicit type allowlist at decode time |
+| **Client Introspection** | `hasMethod()`, `hasModule()`, `getRegisteredMethods()`, `getLoadedModules()` surface the live method/module set for runtime dispatch decisions (used by `ManagedClient::__call()` for transparent third-party module access) |
 | **MockClient** | In-memory test double — register handlers, assert calls, no TCP connection needed |
 | **Logging** | Optional structured logging via any PSR-3 logger — connect, retry, errors, protocol details |
 | **Cache** | Browse, resolve, and metadata read results cached (InMemoryCache, 300s TTL). Plug in any PSR-16 driver (FileCache, Laravel, Redis). Metadata cache opt-in via `setReadMetadataCache(true)` |

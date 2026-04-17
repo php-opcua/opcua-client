@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Types;
 
+use PhpOpcua\Client\Wire\WireSerializable;
+
 /**
  * Represents an OPC UA LocalizedText, containing a locale identifier and a text string.
  */
-readonly class LocalizedText
+readonly class LocalizedText implements WireSerializable
 {
     /**
      * @param ?string $locale
@@ -65,5 +67,30 @@ readonly class LocalizedText
     public function __toString(): string
     {
         return $this->text ?? '';
+    }
+
+    /**
+     * @return array{locale: ?string, text: ?string}
+     */
+    public function jsonSerialize(): array
+    {
+        return ['locale' => $this->locale, 'text' => $this->text];
+    }
+
+    /**
+     * @param array{locale?: ?string, text?: ?string} $data
+     * @return static
+     */
+    public static function fromWireArray(array $data): static
+    {
+        return new self($data['locale'] ?? null, $data['text'] ?? null);
+    }
+
+    /**
+     * @return string
+     */
+    public static function wireTypeId(): string
+    {
+        return 'LocalizedText';
     }
 }

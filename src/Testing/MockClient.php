@@ -291,6 +291,27 @@ class MockClient implements OpcUaClientInterface
     /**
      * {@inheritDoc}
      */
+    public function getRegisteredMethods(): array
+    {
+        $names = [];
+        foreach ((new \ReflectionClass(OpcUaClientInterface::class))->getMethods() as $method) {
+            $names[] = $method->getName();
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getLoadedModules(): array
+    {
+        return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function getServerProductName(): ?string
     {
         $value = $this->read(NodeId::numeric(0, 2262), AttributeId::Value)->getValue();

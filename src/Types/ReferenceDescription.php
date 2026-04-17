@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Types;
 
+use PhpOpcua\Client\Exception\EncodingException;
+use PhpOpcua\Client\Wire\WireSerializable;
+
 /**
  * Represents an OPC UA ReferenceDescription returned from a Browse operation.
  */
-readonly class ReferenceDescription
+readonly class ReferenceDescription implements WireSerializable
 {
     /**
      * @param NodeId $referenceTypeId
@@ -97,5 +100,54 @@ readonly class ReferenceDescription
     public function getTypeDefinition(): ?NodeId
     {
         return $this->typeDefinition;
+    }
+
+    /**
+     * @return array{refType: NodeId, isForward: bool, nodeId: NodeId, browseName: QualifiedName, displayName: LocalizedText, nodeClass: NodeClass, typeDef: ?NodeId}
+     */
+    public function jsonSerialize(): array
+    {
+        return [
+            'refType' => $this->referenceTypeId,
+            'isForward' => $this->isForward,
+            'nodeId' => $this->nodeId,
+            'browseName' => $this->browseName,
+            'displayName' => $this->displayName,
+            'nodeClass' => $this->nodeClass,
+            'typeDef' => $this->typeDefinition,
+        ];
+    }
+
+    /**
+     * @param array{refType?: mixed, isForward?: bool, nodeId?: mixed, browseName?: mixed, displayName?: mixed, nodeClass?: mixed, typeDef?: mixed} $data
+     * @return static
+     * @throws EncodingException
+     */
+    public static function fromWireArray(array $data): static
+    {
+        $required = ['refType' => NodeId::class, 'nodeId' => NodeId::class, 'browseName' => QualifiedName::class, 'displayName' => LocalizedText::class, 'nodeClass' => NodeClass::class];
+        foreach ($required as $key => $class) {
+            if (! isset($data[$key]) || ! $data[$key] instanceof $class) {
+                throw new EncodingException("ReferenceDescription wire payload: field \"{$key}\" must be a decoded {$class} instance.");
+            }
+        }
+
+        return new self(
+            $data['refType'],
+            $data['isForward'] ?? false,
+            $data['nodeId'],
+            $data['browseName'],
+            $data['displayName'],
+            $data['nodeClass'],
+            $data['typeDef'] ?? null,
+        );
+    }
+
+    /**
+     * @return string
+     */
+    public static function wireTypeId(): string
+    {
+        return 'ReferenceDescription';
     }
 }

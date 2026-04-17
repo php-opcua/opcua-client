@@ -9,6 +9,7 @@ use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\NodeClass;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\QualifiedName;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
 
 /**
  * Provides OPC UA NodeManagement operations: AddNodes, DeleteNodes, AddReferences, DeleteReferences.
@@ -33,6 +34,11 @@ class NodeManagementModule extends ServiceModule
     public function reset(): void
     {
         $this->service = null;
+    }
+
+    public function registerWireTypes(WireTypeRegistry $registry): void
+    {
+        $registry->register(AddNodesResult::class);
     }
 
     /**

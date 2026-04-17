@@ -42,6 +42,8 @@ A PHP library for connecting to OPC UA servers (industrial automation protocol).
 - Connection State: lifecycle tracking (Disconnected, Connected, Broken) with reconnect()
 - MockClient: in-memory test double implementing OpcUaClientInterface — register handlers, assert calls, no TCP connection
 - Typed everywhere: all service responses return public readonly DTOs, not arrays
+- Wire serialization (v4.2.0): src/Wire/WireSerializable + src/Wire/WireTypeRegistry turn every core / module DTO into a JSON-safe payload wrapped with a `__t` discriminator. CoreWireTypes registers NodeId, QualifiedName, LocalizedText, DataValue, Variant, ExtensionObject, BrowseNode, ReferenceDescription, EndpointDescription, UserTokenPolicy plus enums BuiltinType/NodeClass/BrowseDirection/ConnectionState. Each ServiceModule::registerWireTypes() hook adds its own result DTOs. Consumers (opcua-session-manager ManagedClient) build a matching registry to safely decode — unregistered __t ids are rejected, no unserialize() anywhere, no gadget-chain surface.
+- Client introspection (v4.2.0): OpcUaClientInterface adds getRegisteredMethods(): string[] and getLoadedModules(): class-string[] alongside existing hasMethod() / hasModule(). Implemented on Client, MockClient, ManagedClient.
 - Thoroughly tested: 1300+ tests (1040+ unit, 250+ integration), 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
 
 ## Property access style
@@ -52,7 +54,8 @@ All Type classes and result DTOs use public readonly properties. Access is $ref-
 
 - ClientBuilder (src/ClientBuilder.php): builder / entry point, implements ClientBuilderInterface, uses config traits in src/ClientBuilder/ (including addModule/replaceModule)
 - Client (src/Client.php): connected client (proxy), implements OpcUaClientInterface, delegates all service methods to module handlers, __call() for custom module methods
-- OpcUaClientInterface: public API contract — all built-in service methods + hasMethod(string): bool + hasModule(string): bool
+- OpcUaClientInterface: public API contract — all built-in service methods + hasMethod(string): bool + hasModule(string): bool + getRegisteredMethods(): string[] + getLoadedModules(): class-string[]
+- Wire/ (src/Wire/): JSON-safe IPC serialization primitives — WireSerializable interface, WireTypeRegistry (security gate / encoder / decoder), CoreWireTypes (registers cross-cutting value-objects and enums)
 - Kernel/ (src/Kernel/): shared infrastructure for modules
   - ClientKernel: executeWithRetry, ensureConnected, send, receive, createDecoder, dispatch, logContext, etc.
   - ClientKernelInterface: public contract that modules depend on

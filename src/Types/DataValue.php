@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace PhpOpcua\Client\Types;
 
 use DateTimeImmutable;
+use PhpOpcua\Client\Wire\WireSerializable;
 
 /**
  * Represents an OPC UA DataValue containing a value, status code, and timestamps.
  */
-readonly class DataValue
+readonly class DataValue implements WireSerializable
 {
     /**
      * @param ?Variant $value
@@ -239,5 +240,40 @@ readonly class DataValue
         }
 
         return $mask;
+    }
+
+    /**
+     * @return array{variant: ?Variant, status: int, sourceTs: ?DateTimeImmutable, serverTs: ?DateTimeImmutable}
+     */
+    public function jsonSerialize(): array
+    {
+        return [
+            'variant' => $this->value,
+            'status' => $this->statusCode,
+            'sourceTs' => $this->sourceTimestamp,
+            'serverTs' => $this->serverTimestamp,
+        ];
+    }
+
+    /**
+     * @param array{variant?: ?Variant, status?: int, sourceTs?: ?DateTimeImmutable, serverTs?: ?DateTimeImmutable} $data
+     * @return static
+     */
+    public static function fromWireArray(array $data): static
+    {
+        return new self(
+            $data['variant'] ?? null,
+            $data['status'] ?? 0,
+            $data['sourceTs'] ?? null,
+            $data['serverTs'] ?? null,
+        );
+    }
+
+    /**
+     * @return string
+     */
+    public static function wireTypeId(): string
+    {
+        return 'DataValue';
     }
 }

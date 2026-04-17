@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Types;
 
+use PhpOpcua\Client\Exception\EncodingException;
+use PhpOpcua\Client\Wire\WireSerializable;
+
 /**
  * Represents a node in a hierarchical browse tree, wrapping a ReferenceDescription with child nodes.
  */
-class BrowseNode
+class BrowseNode implements WireSerializable
 {
     /** @var BrowseNode[] */
     private array $children = [];
@@ -99,5 +102,46 @@ class BrowseNode
     public function hasChildren(): bool
     {
         return count($this->children) > 0;
+    }
+
+    /**
+     * @return array{reference: ReferenceDescription, children: BrowseNode[]}
+     */
+    public function jsonSerialize(): array
+    {
+        return [
+            'reference' => $this->reference,
+            'children' => $this->children,
+        ];
+    }
+
+    /**
+     * @param array{reference?: mixed, children?: array} $data
+     * @return static
+     * @throws EncodingException
+     */
+    public static function fromWireArray(array $data): static
+    {
+        if (! isset($data['reference']) || ! $data['reference'] instanceof ReferenceDescription) {
+            throw new EncodingException('BrowseNode wire payload: "reference" must be a decoded ReferenceDescription instance.');
+        }
+
+        $node = new self($data['reference']);
+        foreach ($data['children'] ?? [] as $child) {
+            if (! $child instanceof self) {
+                throw new EncodingException('BrowseNode wire payload: "children" must contain decoded BrowseNode instances.');
+            }
+            $node->addChild($child);
+        }
+
+        return $node;
+    }
+
+    /**
+     * @return string
+     */
+    public static function wireTypeId(): string
+    {
+        return 'BrowseNode';
     }
 }

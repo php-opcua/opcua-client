@@ -20,6 +20,7 @@ use PhpOpcua\Client\Types\DataValue;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\StatusCode;
 use PhpOpcua\Client\Types\Variant;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
 
 /**
  * Provides read, write, readMulti, writeMulti, and call operations.
@@ -53,6 +54,11 @@ class ReadWriteModule extends ServiceModule
         $this->readService = null;
         $this->writeService = null;
         $this->callService = null;
+    }
+
+    public function registerWireTypes(WireTypeRegistry $registry): void
+    {
+        $registry->register(CallResult::class);
     }
 
     /**

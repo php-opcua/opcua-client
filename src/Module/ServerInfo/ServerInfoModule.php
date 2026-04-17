@@ -9,6 +9,7 @@ use PhpOpcua\Client\Module\ReadWrite\ReadWriteModule;
 use PhpOpcua\Client\Module\ServiceModule;
 use PhpOpcua\Client\Types\AttributeId;
 use PhpOpcua\Client\Types\NodeId;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
 
 /**
  * Provides quick-access methods for standard OPC UA Server BuildInfo nodes (ns=0).
@@ -36,6 +37,11 @@ class ServerInfoModule extends ServiceModule
         $this->client->registerMethod('getServerBuildNumber', $this->getServerBuildNumber(...));
         $this->client->registerMethod('getServerBuildDate', $this->getServerBuildDate(...));
         $this->client->registerMethod('getServerBuildInfo', $this->getServerBuildInfo(...));
+    }
+
+    public function registerWireTypes(WireTypeRegistry $registry): void
+    {
+        $registry->register(BuildInfo::class);
     }
 
     /**

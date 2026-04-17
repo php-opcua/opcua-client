@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace PhpOpcua\Client\Types;
 
 use PhpOpcua\Client\Exception\InvalidNodeIdException;
+use PhpOpcua\Client\Wire\WireSerializable;
 
 /**
  * Represents an OPC UA NodeId, uniquely identifying a node within a server address space.
  */
-readonly class NodeId
+readonly class NodeId implements WireSerializable
 {
     public const TYPE_NUMERIC = 'numeric';
 
@@ -215,6 +216,36 @@ readonly class NodeId
     public function __toString(): string
     {
         return $this->toString();
+    }
+
+    /**
+     * @return array{v: string}
+     */
+    public function jsonSerialize(): array
+    {
+        return ['v' => $this->toString()];
+    }
+
+    /**
+     * @param array{v: string} $data
+     * @return static
+     * @throws InvalidNodeIdException If the wire payload is malformed.
+     */
+    public static function fromWireArray(array $data): static
+    {
+        if (! isset($data['v']) || ! is_string($data['v'])) {
+            throw new InvalidNodeIdException('NodeId wire payload: missing or non-string "v" field.');
+        }
+
+        return self::parse($data['v']);
+    }
+
+    /**
+     * @return string
+     */
+    public static function wireTypeId(): string
+    {
+        return 'NodeId';
     }
 
     /**

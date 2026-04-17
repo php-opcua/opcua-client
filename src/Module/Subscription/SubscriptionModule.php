@@ -30,6 +30,7 @@ use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\Variant;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
 
 /**
  * Provides subscription, monitored item, and publish operations.
@@ -68,6 +69,16 @@ class SubscriptionModule extends ServiceModule
         $this->subscriptionService = null;
         $this->monitoredItemService = null;
         $this->publishService = null;
+    }
+
+    public function registerWireTypes(WireTypeRegistry $registry): void
+    {
+        $registry->register(SubscriptionResult::class);
+        $registry->register(TransferResult::class);
+        $registry->register(MonitoredItemResult::class);
+        $registry->register(MonitoredItemModifyResult::class);
+        $registry->register(PublishResult::class);
+        $registry->register(SetTriggeringResult::class);
     }
 
     /**

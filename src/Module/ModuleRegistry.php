@@ -144,6 +144,23 @@ class ModuleRegistry
     }
 
     /**
+     * Build a {@see \PhpOpcua\Client\Wire\WireTypeRegistry} populated with the
+     * core types plus every loaded module's contribution.
+     *
+     * @return \PhpOpcua\Client\Wire\WireTypeRegistry
+     */
+    public function buildWireTypeRegistry(): \PhpOpcua\Client\Wire\WireTypeRegistry
+    {
+        $registry = new \PhpOpcua\Client\Wire\WireTypeRegistry();
+        \PhpOpcua\Client\Wire\CoreWireTypes::register($registry);
+        foreach ($this->modules as $module) {
+            $module->registerWireTypes($registry);
+        }
+
+        return $registry;
+    }
+
+    /**
      * Perform a topological sort on the module dependency graph.
      *
      * @return class-string<ServiceModule>[]
