@@ -1,7 +1,7 @@
 # Changelog
 
 
-## [v4.2.0] - 2026-04-x
+## [v4.2.0] - 2026-04-17
 
 ### Added
 
@@ -25,6 +25,7 @@
 - **Module-specific DTOs co-located with their module.** Types used by a single module now live in the module's namespace instead of `Types\`. Shared types (`NodeId`, `DataValue`, `Variant`, `StatusCode`, etc.) remain in `Types\`.
 - **Module-specific protocol services co-located with their module.** Each module contains its own protocol service class. Shared base class `AbstractProtocolService` and `ServiceTypeId` remain in `Protocol\`.
 - **`MockClient`** implements the full `OpcUaClientInterface` and keeps its existing handler/tracking API unchanged.
+- **`NodeManagementModule` is no longer registered by `ClientBuilder` by default.** The module, its public API (`addNodes`, `deleteNodes`, `addReferences`, `deleteReferences`), and its unit tests remain shipped and tested, but `ClientBuilder::defaultModules()` omits it until integration coverage is available. UA-.NET Standard — which powers every server in `uanetstandard-test-suite` — does not implement the NodeManagement service set and replies with a top-level `ServiceFault` (`0x800B0000 BadServiceUnsupported`) that the current decoders do not surface as a `ServiceException`. Consumers targeting servers that do implement the service set can opt in with `ClientBuilder::addModule(new NodeManagementModule())`. The six integration tests in `tests/Integration/NodeManagementTest.php` are marked `->skip(...)` with a pointer to `ROADMAP.md`, which now tracks the re-enablement plan.
 
 ### Also added
 
@@ -50,6 +51,8 @@
 
 ### Fixed
 
+- **`Client::resolveNodeId()` no longer misclassifies NodeId strings whose identifier contains slashes as browse paths.** Servers based on the UA-.NET Standard stack routinely expose string NodeIds like `ns=1;s=TestServer/Dynamic/Counter`. The previous heuristic (`str_contains($nodeId, '/')`) treated any slash-bearing string as a browse path and dispatched to `TranslateBrowsePathModule`, producing `ServiceException: 0x806F0000 (BadNotFound)` on every read/write/browse of such nodes. The resolver now matches the OPC UA NodeId grammar first (`/^(ns=\d+;)?[isgb]=/`) and only falls back to the browse-path handler when the string does not look like a NodeId and contains a `/`. Explicit `startingNodeId` arguments continue to route through the browse-path handler. Six new unit tests in `tests/Unit/ClientResolveNodeIdTest.php` cover the dispatch table (`ns=N;s=a/b/c`, `s=a/b/c`, `ns=0;i=N`, `/Objects/Server` browse path, startingNodeId override, and passthrough of `NodeId` instances).
+- **Client method handlers survive a disconnect / reconnect cycle.** Previously `resetConnectionState()` cleared `methodHandlers` on `disconnect()`, so any call into a thin-proxy method (`read`, `browse`, `write`, …) after disconnect triggered `Error: Value of type null is not callable` instead of the documented `ConnectionException('Not connected: call connect() first')`. The handler map is now preserved across the reset; the module closure runs, hits `$this->kernel->ensureConnected()`, and raises the correct exception. `registerMethod()` was updated to allow the same owner to re-register its methods on reconnect without triggering `ModuleConflictException`; cross-module conflicts still throw.
 - **Windows compatibility for `FileTrustStore` and `FileCache`.** Replaced all hardcoded `/` path separators with `DIRECTORY_SEPARATOR` in both classes. `FileTrustStore::defaultBasePath()` now detects Windows via `PHP_OS_FAMILY` and uses `%APPDATA%\opcua` (with `%LOCALAPPDATA%` and `sys_get_temp_dir()` fallbacks) instead of the Unix-only `~/.opcua`. `rtrim()` calls now strip both `/` and `\` to handle paths from either OS. All affected test files updated accordingly.
 - **Windows test compatibility.** Added `->skipOnWindows()` to 8 unit tests that rely on `pcntl_fork()` (Unix-only extension) or platform-specific socket behavior (`fwrite()` on a closed socket does not fail immediately on Windows). Affected files: `ClientHandshakeErrorTest.php` (2 tests), `ClientDiscoveryCoverageTest.php` (5 tests), `TcpTransportCoverageTest.php` (1 test).
 

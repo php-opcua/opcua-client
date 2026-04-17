@@ -272,7 +272,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
      * a spurious {@see ModuleConflictException}. Handlers kept alive across disconnect
      * also preserve the thin-proxy surface on {@see Client}, so that post-disconnect
      * calls go through the module closure and surface a proper
-     * {@see \PhpOpcua\Client\Exception\ConnectionException} via {@see ensureConnected()}
+     * {@see Exception\ConnectionException} via {@see ensureConnected()}
      * instead of a null-callable {@see \Error}.
      *
      * @param string $name The method name.
@@ -437,11 +437,23 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
      */
     public function resolveNodeId(NodeId|string $nodeId, NodeId|string|null $startingNodeId = null, bool $useCache = true): NodeId
     {
-        if ($startingNodeId !== null || ($nodeId instanceof NodeId === false && isset($this->methodHandlers['resolveNodeId']) && str_contains($nodeId, '/'))) {
+        if ($nodeId instanceof NodeId) {
+            return $nodeId;
+        }
+
+        if ($startingNodeId !== null) {
             return ($this->methodHandlers['resolveNodeId'])($nodeId, $startingNodeId, $useCache);
         }
 
-        return is_string($nodeId) ? NodeId::parse($nodeId) : $nodeId;
+        if (preg_match('/^(ns=\d+;)?[isgb]=/', $nodeId) === 1) {
+            return NodeId::parse($nodeId);
+        }
+
+        if (isset($this->methodHandlers['resolveNodeId']) && str_contains($nodeId, '/')) {
+            return ($this->methodHandlers['resolveNodeId'])($nodeId, $startingNodeId, $useCache);
+        }
+
+        return NodeId::parse($nodeId);
     }
 
     /**
