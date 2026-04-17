@@ -229,8 +229,6 @@ trait ManagesConnectionTrait
         $this->secureChannel = null;
         $this->serverNonce = null;
         $this->resetBatchingState();
-        $this->methodHandlers = [];
-        $this->methodOwners = [];
         if (isset($this->moduleRegistry)) {
             $this->moduleRegistry->resetAll();
         }

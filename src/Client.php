@@ -266,6 +266,15 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
     /**
      * Register a method handler provided by a module.
      *
+     * Re-registration by the same owner module class is allowed so that handlers
+     * installed on the initial boot survive a disconnect/reconnect cycle: the module
+     * re-binds its handler to the freshly booted service instance without triggering
+     * a spurious {@see ModuleConflictException}. Handlers kept alive across disconnect
+     * also preserve the thin-proxy surface on {@see Client}, so that post-disconnect
+     * calls go through the module closure and surface a proper
+     * {@see \PhpOpcua\Client\Exception\ConnectionException} via {@see ensureConnected()}
+     * instead of a null-callable {@see \Error}.
+     *
      * @param string $name The method name.
      * @param callable $handler The handler callable.
      * @return void
@@ -274,7 +283,9 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
      */
     public function registerMethod(string $name, callable $handler): void
     {
-        if (isset($this->methodHandlers[$name])) {
+        if (isset($this->methodHandlers[$name])
+            && $this->methodOwners[$name] !== $this->currentModuleClass
+        ) {
             throw new ModuleConflictException(
                 "Method '{$name}' is already registered by {$this->methodOwners[$name]}",
             );

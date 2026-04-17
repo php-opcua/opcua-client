@@ -1,99 +1,79 @@
 # Roadmap
 
-## v4.2.0 - 2026-04-X
+## 
 
-### ~~NodeManagement Services~~ — Done
-`AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences` — implemented. See [CHANGELOG.md](CHANGELOG.md).
+### NodeManagement Services — Implemented, disabled by default
+
+`AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences` are fully implemented
+(`Module\NodeManagement\NodeManagementModule` + `NodeManagementService`, 8 node classes
+with class-specific attribute extension objects, unit tests at 100%). See
+[CHANGELOG.md](CHANGELOG.md).
+
+However, `NodeManagementModule` has been **removed from the default module list** in
+`ClientBuilder::defaultModules()` for v4.2.0. Reasons:
+
+1. **No reference server available for integration validation.** The UA .NET Standard
+   stack — which powers the entire `uanetstandard-test-suite` used by this project —
+   does not implement the NodeManagement service set. Any `AddNodes` / `DeleteNodes` /
+   `AddReferences` / `DeleteReferences` request reaches `EndpointBase.ProcessRequestAsync`
+   without a matching `ServiceDefinition` and returns a top-level `ServiceFault`
+   (`StatusCode = 0x800B0000`, `BadServiceUnsupported`). Implementing a server-side
+   handler would require subclassing `StandardServer` and providing full dispatch logic
+   for all 8 node classes, which is out of scope for this test suite.
+
+2. **Client-side ServiceFault decoding is not yet implemented.** When the server replies
+   with a `ServiceFault` (NodeId 397) instead of a normal `AddNodesResponse` /
+   `DeleteNodesResponse` / etc., the decoder currently tries to read a non-existent
+   results array from the fault body and throws `EncodingException: Buffer underflow`.
+   This is a general issue affecting any service the server rejects as unsupported — the
+   NodeManagement integration tests simply surface it first. A proper fix requires
+   recognising NodeId 397 in every `decodeXxxResponse` path and converting it into a
+   `ServiceException` carrying the fault's status code.
+
+3. **Integration tests are skipped.** The six tests in
+   `tests/Integration/NodeManagementTest.php` are marked `->skip(...)` with a pointer to
+   this document. Unit tests (encoding, module wiring, DTOs) continue to run and remain
+   part of the coverage target.
+
+**Re-enablement plan (post v4.2.0):**
+
+- [ ] Implement client-side `ServiceFault` detection in `AbstractProtocolService` /
+      `readResponseMetadata()` so that every service decoder short-circuits into a
+      `ServiceException` when the response `TypeId` is `ServiceFault_Encoding_DefaultBinary`.
+- [ ] Either stand up a reference server with working NodeManagement (e.g. `open62541`,
+      `python-opcua`, `node-opcua`) alongside the existing test suite on a new port, or
+      drop the server-side TestServerApp override onto the UA .NET Standard stack with a
+      minimal `AddNodesAsync` / `DeleteNodesAsync` / `AddReferencesAsync` /
+      `DeleteReferencesAsync` implementation that mutates the in-memory address space of
+      `TestNodeManager`.
+- [ ] Re-enable `NodeManagementModule::class` in `ClientBuilder::defaultModules()`.
+- [ ] Remove the `->skip()` calls from `tests/Integration/NodeManagementTest.php` and
+      update the BadServiceUnsupported assertions to expect a `ServiceException` rather
+      than a per-item result.
+
+Until then, consumers that need the service set can opt in explicitly:
+
+```php
+$client = (new ClientBuilder())
+    ->addModule(new NodeManagementModule())
+    ->connect($endpointUrl);
+```
 
 > **Note:** The CLI tool has been extracted to a separate package: [`php-opcua/opcua-cli`](https://github.com/php-opcua/opcua-cli). CLI-related roadmap items are tracked there.
 
 ---
 
-## v5.0.0
-
-- [ ] **PHPStan level 5** — static analysis with `phpstan/phpstan` as dev dependency, CI integration, and `composer analyse` script
-
-- [x] **Kernel + ServiceModule architecture** *(shipped in v4.2.0)* — the trait-based Client was replaced with a modular system where each OPC UA service set is a self-contained `ServiceModule` class. The public API is fully backward compatible — no breaking changes. See [CHANGELOG.md](CHANGELOG.md) and [doc/17-module-system.md](doc/17-module-system.md).
-
-  **Why:** Today, adding a new service set (e.g., NodeManagement) requires touching 8 files: the module itself, Client.php (property + use trait), `initServices()`, `resetConnectionState()`, OpcUaClientInterface, and MockClient. Most of these changes are mechanical boilerplate. The trait-based service modules are already independent of each other — they just share a common infrastructure layer (transport, session, retry, encoding). This refactor makes that separation explicit.
-
-  **How it works:**
-
-  - **`ClientKernel`** — extracts the shared infrastructure that every service module needs into a public API: `executeWithRetry()`, `ensureConnected()`, `nextRequestId()`, `send()`, `receive()`, `unwrapResponse()`, `createDecoder()`, `resolveNodeId()`, `getAuthToken()`, `dispatch()`, `logContext()`. The kernel traits (Connection, Handshake, SecureChannel, Session, EventDispatch, Cache, Batching, TrustStore) remain internal to the kernel.
-
-  - **`ServiceModule`** — abstract base class. Each module receives the kernel and a reference to the Client. It implements `register()` to inject its methods onto the Client via `$this->client->registerMethod('read', $this->read(...))`, `boot(SessionService)` to create its protocol service, and `reset()` to clean up on disconnect. One class = one OPC UA service set, fully self-contained.
-
-  - **Method injection** — modules register their public methods directly on the Client during `register()`. The Client dispatches calls through `__call()` to the registered handlers. If two modules try to register the same method name, a `ModuleConflictException` is thrown at boot time — use `replaceModule()` to intentionally swap a module.
-
-  - **`requires()` dependency declaration** — a module can declare which other modules it depends on (e.g., `ServerInfoModule` requires `ReadWriteModule`). The `ModuleRegistry` resolves the dependency graph with topological sort and registers modules in the correct order. Missing dependencies throw a clear exception at `connect()` time. Cross-module calls go through the Client: `$this->client->read()` — same syntax as today's `$this->read()` in traits.
-
-  - **`Client`** — keeps **all built-in methods as concrete, fully typed one-liners** that delegate to the registered handler: `return ($this->methodHandlers['read'])($nodeId, $attributeId, $refresh)`. PHPStan, IDE autocomplete, and refactoring all work. `__call()` is used **only for custom third-party module methods** not in the interface.
-
-  - **`OpcUaClientInterface`** — stays **complete**. All built-in service methods (read, write, browse, addNodes, etc.) remain as typed signatures. Two new methods added: `hasMethod(string): bool` and `hasModule(string): bool` for module introspection. Zero breaking change for consumers type-hinting the interface.
-
-  - **`MockClient`** — implements the full `OpcUaClientInterface` and keeps its existing `onRead()`/`onWrite()`/`onBrowse()` handler registration system unchanged. Adds only `hasMethod()` and `hasModule()`.
-
-  - **No `removeModule()`** — only `addModule()` and `replaceModule()`. Built-in modules are always present. This avoids the complexity of validating broken dependency chains at runtime.
-
-  **What changes for adding a new built-in service set:**
-  - Today: 8 files (DTO, protocol service, trait, Client.php property + use, initServices, resetConnectionState, interface, MockClient).
-  - After: 3–4 files (DTO, protocol service, module class, interface signatures + Client one-liners). No more initServices/resetConnectionState/trait wiring.
-
-  **What changes for external developers:**
-  - `ClientBuilder::replaceModule(ReadWriteModule::class, MyCustomReadWrite::class)` — swap any built-in module with a custom implementation. All other modules that call `$this->client->read()` automatically use the replacement.
-  - `ClientBuilder::addModule(new MyQueryServiceModule())` — add entirely new service sets without forking. Custom methods are accessible via `$client->queryFirst(...)` through `__call()`.
-
-  **Migration for consumers:**
-  - `$client->read()`, `$client->browse()`, etc. — **unchanged**, works identically.
-  - Type hints: `OpcUaClientInterface` — **unchanged**, still works with all built-in methods.
-  - MockClient: **unchanged** API.
-
-  **DTO co-location** — module-specific DTOs move from `src/Types/` into their module's namespace. Types that are used by a single module live alongside it; types shared across multiple modules (NodeId, DataValue, Variant, StatusCode, QualifiedName, etc.) remain in `src/Types/`. Examples:
-
-  | Class | Today | After |
-  |-------|-------|-------|
-  | `AddNodesResult` | `Types\AddNodesResult` | `Module\NodeManagement\AddNodesResult` |
-  | `NodeManagementService` | `Protocol\NodeManagementService` | `Module\NodeManagement\NodeManagementService` |
-  | `CallResult` | `Types\CallResult` | `Module\ReadWrite\CallResult` |
-  | `ReadService` | `Protocol\ReadService` | `Module\ReadWrite\ReadService` |
-  | `WriteService` | `Protocol\WriteService` | `Module\ReadWrite\WriteService` |
-  | `CallService` | `Protocol\CallService` | `Module\ReadWrite\CallService` |
-  | `SubscriptionResult` | `Types\SubscriptionResult` | `Module\Subscription\SubscriptionResult` |
-  | `MonitoredItemResult` | `Types\MonitoredItemResult` | `Module\Subscription\MonitoredItemResult` |
-  | `PublishResult` | `Types\PublishResult` | `Module\Subscription\PublishResult` |
-  | `TransferResult` | `Types\TransferResult` | `Module\Subscription\TransferResult` |
-  | `SubscriptionService` | `Protocol\SubscriptionService` | `Module\Subscription\SubscriptionService` |
-  | `MonitoredItemService` | `Protocol\MonitoredItemService` | `Module\Subscription\MonitoredItemService` |
-  | `PublishService` | `Protocol\PublishService` | `Module\Subscription\PublishService` |
-  | `BrowseResultSet` | `Types\BrowseResultSet` | `Module\Browse\BrowseResultSet` |
-  | `BrowseService` | `Protocol\BrowseService` | `Module\Browse\BrowseService` |
-  | `GetEndpointsService` | `Protocol\GetEndpointsService` | `Module\Browse\GetEndpointsService` |
-  | `BrowsePathResult` | `Types\BrowsePathResult` | `Module\TranslateBrowsePath\BrowsePathResult` |
-  | `TranslateBrowsePathService` | `Protocol\TranslateBrowsePathService` | `Module\TranslateBrowsePath\TranslateBrowsePathService` |
-  | `HistoryReadService` | `Protocol\HistoryReadService` | `Module\History\HistoryReadService` |
-  | `BuildInfo` | `Types\BuildInfo` | `Module\ServerInfo\BuildInfo` |
-  | `NodeId`, `DataValue`, `Variant`, ... | `Types\*` | `Types\*` (unchanged — shared) |
-  | `AbstractProtocolService` | `Protocol\AbstractProtocolService` | `Protocol\AbstractProtocolService` (unchanged — shared base) |
-  | `SessionService` | `Protocol\SessionService` | `Kernel\SessionService` (unchanged — kernel) |
-  | `ServiceTypeId` | `Protocol\ServiceTypeId` | `Protocol\ServiceTypeId` (unchanged — shared constants) |
-
-  Each module becomes a fully self-contained package:
-  ```
-  src/Module/NodeManagement/
-  ├── NodeManagementModule.php      ← module class (register, boot, reset, methods)
-  ├── NodeManagementService.php     ← protocol encoding/decoding
-  └── AddNodesResult.php            ← module-specific DTO
-  ```
-
----
-
-## v5.1.0
-
 - [ ] **IDE helper stub generator** — a `composer generate-ide-helper` command (or `vendor/bin/opcua-ide-helper`) that auto-generates `_ide_helper_opcua.php` from the registered modules via reflection. The stub file contains PHPDoc `@method` annotations for the `Client` class, covering both built-in and custom module methods. The file is not loaded at runtime — it is only consumed by the IDE for autocomplete and static analysis. Replaces the hardcoded `@method` annotations on the `Client` class introduced in v5.0.0, keeping them always in sync with the actual module code. Custom modules are included when the generator is re-run after adding them to the builder. The generated file should be added to `.gitignore`.
 
 ---
 
-## v6.0.0
+
+
+
+- [ ] **PHPStan level 5** — static analysis with `phpstan/phpstan` as dev dependency, CI integration, and `composer analyse` script
+
+
+## v5.0.0
 
 ### Query Services
 

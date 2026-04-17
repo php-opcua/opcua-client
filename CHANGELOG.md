@@ -1,8 +1,7 @@
 # Changelog
 
-## [Unreleased]
 
-## [v4.2.0] - 2026-04-17
+## [v4.2.0] - 2026-04-x
 
 ### Added
 

@@ -6,7 +6,6 @@ use PhpOpcua\Client\ClientBuilder;
 use PhpOpcua\Client\Module\Browse\BrowseModule;
 use PhpOpcua\Client\Module\History\HistoryModule;
 use PhpOpcua\Client\Module\ModuleRegistry;
-use PhpOpcua\Client\Module\NodeManagement\NodeManagementModule;
 use PhpOpcua\Client\Module\ReadWrite\ReadWriteModule;
 use PhpOpcua\Client\Module\ServerInfo\ServerInfoModule;
 use PhpOpcua\Client\Module\ServiceModule;
@@ -40,7 +39,7 @@ class BuilderTestReplacementModule extends ServiceModule
 
 describe('ClientBuilder module configuration', function () {
 
-    it('registers all 8 default built-in modules', function () {
+    it('registers all 7 default built-in modules', function () {
         $builder = ClientBuilder::create();
 
         $ref = new ReflectionProperty(ClientBuilder::class, 'moduleRegistry');
@@ -52,7 +51,6 @@ describe('ClientBuilder module configuration', function () {
             BrowseModule::class,
             SubscriptionModule::class,
             HistoryModule::class,
-            NodeManagementModule::class,
             TranslateBrowsePathModule::class,
             ServerInfoModule::class,
             TypeDiscoveryModule::class,
@@ -62,7 +60,7 @@ describe('ClientBuilder module configuration', function () {
             expect($registry->has($moduleClass))->toBeTrue("Expected module {$moduleClass} to be registered");
         }
 
-        expect($registry->getModuleClasses())->toHaveCount(8);
+        expect($registry->getModuleClasses())->toHaveCount(7);
     });
 
     it('addModule adds a custom module to the registry', function () {
@@ -78,7 +76,7 @@ describe('ClientBuilder module configuration', function () {
         $registry = $ref->getValue($builder);
 
         expect($registry->has(BuilderTestCustomModule::class))->toBeTrue();
-        expect($registry->getModuleClasses())->toHaveCount(9);
+        expect($registry->getModuleClasses())->toHaveCount(8);
     });
 
     it('replaceModule swaps a built-in module', function () {
@@ -95,7 +93,7 @@ describe('ClientBuilder module configuration', function () {
 
         expect($registry->has(ReadWriteModule::class))->toBeTrue();
         expect($registry->get(ReadWriteModule::class))->toBe($replacement);
-        expect($registry->getModuleClasses())->toHaveCount(8);
+        expect($registry->getModuleClasses())->toHaveCount(7);
     });
 
     it('addModule returns builder for fluent chaining', function () {

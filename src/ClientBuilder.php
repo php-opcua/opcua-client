@@ -16,7 +16,6 @@ use PhpOpcua\Client\Event\NullEventDispatcher;
 use PhpOpcua\Client\Module\Browse\BrowseModule;
 use PhpOpcua\Client\Module\History\HistoryModule;
 use PhpOpcua\Client\Module\ModuleRegistry;
-use PhpOpcua\Client\Module\NodeManagement\NodeManagementModule;
 use PhpOpcua\Client\Module\ReadWrite\ReadWriteModule;
 use PhpOpcua\Client\Module\ServerInfo\ServerInfoModule;
 use PhpOpcua\Client\Module\ServiceModule;
@@ -148,6 +147,13 @@ class ClientBuilder implements ClientBuilderInterface
     /**
      * Return the list of default built-in module classes.
      *
+     * NodeManagementModule is intentionally disabled by default — see ROADMAP.md.
+     * The module is fully implemented but cannot be validated against the UA .NET
+     * Standard test suite, which returns a top-level ServiceFault (BadServiceUnsupported)
+     * for every NodeManagement request. Re-enable by passing the module through
+     * `ClientBuilder::addModule(new NodeManagementModule())` when targeting a server
+     * that implements the service set.
+     *
      * @return array<class-string<ServiceModule>>
      */
     private function defaultModules(): array
@@ -157,7 +163,7 @@ class ClientBuilder implements ClientBuilderInterface
             BrowseModule::class,
             SubscriptionModule::class,
             HistoryModule::class,
-            NodeManagementModule::class,
+            // TODO: AGAINT: NodeManagementModule::class — re-enable once the client decodes top-level ServiceFault responses and integration coverage against a server that implements the service set is in place.
             TranslateBrowsePathModule::class,
             ServerInfoModule::class,
             TypeDiscoveryModule::class,
