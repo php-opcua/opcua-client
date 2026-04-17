@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
+use PhpOpcua\Client\Module\Subscription\TransferResult;
 use PhpOpcua\Client\Tests\Integration\Helpers\TestHelper;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\StatusCode;
-use PhpOpcua\Client\Types\TransferResult;
 
 describe('TransferSubscriptions', function () {
 

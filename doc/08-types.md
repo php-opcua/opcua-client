@@ -458,6 +458,20 @@ use PhpOpcua\Client\Types\AttributeId;
 
 All result DTOs use `public readonly` properties.
 
+> **v5.0.0 Note:** Module-specific DTOs have moved from `Types\` to their module's namespace. Shared types (`NodeId`, `DataValue`, `Variant`, `StatusCode`, etc.) remain in `Types\`. Update your `use` imports accordingly:
+>
+> | Class | Old Location | New Location |
+> |---|---|---|
+> | `CallResult` | `PhpOpcua\Client\Types\CallResult` | `PhpOpcua\Client\Module\ReadWrite\CallResult` |
+> | `BrowseResultSet` | `PhpOpcua\Client\Types\BrowseResultSet` | `PhpOpcua\Client\Module\Browse\BrowseResultSet` |
+> | `BrowsePathResult` | `PhpOpcua\Client\Types\BrowsePathResult` | `PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePathResult` |
+> | `SubscriptionResult` | `PhpOpcua\Client\Types\SubscriptionResult` | `PhpOpcua\Client\Module\Subscription\SubscriptionResult` |
+> | `MonitoredItemResult` | `PhpOpcua\Client\Types\MonitoredItemResult` | `PhpOpcua\Client\Module\Subscription\MonitoredItemResult` |
+> | `PublishResult` | `PhpOpcua\Client\Types\PublishResult` | `PhpOpcua\Client\Module\Subscription\PublishResult` |
+> | `TransferResult` | `PhpOpcua\Client\Types\TransferResult` | `PhpOpcua\Client\Module\Subscription\TransferResult` |
+> | `AddNodesResult` | `PhpOpcua\Client\Types\AddNodesResult` | `PhpOpcua\Client\Module\NodeManagement\AddNodesResult` |
+> | `BuildInfo` | `PhpOpcua\Client\Types\BuildInfo` | `PhpOpcua\Client\Module\ServerInfo\BuildInfo` |
+
 ### BrowseResultSet
 
 Returned by `browseWithContinuation()` and `browseNext()`.

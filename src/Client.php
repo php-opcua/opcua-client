@@ -4,37 +4,30 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client;
 
+use DateTimeImmutable;
 use PhpOpcua\Client\Client\ManagesBatchingRuntimeTrait;
-use PhpOpcua\Client\Client\ManagesBrowseTrait;
 use PhpOpcua\Client\Client\ManagesCacheRuntimeTrait;
 use PhpOpcua\Client\Client\ManagesConnectionTrait;
 use PhpOpcua\Client\Client\ManagesEventDispatchTrait;
 use PhpOpcua\Client\Client\ManagesHandshakeTrait;
-use PhpOpcua\Client\Client\ManagesHistoryTrait;
-use PhpOpcua\Client\Client\ManagesNodeManagementTrait;
-use PhpOpcua\Client\Client\ManagesReadWriteTrait;
 use PhpOpcua\Client\Client\ManagesSecureChannelTrait;
-use PhpOpcua\Client\Client\ManagesServerInfoTrait;
 use PhpOpcua\Client\Client\ManagesSessionTrait;
-use PhpOpcua\Client\Client\ManagesSubscriptionsTrait;
-use PhpOpcua\Client\Client\ManagesTranslateBrowsePathTrait;
 use PhpOpcua\Client\Client\ManagesTrustStoreRuntimeTrait;
-use PhpOpcua\Client\Client\ManagesTypeDiscoveryTrait;
 use PhpOpcua\Client\Encoding\BinaryDecoder;
+use PhpOpcua\Client\Exception\ModuleConflictException;
 use PhpOpcua\Client\Exception\ServiceException;
-use PhpOpcua\Client\Protocol\BrowseService;
-use PhpOpcua\Client\Protocol\CallService;
-use PhpOpcua\Client\Protocol\GetEndpointsService;
-use PhpOpcua\Client\Protocol\HistoryReadService;
+use PhpOpcua\Client\Kernel\ClientKernelInterface;
+use PhpOpcua\Client\Module\Browse\BrowseResultSet;
+use PhpOpcua\Client\Module\ModuleRegistry;
+use PhpOpcua\Client\Module\NodeManagement\AddNodesResult;
+use PhpOpcua\Client\Module\ReadWrite\CallResult;
+use PhpOpcua\Client\Module\ServerInfo\BuildInfo;
+use PhpOpcua\Client\Module\Subscription\MonitoredItemResult;
+use PhpOpcua\Client\Module\Subscription\PublishResult;
+use PhpOpcua\Client\Module\Subscription\SubscriptionResult;
+use PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePathResult;
 use PhpOpcua\Client\Protocol\MessageHeader;
-use PhpOpcua\Client\Protocol\MonitoredItemService;
-use PhpOpcua\Client\Protocol\NodeManagementService;
-use PhpOpcua\Client\Protocol\PublishService;
-use PhpOpcua\Client\Protocol\ReadService;
 use PhpOpcua\Client\Protocol\SessionService;
-use PhpOpcua\Client\Protocol\SubscriptionService;
-use PhpOpcua\Client\Protocol\TranslateBrowsePathService;
-use PhpOpcua\Client\Protocol\WriteService;
 use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Security\SecurityMode;
@@ -42,8 +35,18 @@ use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\Client\Transport\TcpTransport;
 use PhpOpcua\Client\TrustStore\TrustPolicy;
 use PhpOpcua\Client\TrustStore\TrustStoreInterface;
+use PhpOpcua\Client\Types\AttributeId;
+use PhpOpcua\Client\Types\BrowseDirection;
+use PhpOpcua\Client\Types\BrowseNode;
+use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\ConnectionState;
+use PhpOpcua\Client\Types\DataValue;
+use PhpOpcua\Client\Types\EndpointDescription;
+use PhpOpcua\Client\Types\NodeClass;
 use PhpOpcua\Client\Types\NodeId;
+use PhpOpcua\Client\Types\QualifiedName;
+use PhpOpcua\Client\Types\ReferenceDescription;
+use PhpOpcua\Client\Types\Variant;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -52,13 +55,16 @@ use Psr\SimpleCache\CacheInterface;
  * Connected OPC UA client providing browsing, reading, writing, subscriptions, and history access.
  *
  * Instances are created via {@see ClientBuilder::connect()}. Do not instantiate directly.
+ * Service operations are provided by modules loaded via the {@see ModuleRegistry}.
  *
  * @implements OpcUaClientInterface
+ * @implements ClientKernelInterface
  *
  * @see OpcUaClientInterface
+ * @see ClientKernelInterface
  * @see ClientBuilder
  */
-class Client implements OpcUaClientInterface
+class Client implements OpcUaClientInterface, ClientKernelInterface
 {
     use ManagesEventDispatchTrait;
     use ManagesCacheRuntimeTrait;
@@ -68,40 +74,10 @@ class Client implements OpcUaClientInterface
     use ManagesHandshakeTrait;
     use ManagesSecureChannelTrait;
     use ManagesSessionTrait;
-    use ManagesBrowseTrait;
-    use ManagesReadWriteTrait;
-    use ManagesServerInfoTrait;
-    use ManagesNodeManagementTrait;
-    use ManagesSubscriptionsTrait;
-    use ManagesHistoryTrait;
-    use ManagesTypeDiscoveryTrait;
-    use ManagesTranslateBrowsePathTrait;
 
     private TcpTransport $transport;
 
     private ?SessionService $session = null;
-
-    private ?BrowseService $browseService = null;
-
-    private ?ReadService $readService = null;
-
-    private ?WriteService $writeService = null;
-
-    private ?CallService $callService = null;
-
-    private ?GetEndpointsService $getEndpointsService = null;
-
-    private ?SubscriptionService $subscriptionService = null;
-
-    private ?MonitoredItemService $monitoredItemService = null;
-
-    private ?PublishService $publishService = null;
-
-    private ?HistoryReadService $historyReadService = null;
-
-    private ?TranslateBrowsePathService $translateBrowsePathService = null;
-
-    private ?NodeManagementService $nodeManagementService = null;
 
     private ?NodeId $authenticationToken = null;
 
@@ -182,6 +158,16 @@ class Client implements OpcUaClientInterface
     /** @var array<string, class-string<\BackedEnum>> */
     private array $enumMappings;
 
+    private ModuleRegistry $moduleRegistry;
+
+    /** @var array<string, callable> */
+    private array $methodHandlers = [];
+
+    /** @var array<string, string> */
+    private array $methodOwners = [];
+
+    private string $currentModuleClass = '';
+
     /**
      * Create a connected OPC UA client. Called internally by {@see ClientBuilder::connect()}.
      *
@@ -211,6 +197,7 @@ class Client implements OpcUaClientInterface
      * @param bool $readMetadataCache Enable metadata read caching.
      * @param ExtensionObjectRepository $extensionObjectRepository Codec registry.
      * @param array<string, class-string<\BackedEnum>> $enumMappings Enum mappings.
+     * @param ModuleRegistry $moduleRegistry Module registry.
      *
      * @throws Exception\ConfigurationException If the endpoint URL is invalid.
      * @throws Exception\ConnectionException If the TCP connection or handshake fails.
@@ -243,6 +230,7 @@ class Client implements OpcUaClientInterface
         bool $readMetadataCache,
         ExtensionObjectRepository $extensionObjectRepository,
         array $enumMappings,
+        ?ModuleRegistry $moduleRegistry = null,
     ) {
         $this->securityPolicy = $securityPolicy;
         $this->securityMode = $securityMode;
@@ -269,9 +257,221 @@ class Client implements OpcUaClientInterface
         $this->readMetadataCache = $readMetadataCache;
         $this->extensionObjectRepository = $extensionObjectRepository;
         $this->enumMappings = $enumMappings;
+        $this->moduleRegistry = $moduleRegistry ?? new ModuleRegistry();
         $this->transport = new TcpTransport();
 
         $this->performConnect($endpointUrl);
+    }
+
+    /**
+     * Register a method handler provided by a module.
+     *
+     * @param string $name The method name.
+     * @param callable $handler The handler callable.
+     * @return void
+     *
+     * @throws ModuleConflictException If the method is already registered by another module.
+     */
+    public function registerMethod(string $name, callable $handler): void
+    {
+        if (isset($this->methodHandlers[$name])) {
+            throw new ModuleConflictException(
+                "Method '{$name}' is already registered by {$this->methodOwners[$name]}",
+            );
+        }
+        $this->methodHandlers[$name] = $handler;
+        $this->methodOwners[$name] = $this->currentModuleClass;
+    }
+
+    /**
+     * Set the current module class being registered (called by ModuleRegistry during boot).
+     *
+     * @param string $class The fully-qualified module class name.
+     * @return void
+     */
+    public function setCurrentModuleClass(string $class): void
+    {
+        $this->currentModuleClass = $class;
+    }
+
+    /**
+     * Check whether a method is registered by any loaded module.
+     *
+     * @param string $name The method name.
+     * @return bool
+     */
+    public function hasMethod(string $name): bool
+    {
+        return isset($this->methodHandlers[$name]);
+    }
+
+    /**
+     * Check whether a module class is loaded.
+     *
+     * @param string $moduleClass The fully-qualified module class name.
+     * @return bool
+     */
+    public function hasModule(string $moduleClass): bool
+    {
+        return $this->moduleRegistry->has($moduleClass);
+    }
+
+    /**
+     * Dynamically dispatch a method call to the registered module handler.
+     *
+     * @param string $method The method name.
+     * @param array<int, mixed> $args The method arguments.
+     * @return mixed
+     *
+     * @throws \BadMethodCallException If the method is not registered by any module.
+     */
+    public function __call(string $method, array $args): mixed
+    {
+        if (isset($this->methodHandlers[$method])) {
+            return ($this->methodHandlers[$method])(...$args);
+        }
+        throw new \BadMethodCallException("Method '{$method}' is not registered. Is the module loaded?");
+    }
+
+    /**
+     * Send raw data over the transport.
+     *
+     * @param string $data The raw bytes to send.
+     * @return void
+     */
+    public function send(string $data): void
+    {
+        $this->transport->send($data);
+    }
+
+    /**
+     * Receive raw data from the transport.
+     *
+     * @return string
+     */
+    public function receive(): string
+    {
+        return $this->transport->receive();
+    }
+
+    /**
+     * Generate and return the next sequential request ID.
+     *
+     * @return int
+     */
+    public function nextRequestId(): int
+    {
+        return $this->requestId++;
+    }
+
+    /**
+     * Get the current authentication token.
+     *
+     * @return NodeId
+     */
+    public function getAuthToken(): NodeId
+    {
+        return $this->authenticationToken;
+    }
+
+    /**
+     * Unwrap a raw transport response, handling ERR messages and secure channel decryption.
+     *
+     * @param string $response The raw response bytes from the transport layer.
+     * @return string The decoded response body.
+     *
+     * @throws ServiceException If the server returned an ERR message.
+     */
+    public function unwrapResponse(string $response): string
+    {
+        if (str_starts_with($response, 'ERR')) {
+            $decoder = $this->createDecoder($response);
+            MessageHeader::decode($decoder);
+            $errorCode = $decoder->readUInt32();
+            $reason = $decoder->readString() ?? 'Unknown error';
+            throw new ServiceException(sprintf('Server error 0x%08X: %s', $errorCode, $reason), $errorCode);
+        }
+
+        if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
+            return $this->secureChannel->processMessage($response);
+        }
+
+        return substr($response, MessageHeader::HEADER_SIZE + 4);
+    }
+
+    /**
+     * Create a BinaryDecoder for the given data buffer.
+     *
+     * @param string $data The binary data to decode.
+     * @return BinaryDecoder
+     */
+    public function createDecoder(string $data): BinaryDecoder
+    {
+        return new BinaryDecoder($data, $this->extensionObjectRepository);
+    }
+
+    /**
+     * Resolve a NodeId parameter that may be passed as a string.
+     *
+     * When called with a single argument (kernel usage), parses a NodeId string
+     * into a NodeId object. When called with additional arguments (client interface
+     * usage), delegates to the module-provided browse path resolver.
+     *
+     * @param NodeId|string $nodeId The node identifier or browse path string.
+     * @param NodeId|string|null $startingNodeId Starting node for browse path resolution.
+     * @param bool $useCache Whether to use the browse cache for path resolution.
+     * @return NodeId
+     *
+     * @throws Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
+     */
+    public function resolveNodeId(NodeId|string $nodeId, NodeId|string|null $startingNodeId = null, bool $useCache = true): NodeId
+    {
+        if ($startingNodeId !== null || ($nodeId instanceof NodeId === false && isset($this->methodHandlers['resolveNodeId']) && str_contains($nodeId, '/'))) {
+            return ($this->methodHandlers['resolveNodeId'])($nodeId, $startingNodeId, $useCache);
+        }
+
+        return is_string($nodeId) ? NodeId::parse($nodeId) : $nodeId;
+    }
+
+    /**
+     * Resolve string NodeIds in an array of items to NodeId objects.
+     *
+     * @param array<int, array<string, mixed>> $items
+     * @param string $key
+     * @return void
+     */
+    public function resolveNodeIdArray(array &$items, string $key = 'nodeId'): void
+    {
+        foreach ($items as &$item) {
+            if (isset($item[$key]) && is_string($item[$key])) {
+                $item[$key] = NodeId::parse($item[$key]);
+            }
+        }
+        unset($item);
+    }
+
+    /**
+     * Return the logger instance.
+     *
+     * @return LoggerInterface
+     */
+    public function log(): LoggerInterface
+    {
+        return $this->logger;
+    }
+
+    /**
+     * Build a log context array with endpoint and session_id prepended.
+     *
+     * @param array<string, mixed> $context Additional context data.
+     * @return array<string, mixed>
+     */
+    public function logContext(array $context = []): array
+    {
+        return array_merge([
+            'endpoint' => $this->lastEndpointUrl,
+            'session_id' => $this->authenticationToken !== null ? (string) $this->authenticationToken : null,
+        ], $context);
     }
 
     /**
@@ -341,92 +541,449 @@ class Client implements OpcUaClientInterface
     }
 
     /**
-     * Unwrap a raw transport response, handling ERR messages and secure channel decryption.
+     * Whether automatic write type detection is enabled.
      *
-     * @param string $response The raw response bytes from the transport layer.
-     * @return string The decoded response body.
-     *
-     * @throws ServiceException If the server returned an ERR message.
+     * @return bool
      */
-    private function unwrapResponse(string $response): string
+    public function isAutoDetectWriteType(): bool
     {
-        if (str_starts_with($response, 'ERR')) {
-            $decoder = $this->createDecoder($response);
-            MessageHeader::decode($decoder);
-            $errorCode = $decoder->readUInt32();
-            $reason = $decoder->readString() ?? 'Unknown error';
-            throw new ServiceException(sprintf('Server error 0x%08X: %s', $errorCode, $reason), $errorCode);
-        }
-
-        if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
-            return $this->secureChannel->processMessage($response);
-        }
-
-        return substr($response, MessageHeader::HEADER_SIZE + 4);
+        return $this->autoDetectWriteType;
     }
 
     /**
-     * Create a BinaryDecoder for the given data buffer.
+     * Whether metadata read caching is enabled.
      *
-     * @param string $data The binary data to decode.
-     * @return BinaryDecoder
+     * @return bool
      */
-    private function createDecoder(string $data): BinaryDecoder
+    public function isReadMetadataCache(): bool
     {
-        return new BinaryDecoder($data, $this->extensionObjectRepository);
+        return $this->readMetadataCache;
     }
 
     /**
-     * Build a log context array with endpoint and session_id prepended.
+     * Get the registered enum mappings.
      *
-     * @param array<string, mixed> $context Additional context data.
-     * @return array<string, mixed>
+     * @return array<string, class-string<\BackedEnum>>
      */
-    private function logContext(array $context = []): array
+    public function getEnumMappings(): array
     {
-        return array_merge([
-            'endpoint' => $this->lastEndpointUrl,
-            'session_id' => $this->authenticationToken !== null ? (string) $this->authenticationToken : null,
-        ], $context);
+        return $this->enumMappings;
     }
 
     /**
-     * Generate and return the next sequential request ID.
-     *
+     * @param ?int $namespaceIndex
+     * @param bool $useCache
      * @return int
      */
-    private function nextRequestId(): int
+    public function discoverDataTypes(?int $namespaceIndex = null, bool $useCache = true): int
     {
-        return $this->requestId++;
+        return ($this->methodHandlers['discoverDataTypes'])($namespaceIndex, $useCache);
     }
 
     /**
-     * Resolve a NodeId parameter that may be passed as a string.
-     *
-     * @param NodeId|string $nodeId The node identifier as a NodeId object or OPC UA string format.
-     * @return NodeId
-     *
-     * @throws Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
+     * @return ?string
      */
-    private function resolveNodeIdParam(NodeId|string $nodeId): NodeId
+    public function getServerProductName(): ?string
     {
-        return is_string($nodeId) ? NodeId::parse($nodeId) : $nodeId;
+        return ($this->methodHandlers['getServerProductName'])();
     }
 
     /**
-     * Resolve string NodeIds in an array of items to NodeId objects.
-     *
-     * @param array $items
-     * @param string $key
-     * @return void
+     * @return ?string
      */
-    private function resolveNodeIdArrayParam(array &$items, string $key = 'nodeId'): void
+    public function getServerManufacturerName(): ?string
     {
-        foreach ($items as &$item) {
-            if (isset($item[$key]) && is_string($item[$key])) {
-                $item[$key] = NodeId::parse($item[$key]);
-            }
-        }
-        unset($item);
+        return ($this->methodHandlers['getServerManufacturerName'])();
+    }
+
+    /**
+     * @return ?string
+     */
+    public function getServerSoftwareVersion(): ?string
+    {
+        return ($this->methodHandlers['getServerSoftwareVersion'])();
+    }
+
+    /**
+     * @return ?string
+     */
+    public function getServerBuildNumber(): ?string
+    {
+        return ($this->methodHandlers['getServerBuildNumber'])();
+    }
+
+    /**
+     * @return ?DateTimeImmutable
+     */
+    public function getServerBuildDate(): ?DateTimeImmutable
+    {
+        return ($this->methodHandlers['getServerBuildDate'])();
+    }
+
+    /**
+     * @return BuildInfo
+     */
+    public function getServerBuildInfo(): BuildInfo
+    {
+        return ($this->methodHandlers['getServerBuildInfo'])();
+    }
+
+    /**
+     * @param string $endpointUrl
+     * @param bool $useCache
+     * @return EndpointDescription[]
+     */
+    public function getEndpoints(string $endpointUrl, bool $useCache = true): array
+    {
+        return ($this->methodHandlers['getEndpoints'])($endpointUrl, $useCache);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param BrowseDirection $direction
+     * @param ?NodeId $referenceTypeId
+     * @param bool $includeSubtypes
+     * @param NodeClass[] $nodeClasses
+     * @param bool $useCache
+     * @return ReferenceDescription[]
+     */
+    public function browse(
+        NodeId|string $nodeId,
+        BrowseDirection $direction = BrowseDirection::Forward,
+        ?NodeId $referenceTypeId = null,
+        bool $includeSubtypes = true,
+        array $nodeClasses = [],
+        bool $useCache = true,
+    ): array {
+        return ($this->methodHandlers['browse'])($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClasses, $useCache);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param BrowseDirection $direction
+     * @param ?NodeId $referenceTypeId
+     * @param bool $includeSubtypes
+     * @param NodeClass[] $nodeClasses
+     * @return BrowseResultSet
+     */
+    public function browseWithContinuation(
+        NodeId|string $nodeId,
+        BrowseDirection $direction = BrowseDirection::Forward,
+        ?NodeId $referenceTypeId = null,
+        bool $includeSubtypes = true,
+        array $nodeClasses = [],
+    ): BrowseResultSet {
+        return ($this->methodHandlers['browseWithContinuation'])($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClasses);
+    }
+
+    /**
+     * @param string $continuationPoint
+     * @return BrowseResultSet
+     */
+    public function browseNext(string $continuationPoint): BrowseResultSet
+    {
+        return ($this->methodHandlers['browseNext'])($continuationPoint);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param BrowseDirection $direction
+     * @param ?NodeId $referenceTypeId
+     * @param bool $includeSubtypes
+     * @param NodeClass[] $nodeClasses
+     * @param bool $useCache
+     * @return ReferenceDescription[]
+     */
+    public function browseAll(
+        NodeId|string $nodeId,
+        BrowseDirection $direction = BrowseDirection::Forward,
+        ?NodeId $referenceTypeId = null,
+        bool $includeSubtypes = true,
+        array $nodeClasses = [],
+        bool $useCache = true,
+    ): array {
+        return ($this->methodHandlers['browseAll'])($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClasses, $useCache);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param BrowseDirection $direction
+     * @param ?int $maxDepth
+     * @param ?NodeId $referenceTypeId
+     * @param bool $includeSubtypes
+     * @param NodeClass[] $nodeClasses
+     * @return BrowseNode[]
+     */
+    public function browseRecursive(
+        NodeId|string $nodeId,
+        BrowseDirection $direction = BrowseDirection::Forward,
+        ?int $maxDepth = null,
+        ?NodeId $referenceTypeId = null,
+        bool $includeSubtypes = true,
+        array $nodeClasses = [],
+    ): array {
+        return ($this->methodHandlers['browseRecursive'])($nodeId, $direction, $maxDepth, $referenceTypeId, $includeSubtypes, $nodeClasses);
+    }
+
+    /**
+     * @param array<array{startingNodeId: NodeId|string, relativePath: array<array{referenceTypeId?: NodeId, isInverse?: bool, includeSubtypes?: bool, targetName: QualifiedName}>}>|null $browsePaths
+     * @return BrowsePathResult[]|Builder\BrowsePathsBuilder
+     */
+    public function translateBrowsePaths(?array $browsePaths = null): array|Builder\BrowsePathsBuilder
+    {
+        return ($this->methodHandlers['translateBrowsePaths'])($browsePaths);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param int $attributeId
+     * @param bool $refresh
+     * @return DataValue
+     */
+    public function read(NodeId|string $nodeId, int $attributeId = AttributeId::Value, bool $refresh = false): DataValue
+    {
+        return ($this->methodHandlers['read'])($nodeId, $attributeId, $refresh);
+    }
+
+    /**
+     * @param ?array<array{nodeId: NodeId|string, attributeId?: int}> $readItems
+     * @return DataValue[]|Builder\ReadMultiBuilder
+     */
+    public function readMulti(?array $readItems = null): array|Builder\ReadMultiBuilder
+    {
+        return ($this->methodHandlers['readMulti'])($readItems);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param mixed $value
+     * @param ?BuiltinType $type
+     * @return int
+     */
+    public function write(NodeId|string $nodeId, mixed $value, ?BuiltinType $type = null): int
+    {
+        return ($this->methodHandlers['write'])($nodeId, $value, $type);
+    }
+
+    /**
+     * @param ?array<array{nodeId: NodeId|string, value: mixed, type?: ?BuiltinType, attributeId?: int}> $writeItems
+     * @return int[]|Builder\WriteMultiBuilder
+     */
+    public function writeMulti(?array $writeItems = null): array|Builder\WriteMultiBuilder
+    {
+        return ($this->methodHandlers['writeMulti'])($writeItems);
+    }
+
+    /**
+     * @param NodeId|string $objectId
+     * @param NodeId|string $methodId
+     * @param Variant[] $inputArguments
+     * @return CallResult
+     */
+    public function call(NodeId|string $objectId, NodeId|string $methodId, array $inputArguments = []): CallResult
+    {
+        return ($this->methodHandlers['call'])($objectId, $methodId, $inputArguments);
+    }
+
+    /**
+     * @param float $publishingInterval
+     * @param int $lifetimeCount
+     * @param int $maxKeepAliveCount
+     * @param int $maxNotificationsPerPublish
+     * @param bool $publishingEnabled
+     * @param int $priority
+     * @return SubscriptionResult
+     */
+    public function createSubscription(
+        float $publishingInterval = 500.0,
+        int $lifetimeCount = 2400,
+        int $maxKeepAliveCount = 10,
+        int $maxNotificationsPerPublish = 0,
+        bool $publishingEnabled = true,
+        int $priority = 0,
+    ): SubscriptionResult {
+        return ($this->methodHandlers['createSubscription'])($publishingInterval, $lifetimeCount, $maxKeepAliveCount, $maxNotificationsPerPublish, $publishingEnabled, $priority);
+    }
+
+    /**
+     * @param int $subscriptionId
+     * @param ?array<array{nodeId: NodeId|string, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int}> $items
+     * @return MonitoredItemResult[]|Builder\MonitoredItemsBuilder
+     */
+    public function createMonitoredItems(
+        int $subscriptionId,
+        ?array $items = null,
+    ): array|Builder\MonitoredItemsBuilder {
+        return ($this->methodHandlers['createMonitoredItems'])($subscriptionId, $items);
+    }
+
+    /**
+     * @param int $subscriptionId
+     * @param NodeId|string $nodeId
+     * @param string[] $selectFields
+     * @param int $clientHandle
+     * @return MonitoredItemResult
+     */
+    public function createEventMonitoredItem(
+        int $subscriptionId,
+        NodeId|string $nodeId,
+        array $selectFields = ['EventId', 'EventType', 'SourceName', 'Time', 'Message', 'Severity'],
+        int $clientHandle = 1,
+    ): MonitoredItemResult {
+        return ($this->methodHandlers['createEventMonitoredItem'])($subscriptionId, $nodeId, $selectFields, $clientHandle);
+    }
+
+    /**
+     * @param int $subscriptionId
+     * @param int[] $monitoredItemIds
+     * @return int[]
+     */
+    public function deleteMonitoredItems(int $subscriptionId, array $monitoredItemIds): array
+    {
+        return ($this->methodHandlers['deleteMonitoredItems'])($subscriptionId, $monitoredItemIds);
+    }
+
+    /**
+     * @param int $subscriptionId
+     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool}> $itemsToModify
+     * @return Module\Subscription\MonitoredItemModifyResult[]
+     */
+    public function modifyMonitoredItems(int $subscriptionId, array $itemsToModify): array
+    {
+        return ($this->methodHandlers['modifyMonitoredItems'])($subscriptionId, $itemsToModify);
+    }
+
+    /**
+     * @param int $subscriptionId
+     * @param int $triggeringItemId
+     * @param int[] $linksToAdd
+     * @param int[] $linksToRemove
+     * @return Module\Subscription\SetTriggeringResult
+     */
+    public function setTriggering(int $subscriptionId, int $triggeringItemId, array $linksToAdd = [], array $linksToRemove = []): Module\Subscription\SetTriggeringResult
+    {
+        return ($this->methodHandlers['setTriggering'])($subscriptionId, $triggeringItemId, $linksToAdd, $linksToRemove);
+    }
+
+    /**
+     * @param int $subscriptionId
+     * @return int
+     */
+    public function deleteSubscription(int $subscriptionId): int
+    {
+        return ($this->methodHandlers['deleteSubscription'])($subscriptionId);
+    }
+
+    /**
+     * @param array<array{subscriptionId: int, sequenceNumber: int}> $acknowledgements
+     * @return PublishResult
+     */
+    public function publish(array $acknowledgements = []): PublishResult
+    {
+        return ($this->methodHandlers['publish'])($acknowledgements);
+    }
+
+    /**
+     * @param int[] $subscriptionIds
+     * @param bool $sendInitialValues
+     * @return Module\Subscription\TransferResult[]
+     */
+    public function transferSubscriptions(array $subscriptionIds, bool $sendInitialValues = false): array
+    {
+        return ($this->methodHandlers['transferSubscriptions'])($subscriptionIds, $sendInitialValues);
+    }
+
+    /**
+     * @param int $subscriptionId
+     * @param int $retransmitSequenceNumber
+     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array}
+     */
+    public function republish(int $subscriptionId, int $retransmitSequenceNumber): array
+    {
+        return ($this->methodHandlers['republish'])($subscriptionId, $retransmitSequenceNumber);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param ?DateTimeImmutable $startTime
+     * @param ?DateTimeImmutable $endTime
+     * @param int $numValuesPerNode
+     * @param bool $returnBounds
+     * @return DataValue[]
+     */
+    public function historyReadRaw(
+        NodeId|string $nodeId,
+        ?DateTimeImmutable $startTime = null,
+        ?DateTimeImmutable $endTime = null,
+        int $numValuesPerNode = 0,
+        bool $returnBounds = false,
+    ): array {
+        return ($this->methodHandlers['historyReadRaw'])($nodeId, $startTime, $endTime, $numValuesPerNode, $returnBounds);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param DateTimeImmutable $startTime
+     * @param DateTimeImmutable $endTime
+     * @param float $processingInterval
+     * @param NodeId $aggregateType
+     * @return DataValue[]
+     */
+    public function historyReadProcessed(
+        NodeId|string $nodeId,
+        DateTimeImmutable $startTime,
+        DateTimeImmutable $endTime,
+        float $processingInterval,
+        NodeId $aggregateType,
+    ): array {
+        return ($this->methodHandlers['historyReadProcessed'])($nodeId, $startTime, $endTime, $processingInterval, $aggregateType);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param DateTimeImmutable[] $timestamps
+     * @return DataValue[]
+     */
+    public function historyReadAtTime(
+        NodeId|string $nodeId,
+        array $timestamps,
+    ): array {
+        return ($this->methodHandlers['historyReadAtTime'])($nodeId, $timestamps);
+    }
+
+    /**
+     * @param array<array{parentNodeId: NodeId|string, referenceTypeId: NodeId|string, requestedNewNodeId: NodeId|string, browseName: QualifiedName, nodeClass: NodeClass, typeDefinition: NodeId|string, displayName?: ?string, description?: ?string, writeMask?: int, userWriteMask?: int}> $nodesToAdd
+     * @return AddNodesResult[]
+     */
+    public function addNodes(array $nodesToAdd): array
+    {
+        return ($this->methodHandlers['addNodes'])($nodesToAdd);
+    }
+
+    /**
+     * @param array<array{nodeId: NodeId|string, deleteTargetReferences?: bool}> $nodesToDelete
+     * @return int[]
+     */
+    public function deleteNodes(array $nodesToDelete): array
+    {
+        return ($this->methodHandlers['deleteNodes'])($nodesToDelete);
+    }
+
+    /**
+     * @param array<array{sourceNodeId: NodeId|string, referenceTypeId: NodeId|string, isForward: bool, targetNodeId: NodeId|string, targetNodeClass: NodeClass, targetServerUri?: ?string}> $referencesToAdd
+     * @return int[]
+     */
+    public function addReferences(array $referencesToAdd): array
+    {
+        return ($this->methodHandlers['addReferences'])($referencesToAdd);
+    }
+
+    /**
+     * @param array<array{sourceNodeId: NodeId|string, referenceTypeId: NodeId|string, isForward: bool, targetNodeId: NodeId|string, deleteBidirectional?: bool}> $referencesToDelete
+     * @return int[]
+     */
+    public function deleteReferences(array $referencesToDelete): array
+    {
+        return ($this->methodHandlers['deleteReferences'])($referencesToDelete);
     }
 }

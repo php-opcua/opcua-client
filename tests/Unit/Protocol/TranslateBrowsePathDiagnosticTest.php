@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
+use PhpOpcua\Client\Module\TranslateBrowsePath\TranslateBrowsePathService;
 use PhpOpcua\Client\Protocol\SessionService;
-use PhpOpcua\Client\Protocol\TranslateBrowsePathService;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\QualifiedName;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use PhpOpcua\Client\Module\ReadWrite\CallResult;
 use PhpOpcua\Client\Testing\MockClient;
 use PhpOpcua\Client\Types\BuiltinType;
-use PhpOpcua\Client\Types\CallResult;
 use PhpOpcua\Client\Types\ConnectionState;
 use PhpOpcua\Client\Types\DataValue;
 use PhpOpcua\Client\Types\NodeId;
@@ -277,7 +277,7 @@ describe('MockClient', function () {
         ]);
 
         expect($results)->toHaveCount(2);
-        expect($results[0])->toBeInstanceOf(PhpOpcua\Client\Types\MonitoredItemModifyResult::class);
+        expect($results[0])->toBeInstanceOf(PhpOpcua\Client\Module\Subscription\MonitoredItemModifyResult::class);
         expect($results[0]->statusCode)->toBe(0);
         expect($results[0]->revisedSamplingInterval)->toBe(1000.0);
         expect($results[1]->revisedQueueSize)->toBe(5);
@@ -287,7 +287,7 @@ describe('MockClient', function () {
         $mock = MockClient::create();
         $result = $mock->setTriggering(1, 1, [2, 3], [4]);
 
-        expect($result)->toBeInstanceOf(PhpOpcua\Client\Types\SetTriggeringResult::class);
+        expect($result)->toBeInstanceOf(PhpOpcua\Client\Module\Subscription\SetTriggeringResult::class);
         expect($result->addResults)->toBe([0, 0]);
         expect($result->removeResults)->toBe([0]);
     });
@@ -417,7 +417,7 @@ describe('MockClient', function () {
         $results = $mock->transferSubscriptions([1, 2]);
 
         expect($results)->toHaveCount(2);
-        expect($results[0])->toBeInstanceOf(PhpOpcua\Client\Types\TransferResult::class);
+        expect($results[0])->toBeInstanceOf(PhpOpcua\Client\Module\Subscription\TransferResult::class);
         expect($results[0]->statusCode)->toBe(0);
         expect($results[1]->availableSequenceNumbers)->toBe([]);
     });
@@ -453,7 +453,7 @@ describe('MockClient', function () {
     it('getServerBuildInfo returns pre-populated BuildInfo', function () {
         $info = MockClient::create()->getServerBuildInfo();
 
-        expect($info)->toBeInstanceOf(PhpOpcua\Client\Types\BuildInfo::class);
+        expect($info)->toBeInstanceOf(PhpOpcua\Client\Module\ServerInfo\BuildInfo::class);
         expect($info->productName)->toBe('MockServer');
         expect($info->manufacturerName)->toBe('php-opcua');
         expect($info->softwareVersion)->toBe('1.0.0');
@@ -485,7 +485,7 @@ describe('MockClient', function () {
         ]);
 
         expect($results)->toHaveCount(1);
-        expect($results[0])->toBeInstanceOf(PhpOpcua\Client\Types\AddNodesResult::class);
+        expect($results[0])->toBeInstanceOf(PhpOpcua\Client\Module\NodeManagement\AddNodesResult::class);
         expect($results[0]->statusCode)->toBe(0);
         expect((string) $results[0]->addedNodeId)->toBe('ns=2;i=1001');
         expect($mock->callCount('addNodes'))->toBe(1);

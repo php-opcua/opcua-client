@@ -433,6 +433,7 @@ describe('ManagesConnectionTrait', function () {
 
     it('ensureConnected throws for Broken state', function () {
         $client = createClientWithoutConnect();
+        registerClientModules($client);
         setClientProperty($client, 'connectionState', ConnectionState::Broken);
 
         expect(fn () => $client->read(NodeId::numeric(0, 2259)))
@@ -481,7 +482,7 @@ describe('ManagesConnectionTrait', function () {
         setClientProperty($client, 'authenticationToken', NodeId::numeric(0, 2));
         setClientProperty($client, 'secureChannelId', 1);
         setClientProperty($client, 'lastEndpointUrl', 'opc.tcp://mock:4840');
-        callClientMethod($client, 'initServices', [$session]);
+        bootClientModules($client, $session);
 
         $client->disconnect();
         expect($client->getConnectionState())->toBe(ConnectionState::Disconnected);
@@ -731,7 +732,7 @@ describe('ManagesSubscriptionsTrait', function () {
         $client = setupConnectedClient($mock);
         $result = $client->createEventMonitoredItem(42, NodeId::numeric(0, 2253));
 
-        expect($result)->toBeInstanceOf(PhpOpcua\Client\Types\MonitoredItemResult::class);
+        expect($result)->toBeInstanceOf(PhpOpcua\Client\Module\Subscription\MonitoredItemResult::class);
         expect($result->monitoredItemId)->toBe(100);
     });
 
@@ -765,7 +766,7 @@ describe('ManagesSubscriptionsTrait', function () {
         $client = setupConnectedClient($mock);
         $result = $client->setTriggering(42, 100, [200, 201], [300]);
 
-        expect($result)->toBeInstanceOf(PhpOpcua\Client\Types\SetTriggeringResult::class);
+        expect($result)->toBeInstanceOf(PhpOpcua\Client\Module\Subscription\SetTriggeringResult::class);
         expect($result->addResults)->toHaveCount(2);
     });
 
@@ -957,7 +958,7 @@ describe('ManagesSecureChannelTrait', function () {
         setClientProperty($client, 'securityPolicy', $policy);
         setClientProperty($client, 'securityMode', PhpOpcua\Client\Security\SecurityMode::SignAndEncrypt);
         setClientProperty($client, 'lastEndpointUrl', 'opc.tcp://mock:4840');
-        callClientMethod($client, 'initServices', [$session]);
+        bootClientModules($client, $session);
 
         callClientMethod($client, 'closeSecureChannel');
 
@@ -1005,7 +1006,7 @@ describe('ManagesSessionTrait', function () {
         setClientProperty($client, 'secureChannelId', 1);
         setClientProperty($client, 'secureChannel', $sc);
         setClientProperty($client, 'lastEndpointUrl', 'opc.tcp://mock:4840');
-        callClientMethod($client, 'initServices', [$session]);
+        bootClientModules($client, $session);
 
         callClientMethod($client, 'createAndActivateSession', ['opc.tcp://mock:4840']);
 
@@ -1033,7 +1034,7 @@ describe('ManagesSessionTrait', function () {
         setClientProperty($client, 'securityPolicy', $policy);
         setClientProperty($client, 'securityMode', PhpOpcua\Client\Security\SecurityMode::SignAndEncrypt);
         setClientProperty($client, 'lastEndpointUrl', 'opc.tcp://mock:4840');
-        callClientMethod($client, 'initServices', [$session]);
+        bootClientModules($client, $session);
 
         callClientMethod($client, 'closeSession');
         expect($mock->sent)->toHaveCount(1);
@@ -1108,7 +1109,13 @@ describe('ManagesTypeDiscoveryTrait', function () {
     it('findBinaryEncodingId returns null when browse throws', function () {
         $mock = new MockTransport();
         $client = setupConnectedClient($mock);
-        expect(callClientMethod($client, 'findBinaryEncodingId', [NodeId::numeric(2, 999)]))->toBeNull();
+
+        $moduleRef = new ReflectionProperty(PhpOpcua\Client\Client::class, 'moduleRegistry');
+        $registry = $moduleRef->getValue($client);
+        $module = $registry->get(PhpOpcua\Client\Module\TypeDiscovery\TypeDiscoveryModule::class);
+        $method = new ReflectionMethod($module, 'findBinaryEncodingId');
+
+        expect($method->invoke($module, NodeId::numeric(2, 999)))->toBeNull();
     });
 
     it('discoverSingleDataType catches exception in discoverFromTree', function () {
@@ -1155,9 +1162,14 @@ describe('ManagesTypeDiscoveryTrait', function () {
         );
         $node = new PhpOpcua\Client\Types\BrowseNode($ref);
 
+        $moduleRef = new ReflectionProperty(PhpOpcua\Client\Client::class, 'moduleRegistry');
+        $registry = $moduleRef->getValue($client);
+        $module = $registry->get(PhpOpcua\Client\Module\TypeDiscovery\TypeDiscoveryModule::class);
+        $method = new ReflectionMethod($module, 'discoverFromTree');
+
         $discovered = [];
         $registered = 0;
-        callClientMethod($client, 'discoverFromTree', [[$node], null, &$registered, &$discovered]);
+        $method->invoke($module, [$node], null, $registered, $discovered);
         expect($registered)->toBe(0);
     });
 
@@ -1188,9 +1200,14 @@ describe('ManagesTypeDiscoveryTrait', function () {
         $parentNode = new PhpOpcua\Client\Types\BrowseNode($parentRef);
         $parentNode->addChild($childNode);
 
+        $moduleRef = new ReflectionProperty(PhpOpcua\Client\Client::class, 'moduleRegistry');
+        $registry = $moduleRef->getValue($client);
+        $module = $registry->get(PhpOpcua\Client\Module\TypeDiscovery\TypeDiscoveryModule::class);
+        $method = new ReflectionMethod($module, 'discoverFromTree');
+
         $discovered = [];
         $registered = 0;
-        callClientMethod($client, 'discoverFromTree', [[$parentNode], null, &$registered, &$discovered]);
+        $method->invoke($module, [$parentNode], null, $registered, $discovered);
         expect($registered)->toBe(0);
     });
 });

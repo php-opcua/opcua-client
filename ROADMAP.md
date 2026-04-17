@@ -13,25 +13,83 @@
 
 - [ ] **PHPStan level 5** — static analysis with `phpstan/phpstan` as dev dependency, CI integration, and `composer analyse` script
 
-- [ ] **Kernel + ServiceModule architecture** — replace the trait-based Client with a modular system where each OPC UA service set (Browse, Read/Write, Subscriptions, History, NodeManagement, etc.) is a self-contained `ServiceModule` class. Breaking change.
+- [x] **Kernel + ServiceModule architecture** *(shipped in v4.2.0)* — the trait-based Client was replaced with a modular system where each OPC UA service set is a self-contained `ServiceModule` class. The public API is fully backward compatible — no breaking changes. See [CHANGELOG.md](CHANGELOG.md) and [doc/17-module-system.md](doc/17-module-system.md).
 
   **Why:** Today, adding a new service set (e.g., NodeManagement) requires touching 8 files: the module itself, Client.php (property + use trait), `initServices()`, `resetConnectionState()`, OpcUaClientInterface, and MockClient. Most of these changes are mechanical boilerplate. The trait-based service modules are already independent of each other — they just share a common infrastructure layer (transport, session, retry, encoding). This refactor makes that separation explicit.
 
   **How it works:**
-  - **`ClientKernel`** — extracts the shared infrastructure that every service needs into a public API: `executeWithRetry()`, `ensureConnected()`, `nextRequestId()`, `send()`, `receive()`, `unwrapResponse()`, `createDecoder()`, `resolveNodeId()`, `getAuthToken()`, `dispatch()`, `logContext()`. The kernel traits (Connection, Handshake, SecureChannel, Session, EventDispatch, Cache, Batching, TrustStore) remain internal to the kernel.
-  - **`ServiceModule`** — abstract base class. Each module receives the kernel, implements `boot(SessionService)` to create its protocol service, `reset()` to clean up on disconnect, and exposes its public methods. One class = one OPC UA service set, fully self-contained.
-  - **`ModuleRegistry`** — manages module lifecycle. On connect, calls `boot()` on all modules. On disconnect, calls `reset()`. No more manual `initServices()` / `resetConnectionState()` lists to maintain.
-  - **`Client`** — becomes a thin proxy: `OpcUaClientInterface` methods are one-liner delegations to the appropriate module. The interface itself does not change — zero breaking change for consumers.
-  - **`MockClient`** — can internally use the same module system, or remain a standalone implementation of the interface.
 
-  **What changes for adding a new service set:**
+  - **`ClientKernel`** — extracts the shared infrastructure that every service module needs into a public API: `executeWithRetry()`, `ensureConnected()`, `nextRequestId()`, `send()`, `receive()`, `unwrapResponse()`, `createDecoder()`, `resolveNodeId()`, `getAuthToken()`, `dispatch()`, `logContext()`. The kernel traits (Connection, Handshake, SecureChannel, Session, EventDispatch, Cache, Batching, TrustStore) remain internal to the kernel.
+
+  - **`ServiceModule`** — abstract base class. Each module receives the kernel and a reference to the Client. It implements `register()` to inject its methods onto the Client via `$this->client->registerMethod('read', $this->read(...))`, `boot(SessionService)` to create its protocol service, and `reset()` to clean up on disconnect. One class = one OPC UA service set, fully self-contained.
+
+  - **Method injection** — modules register their public methods directly on the Client during `register()`. The Client dispatches calls through `__call()` to the registered handlers. If two modules try to register the same method name, a `ModuleConflictException` is thrown at boot time — use `replaceModule()` to intentionally swap a module.
+
+  - **`requires()` dependency declaration** — a module can declare which other modules it depends on (e.g., `ServerInfoModule` requires `ReadWriteModule`). The `ModuleRegistry` resolves the dependency graph with topological sort and registers modules in the correct order. Missing dependencies throw a clear exception at `connect()` time. Cross-module calls go through the Client: `$this->client->read()` — same syntax as today's `$this->read()` in traits.
+
+  - **`Client`** — keeps **all built-in methods as concrete, fully typed one-liners** that delegate to the registered handler: `return ($this->methodHandlers['read'])($nodeId, $attributeId, $refresh)`. PHPStan, IDE autocomplete, and refactoring all work. `__call()` is used **only for custom third-party module methods** not in the interface.
+
+  - **`OpcUaClientInterface`** — stays **complete**. All built-in service methods (read, write, browse, addNodes, etc.) remain as typed signatures. Two new methods added: `hasMethod(string): bool` and `hasModule(string): bool` for module introspection. Zero breaking change for consumers type-hinting the interface.
+
+  - **`MockClient`** — implements the full `OpcUaClientInterface` and keeps its existing `onRead()`/`onWrite()`/`onBrowse()` handler registration system unchanged. Adds only `hasMethod()` and `hasModule()`.
+
+  - **No `removeModule()`** — only `addModule()` and `replaceModule()`. Built-in modules are always present. This avoids the complexity of validating broken dependency chains at runtime.
+
+  **What changes for adding a new built-in service set:**
   - Today: 8 files (DTO, protocol service, trait, Client.php property + use, initServices, resetConnectionState, interface, MockClient).
-  - After: 3–4 files (DTO, protocol service, module class, interface signatures + Client one-liners).
+  - After: 3–4 files (DTO, protocol service, module class, interface signatures + Client one-liners). No more initServices/resetConnectionState/trait wiring.
 
   **What changes for external developers:**
-  - `ClientBuilder::replaceModule(ReadWriteModule::class, MyCustomReadWrite::class)` — swap any built-in module with a custom implementation.
-  - `ClientBuilder::addModule(new MyQueryServiceModule())` — add entirely new service sets without forking.
-  - `$client->module(MyModule::class)->customMethod()` — access custom module methods.
+  - `ClientBuilder::replaceModule(ReadWriteModule::class, MyCustomReadWrite::class)` — swap any built-in module with a custom implementation. All other modules that call `$this->client->read()` automatically use the replacement.
+  - `ClientBuilder::addModule(new MyQueryServiceModule())` — add entirely new service sets without forking. Custom methods are accessible via `$client->queryFirst(...)` through `__call()`.
+
+  **Migration for consumers:**
+  - `$client->read()`, `$client->browse()`, etc. — **unchanged**, works identically.
+  - Type hints: `OpcUaClientInterface` — **unchanged**, still works with all built-in methods.
+  - MockClient: **unchanged** API.
+
+  **DTO co-location** — module-specific DTOs move from `src/Types/` into their module's namespace. Types that are used by a single module live alongside it; types shared across multiple modules (NodeId, DataValue, Variant, StatusCode, QualifiedName, etc.) remain in `src/Types/`. Examples:
+
+  | Class | Today | After |
+  |-------|-------|-------|
+  | `AddNodesResult` | `Types\AddNodesResult` | `Module\NodeManagement\AddNodesResult` |
+  | `NodeManagementService` | `Protocol\NodeManagementService` | `Module\NodeManagement\NodeManagementService` |
+  | `CallResult` | `Types\CallResult` | `Module\ReadWrite\CallResult` |
+  | `ReadService` | `Protocol\ReadService` | `Module\ReadWrite\ReadService` |
+  | `WriteService` | `Protocol\WriteService` | `Module\ReadWrite\WriteService` |
+  | `CallService` | `Protocol\CallService` | `Module\ReadWrite\CallService` |
+  | `SubscriptionResult` | `Types\SubscriptionResult` | `Module\Subscription\SubscriptionResult` |
+  | `MonitoredItemResult` | `Types\MonitoredItemResult` | `Module\Subscription\MonitoredItemResult` |
+  | `PublishResult` | `Types\PublishResult` | `Module\Subscription\PublishResult` |
+  | `TransferResult` | `Types\TransferResult` | `Module\Subscription\TransferResult` |
+  | `SubscriptionService` | `Protocol\SubscriptionService` | `Module\Subscription\SubscriptionService` |
+  | `MonitoredItemService` | `Protocol\MonitoredItemService` | `Module\Subscription\MonitoredItemService` |
+  | `PublishService` | `Protocol\PublishService` | `Module\Subscription\PublishService` |
+  | `BrowseResultSet` | `Types\BrowseResultSet` | `Module\Browse\BrowseResultSet` |
+  | `BrowseService` | `Protocol\BrowseService` | `Module\Browse\BrowseService` |
+  | `GetEndpointsService` | `Protocol\GetEndpointsService` | `Module\Browse\GetEndpointsService` |
+  | `BrowsePathResult` | `Types\BrowsePathResult` | `Module\TranslateBrowsePath\BrowsePathResult` |
+  | `TranslateBrowsePathService` | `Protocol\TranslateBrowsePathService` | `Module\TranslateBrowsePath\TranslateBrowsePathService` |
+  | `HistoryReadService` | `Protocol\HistoryReadService` | `Module\History\HistoryReadService` |
+  | `BuildInfo` | `Types\BuildInfo` | `Module\ServerInfo\BuildInfo` |
+  | `NodeId`, `DataValue`, `Variant`, ... | `Types\*` | `Types\*` (unchanged — shared) |
+  | `AbstractProtocolService` | `Protocol\AbstractProtocolService` | `Protocol\AbstractProtocolService` (unchanged — shared base) |
+  | `SessionService` | `Protocol\SessionService` | `Kernel\SessionService` (unchanged — kernel) |
+  | `ServiceTypeId` | `Protocol\ServiceTypeId` | `Protocol\ServiceTypeId` (unchanged — shared constants) |
+
+  Each module becomes a fully self-contained package:
+  ```
+  src/Module/NodeManagement/
+  ├── NodeManagementModule.php      ← module class (register, boot, reset, methods)
+  ├── NodeManagementService.php     ← protocol encoding/decoding
+  └── AddNodesResult.php            ← module-specific DTO
+  ```
+
+---
+
+## v5.1.0
+
+- [ ] **IDE helper stub generator** — a `composer generate-ide-helper` command (or `vendor/bin/opcua-ide-helper`) that auto-generates `_ide_helper_opcua.php` from the registered modules via reflection. The stub file contains PHPDoc `@method` annotations for the `Client` class, covering both built-in and custom module methods. The file is not loaded at runtime — it is only consumed by the IDE for autocomplete and static analysis. Replaces the hardcoded `@method` annotations on the `Client` class introduced in v5.0.0, keeping them always in sync with the actual module code. Custom modules are included when the generator is re-run after adding them to the builder. The generated file should be added to `.gitignore`.
 
 ---
 

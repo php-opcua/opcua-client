@@ -49,7 +49,7 @@ trait ManagesBatchingRuntimeTrait
      *
      * @return int|null
      */
-    private function getEffectiveReadBatchSize(): ?int
+    public function getEffectiveReadBatchSize(): ?int
     {
         if ($this->batchSize !== null) {
             return $this->batchSize > 0 ? $this->batchSize : null;
@@ -63,7 +63,7 @@ trait ManagesBatchingRuntimeTrait
      *
      * @return int|null
      */
-    private function getEffectiveWriteBatchSize(): ?int
+    public function getEffectiveWriteBatchSize(): ?int
     {
         if ($this->batchSize !== null) {
             return $this->batchSize > 0 ? $this->batchSize : null;
@@ -89,7 +89,7 @@ trait ManagesBatchingRuntimeTrait
         ];
 
         try {
-            $results = $this->readMultiRaw($items);
+            $results = ($this->methodHandlers['readMulti'])($items);
 
             if (isset($results[0]) && StatusCode::isGood($results[0]->getStatusCode())) {
                 $value = $results[0]->getValue();

@@ -11,82 +11,74 @@ use PhpOpcua\Client\Types\NodeId;
 
 describe('Client throws ConnectionException when not connected', function () {
 
+    beforeEach(function () {
+        $this->client = createClientWithoutConnect();
+        registerClientModules($this->client);
+    });
+
     it('throws on browse', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->browse(NodeId::numeric(0, 85)))
+        expect(fn () => $this->client->browse(NodeId::numeric(0, 85)))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on browseWithContinuation', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->browseWithContinuation(NodeId::numeric(0, 85)))
+        expect(fn () => $this->client->browseWithContinuation(NodeId::numeric(0, 85)))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on browseNext', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->browseNext('some-continuation'))
+        expect(fn () => $this->client->browseNext('some-continuation'))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on read', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->read(NodeId::numeric(0, 2259)))
+        expect(fn () => $this->client->read(NodeId::numeric(0, 2259)))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on readMulti', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->readMulti([['nodeId' => NodeId::numeric(0, 2259)]]))
+        expect(fn () => $this->client->readMulti([['nodeId' => NodeId::numeric(0, 2259)]]))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on write', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->write(NodeId::numeric(1, 100), 42, BuiltinType::Int32))
+        expect(fn () => $this->client->write(NodeId::numeric(1, 100), 42, BuiltinType::Int32))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on writeMulti', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->writeMulti([
+        expect(fn () => $this->client->writeMulti([
             ['nodeId' => NodeId::numeric(1, 100), 'value' => 42, 'type' => BuiltinType::Int32],
         ]))->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on call', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->call(NodeId::numeric(1, 100), NodeId::numeric(1, 200)))
+        expect(fn () => $this->client->call(NodeId::numeric(1, 100), NodeId::numeric(1, 200)))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on createSubscription', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->createSubscription())
+        expect(fn () => $this->client->createSubscription())
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on createMonitoredItems', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->createMonitoredItems(1, [['nodeId' => NodeId::numeric(0, 2259)]]))
+        expect(fn () => $this->client->createMonitoredItems(1, [['nodeId' => NodeId::numeric(0, 2259)]]))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on deleteMonitoredItems', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->deleteMonitoredItems(1, [1]))
+        expect(fn () => $this->client->deleteMonitoredItems(1, [1]))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on publish', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->publish())
+        expect(fn () => $this->client->publish())
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on historyReadRaw', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->historyReadRaw(
+        expect(fn () => $this->client->historyReadRaw(
             NodeId::numeric(1, 100),
             new DateTimeImmutable('-1 hour'),
             new DateTimeImmutable(),
@@ -94,8 +86,7 @@ describe('Client throws ConnectionException when not connected', function () {
     });
 
     it('throws on historyReadProcessed', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->historyReadProcessed(
+        expect(fn () => $this->client->historyReadProcessed(
             NodeId::numeric(1, 100),
             new DateTimeImmutable('-1 hour'),
             new DateTimeImmutable(),
@@ -105,16 +96,14 @@ describe('Client throws ConnectionException when not connected', function () {
     });
 
     it('throws on historyReadAtTime', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->historyReadAtTime(
+        expect(fn () => $this->client->historyReadAtTime(
             NodeId::numeric(1, 100),
             [new DateTimeImmutable()],
         ))->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws on getEndpoints', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->getEndpoints('opc.tcp://localhost:4840'))
+        expect(fn () => $this->client->getEndpoints('opc.tcp://localhost:4840'))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 });

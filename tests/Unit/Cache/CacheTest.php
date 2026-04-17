@@ -56,7 +56,7 @@ class CacheMockTransport extends TcpTransport
 
 function setCacheClientProperty(Client $client, string $name, mixed $value): void
 {
-    $ref = new ReflectionProperty($client, $name);
+    $ref = new ReflectionProperty(Client::class, $name);
     $ref->setValue($client, $value);
 }
 
@@ -102,22 +102,33 @@ function createCacheClientWithoutConnect(): Client
     setCacheClientProperty($client, 'enumMappings', []);
     setCacheClientProperty($client, 'transport', new TcpTransport());
     setCacheClientProperty($client, 'session', null);
-    setCacheClientProperty($client, 'browseService', null);
-    setCacheClientProperty($client, 'readService', null);
-    setCacheClientProperty($client, 'writeService', null);
-    setCacheClientProperty($client, 'callService', null);
-    setCacheClientProperty($client, 'getEndpointsService', null);
-    setCacheClientProperty($client, 'subscriptionService', null);
-    setCacheClientProperty($client, 'monitoredItemService', null);
-    setCacheClientProperty($client, 'publishService', null);
-    setCacheClientProperty($client, 'historyReadService', null);
-    setCacheClientProperty($client, 'translateBrowsePathService', null);
+    $moduleRegistry = new PhpOpcua\Client\Module\ModuleRegistry();
+    $moduleRegistry->add(new PhpOpcua\Client\Module\ReadWrite\ReadWriteModule());
+    $moduleRegistry->add(new PhpOpcua\Client\Module\Browse\BrowseModule());
+    $moduleRegistry->add(new PhpOpcua\Client\Module\Subscription\SubscriptionModule());
+    $moduleRegistry->add(new PhpOpcua\Client\Module\History\HistoryModule());
+    $moduleRegistry->add(new PhpOpcua\Client\Module\NodeManagement\NodeManagementModule());
+    $moduleRegistry->add(new PhpOpcua\Client\Module\TranslateBrowsePath\TranslateBrowsePathModule());
+    $moduleRegistry->add(new PhpOpcua\Client\Module\ServerInfo\ServerInfoModule());
+    $moduleRegistry->add(new PhpOpcua\Client\Module\TypeDiscovery\TypeDiscoveryModule());
+    setCacheClientProperty($client, 'moduleRegistry', $moduleRegistry);
+    setCacheClientProperty($client, 'methodHandlers', []);
+    setCacheClientProperty($client, 'methodOwners', []);
+    setCacheClientProperty($client, 'currentModuleClass', '');
+    foreach ($moduleRegistry->getModuleClasses() as $moduleClass) {
+        $module = $moduleRegistry->get($moduleClass);
+        $module->setKernel($client);
+        $module->setClient($client);
+        $client->setCurrentModuleClass($moduleClass);
+        $module->register();
+    }
     setCacheClientProperty($client, 'authenticationToken', null);
     setCacheClientProperty($client, 'secureChannelId', 0);
     setCacheClientProperty($client, 'requestId', 10);
     setCacheClientProperty($client, 'serverCertDer', null);
     setCacheClientProperty($client, 'secureChannel', null);
     setCacheClientProperty($client, 'serverNonce', null);
+    setCacheClientProperty($client, 'eccServerEphemeralKey', null);
     setCacheClientProperty($client, 'usernamePolicyId', null);
     setCacheClientProperty($client, 'certificatePolicyId', null);
     setCacheClientProperty($client, 'anonymousPolicyId', null);
@@ -137,7 +148,12 @@ function setupCacheConnectedClient(CacheMockTransport $mock): Client
     setCacheClientProperty($client, 'authenticationToken', NodeId::numeric(0, 2));
     setCacheClientProperty($client, 'secureChannelId', 1);
     setCacheClientProperty($client, 'lastEndpointUrl', 'opc.tcp://mock:4840');
-    callCacheClientMethod($client, 'initServices', [$session]);
+
+    $ref = new ReflectionProperty(Client::class, 'moduleRegistry');
+    $moduleRegistry = $ref->getValue($client);
+    foreach ($moduleRegistry->getModuleClasses() as $moduleClass) {
+        $moduleRegistry->get($moduleClass)->boot($session);
+    }
 
     return $client;
 }

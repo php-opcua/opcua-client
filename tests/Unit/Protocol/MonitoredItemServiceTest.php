@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
+use PhpOpcua\Client\Module\Subscription\MonitoredItemService;
 use PhpOpcua\Client\Protocol\MessageHeader;
-use PhpOpcua\Client\Protocol\MonitoredItemService;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\NodeId;
 

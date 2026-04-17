@@ -2,7 +2,32 @@
 
 ## [Unreleased]
 
+## [v4.2.0] - 2026-04-17
+
 ### Added
+
+- **Kernel + ServiceModule architecture.** The `Client` now delegates all OPC UA service operations to self-contained `ServiceModule` classes, replacing the trait-based approach. Each module encapsulates its protocol services, DTOs, and methods in a single directory.
+- **`ClientKernel`** (`src/Kernel/ClientKernel.php`) — shared infrastructure API for all modules: `executeWithRetry()`, `ensureConnected()`, `nextRequestId()`, `send()`, `receive()`, `unwrapResponse()`, `createDecoder()`, `resolveNodeId()`, `getAuthToken()`, `dispatch()`, `logContext()`.
+- **`ClientKernelInterface`** (`src/Kernel/ClientKernelInterface.php`) — public contract for the kernel infrastructure that modules depend on.
+- **`ServiceModule`** abstract base class — each module implements `register()`, `boot()`, `reset()`, and optionally `requires()` for dependency declaration.
+- **`ModuleRegistry`** — manages module lifecycle with topological dependency sort, method conflict detection, and ordered boot/reset.
+- **8 built-in modules:** `ReadWriteModule`, `BrowseModule`, `SubscriptionModule`, `HistoryModule`, `NodeManagementModule`, `TranslateBrowsePathModule`, `ServerInfoModule`, `TypeDiscoveryModule`.
+- **`ClientBuilder::addModule()`** — register a custom third-party module.
+- **`ClientBuilder::replaceModule()`** — swap a built-in module with a custom implementation.
+- **`Client::hasMethod(string): bool`** and **`Client::hasModule(string): bool`** — runtime introspection for registered methods and modules.
+- **`OpcUaClientInterface::hasMethod()`** and **`OpcUaClientInterface::hasModule()`** — added to the public API contract.
+- **`ModuleConflictException`** — thrown when two modules try to register the same method name (use `replaceModule()` to intentionally swap).
+- **`MissingModuleDependencyException`** — thrown when a module's `requires()` dependencies are not satisfied.
+- **`MockClient::hasMethod()`** and **`MockClient::hasModule()`** — added to match the updated interface.
+
+### Changed
+
+- **`Client` is now a thin proxy.** All built-in service methods (read, write, browse, etc.) are concrete, fully typed one-liners that delegate to the registered module handler. `__call()` is used **only** for custom third-party module methods not in the interface.
+- **Module-specific DTOs co-located with their module.** Types used by a single module now live in the module's namespace instead of `Types\`. Shared types (`NodeId`, `DataValue`, `Variant`, `StatusCode`, etc.) remain in `Types\`.
+- **Module-specific protocol services co-located with their module.** Each module contains its own protocol service class. Shared base class `AbstractProtocolService` and `ServiceTypeId` remain in `Protocol\`.
+- **`MockClient`** implements the full `OpcUaClientInterface` and keeps its existing handler/tracking API unchanged.
+
+### Also added
 
 - **Server BuildInfo convenience methods.** Six new methods on `OpcUaClientInterface` for quick access to standard OPC UA Server BuildInfo nodes (mandatory on every server):
   - `getServerProductName()` — reads `ns=0;i=2262`, returns `?string`

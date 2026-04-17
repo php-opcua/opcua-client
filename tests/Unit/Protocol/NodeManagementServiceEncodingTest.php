@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
-use PhpOpcua\Client\Protocol\NodeManagementService;
+use PhpOpcua\Client\Module\NodeManagement\AddNodesResult;
+use PhpOpcua\Client\Module\NodeManagement\NodeManagementService;
 use PhpOpcua\Client\Protocol\SessionService;
-use PhpOpcua\Client\Types\AddNodesResult;
 use PhpOpcua\Client\Types\NodeClass;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\QualifiedName;

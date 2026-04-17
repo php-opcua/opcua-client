@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/Client/ClientTraitsCoverageTest.php';
 
-use PhpOpcua\Client\Client;
 use PhpOpcua\Client\Exception\ConnectionException;
+use PhpOpcua\Client\Module\TranslateBrowsePath\TranslateBrowsePathModule;
 use PhpOpcua\Client\OpcUaClientInterface;
 use PhpOpcua\Client\Types\QualifiedName;
 
 describe('resolveNodeId path parsing', function () {
 
     beforeEach(function () {
-        $this->parse = (new ReflectionMethod(Client::class, 'parseQualifiedName'))->getClosure();
+        $this->parse = (new ReflectionMethod(TranslateBrowsePathModule::class, 'parseQualifiedName'))->getClosure();
     });
 
     it('parses a simple name as namespace 0', function () {
@@ -69,12 +69,14 @@ describe('resolveNodeId interface', function () {
 
     it('throws when not connected', function () {
         $client = createClientWithoutConnect();
+        registerClientModules($client);
         expect(fn () => $client->resolveNodeId('/Objects/Server'))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws translateBrowsePaths when not connected', function () {
         $client = createClientWithoutConnect();
+        registerClientModules($client);
         expect(fn () => $client->translateBrowsePaths([]))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });

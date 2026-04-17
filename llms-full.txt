@@ -60,21 +60,49 @@ Old getter methods are deprecated but still work.
 ### Architecture
 
 ```
-ClientBuilder (entry point, 8 config traits in ClientBuilder/)
-  +-- connect() → returns Client
+ClientBuilder (entry point, config traits in ClientBuilder/, addModule/replaceModule)
+  +-- connect() → boots Kernel → registers Modules → returns Client
 
-Client (connected client, 14 runtime traits in Client/)
+Client (proxy to modules, implements OpcUaClientInterface, hasMethod, hasModule)
+  +-- __call() for custom module methods
+
+Kernel/ClientKernel (shared infrastructure for all modules)
   +-- Transport/TcpTransport        (TCP socket communication)
-  +-- Protocol/*Service              (OPC UA service encoding/decoding)
+  +-- Protocol/SessionService        (session management, kernel-level)
   +-- Encoding/BinaryEncoder         (binary serialization)
   +-- Encoding/BinaryDecoder         (binary deserialization)
   +-- Security/SecureChannel         (message-level security)
   +-- Security/MessageSecurity       (crypto operations)
   +-- Security/CertificateManager    (certificate handling)
-  +-- Types/*                        (data types and result DTOs)
-  +-- Repository/*                   (per-client codec registry)
-  +-- Exception/*                    (error hierarchy)
+
+Kernel/ModuleRegistry (module lifecycle, topological dependency sort, method registry)
+
+Module/* (8 built-in service modules, each self-contained)
+  +-- Module/ReadWrite/              (read, write, call + CallResult)
+  +-- Module/Browse/                 (browse, getEndpoints + BrowseResultSet)
+  +-- Module/Subscription/           (subscriptions, monitoring + SubscriptionResult, etc.)
+  +-- Module/History/                (history read)
+  +-- Module/NodeManagement/         (add/delete nodes + AddNodesResult)
+  +-- Module/TranslateBrowsePath/    (path resolution + BrowsePathResult)
+  +-- Module/ServerInfo/             (server build info + BuildInfo)
+  +-- Module/TypeDiscovery/          (auto type discovery)
+
+Types/*                              (shared types: NodeId, DataValue, Variant, etc.)
+Repository/*                         (per-client codec registry)
+Exception/*                          (error hierarchy)
 ```
+
+### Module System
+
+The Client uses a modular architecture. Each OPC UA service set is a self-contained `ServiceModule` with its own protocol services, DTOs, and method implementations.
+
+**Boot flow:** ClientBuilder::connect() creates ClientKernel, creates ModuleRegistry, registers all modules (8 built-in + custom), resolves dependencies with topological sort, boots all modules in order, returns Client with method handlers populated.
+
+**Extending:** `ClientBuilder::addModule(new MyModule())` adds a custom module. `ClientBuilder::replaceModule(ReadWriteModule::class, new MyReadWrite())` swaps a built-in. Custom module methods are accessible via `__call()`. Built-in methods are concrete typed one-liners on Client that delegate to handlers.
+
+**Introspection:** `$client->hasMethod('read')` and `$client->hasModule(ReadWriteModule::class)` for runtime checks.
+
+**Dependencies:** Modules declare dependencies via `requires()`. The registry resolves the graph and throws `MissingModuleDependencyException` for unsatisfied deps. `ModuleConflictException` is thrown if two modules register the same method name.
 
 ### Quick Start
 
@@ -644,16 +672,19 @@ NodeId(1), NodeClass(2), BrowseName(3), DisplayName(4), Description(5), Value(13
 
 ### Result DTOs (all public readonly)
 
-BrowseResultSet: references (ReferenceDescription[]), continuationPoint (?string)
-BrowsePathResult: statusCode (int), targets (BrowsePathTarget[])
-BrowsePathTarget: targetId (NodeId), remainingPathIndex (int)
-CallResult: statusCode (int), inputArgumentResults (int[]), outputArguments (Variant[])
-SubscriptionResult: subscriptionId (int), revisedPublishingInterval (float), revisedLifetimeCount (int), revisedMaxKeepAliveCount (int)
-MonitoredItemResult: statusCode (int), monitoredItemId (int), revisedSamplingInterval (float), revisedQueueSize (int)
-PublishResult: subscriptionId (int), sequenceNumber (int), moreNotifications (bool), notifications (array), availableSequenceNumbers (int[])
-TransferResult: statusCode (int), availableSequenceNumbers (int[])
-ExtensionObject: typeId (NodeId), encoding (int), body (?string), value (mixed); methods: isDecoded(), isRaw(). DataValue::getValue() auto-extracts decoded value when codec is registered.
-BuildInfo: productName (?string), manufacturerName (?string), softwareVersion (?string), buildNumber (?string), buildDate (?DateTimeImmutable)
+Note: Module-specific DTOs have moved from Types\ to their module namespace in v5.0.0. Shared types remain in Types\.
+
+Module\Browse\BrowseResultSet: references (ReferenceDescription[]), continuationPoint (?string)
+Module\TranslateBrowsePath\BrowsePathResult: statusCode (int), targets (BrowsePathTarget[])
+Types\BrowsePathTarget: targetId (NodeId), remainingPathIndex (int)
+Module\ReadWrite\CallResult: statusCode (int), inputArgumentResults (int[]), outputArguments (Variant[])
+Module\Subscription\SubscriptionResult: subscriptionId (int), revisedPublishingInterval (float), revisedLifetimeCount (int), revisedMaxKeepAliveCount (int)
+Module\Subscription\MonitoredItemResult: statusCode (int), monitoredItemId (int), revisedSamplingInterval (float), revisedQueueSize (int)
+Module\Subscription\PublishResult: subscriptionId (int), sequenceNumber (int), moreNotifications (bool), notifications (array), availableSequenceNumbers (int[])
+Module\Subscription\TransferResult: statusCode (int), availableSequenceNumbers (int[])
+Types\ExtensionObject: typeId (NodeId), encoding (int), body (?string), value (mixed); methods: isDecoded(), isRaw(). DataValue::getValue() auto-extracts decoded value when codec is registered.
+Module\ServerInfo\BuildInfo: productName (?string), manufacturerName (?string), softwareVersion (?string), buildNumber (?string), buildDate (?DateTimeImmutable)
+Module\NodeManagement\AddNodesResult: statusCode (int), addedNodeId (NodeId)
 
 ---
 
@@ -709,31 +740,40 @@ Connection flow with ECC security:
 
 ```
 src/
-├── ClientBuilder.php             # Builder / entry point (8 config traits)
+├── ClientBuilder.php             # Builder / entry point (config traits, addModule, replaceModule)
 ├── ClientBuilderInterface.php    # Builder interface
-├── Client.php                    # Connected client (14 runtime traits)
-├── OpcUaClientInterface.php      # Public API contract (operations)
-├── ClientBuilder/*.php           # Builder traits (configuration: cache, events, timeout, trust, etc.)
-├── Client/*.php                  # Client traits (operations: browse, read/write, subscriptions, etc.)
+├── Client.php                    # Connected client (proxy to modules, hasMethod, hasModule, __call)
+├── OpcUaClientInterface.php      # Public API contract (all built-in methods + hasMethod + hasModule)
+├── ClientBuilder/*.php           # Builder traits (configuration: cache, events, timeout, trust, modules, etc.)
+├── Kernel/ClientKernel.php       # Shared infrastructure for modules
+├── Kernel/ClientKernelInterface.php  # Kernel contract for modules
+├── Kernel/ModuleRegistry.php     # Module lifecycle, dependency sort, method registry
+├── Module/ServiceModule.php      # Abstract base class (register, boot, reset, requires)
+├── Module/ReadWrite/             # ReadWriteModule + ReadService, WriteService, CallService, CallResult
+├── Module/Browse/                # BrowseModule + BrowseService, GetEndpointsService, BrowseResultSet
+├── Module/Subscription/          # SubscriptionModule + SubscriptionService, MonitoredItemService, PublishService, SubscriptionResult, MonitoredItemResult, PublishResult, TransferResult
+├── Module/History/               # HistoryModule + HistoryReadService
+├── Module/NodeManagement/        # NodeManagementModule + NodeManagementService, AddNodesResult
+├── Module/TranslateBrowsePath/   # TranslateBrowsePathModule + TranslateBrowsePathService, BrowsePathResult
+├── Module/ServerInfo/            # ServerInfoModule + BuildInfo
+├── Module/TypeDiscovery/         # TypeDiscoveryModule
 ├── Transport/TcpTransport.php    # TCP socket I/O
 ├── Encoding/BinaryEncoder.php    # Serialization
 ├── Encoding/BinaryDecoder.php    # Deserialization (accepts optional ExtensionObjectRepository)
 ├── Encoding/ExtensionObjectCodec.php  # Codec interface
 ├── Protocol/AbstractProtocolService.php  # Shared encode/decode base class
 ├── Protocol/ServiceTypeId.php   # Named constants for all OPC UA service NodeIds
-├── Protocol/*Service.php         # 15 OPC UA service classes (extend AbstractProtocolService)
+├── Protocol/SessionService.php  # Session management (kernel-level)
 ├── Security/*.php                # SecureChannel, MessageSecurity, CertificateManager, enums
-├── Types/*.php                   # 23 type/enum/DTO classes (all public readonly, includes ExtensionObject)
+├── Types/*.php                   # Shared types (NodeId, DataValue, Variant, etc. — module-specific DTOs live in Module/*)
 ├── Builder/*.php                 # Fluent builders for multi-operations
-├── Cli/Application.php            # CLI entry point, command routing
-├── Cli/Commands/*.php             # 10 CLI commands (browse, read, write, endpoints, watch, generate:nodeset, dump:nodeset, trust, trust:list, trust:remove)
 ├── Event/NullEventDispatcher.php   # No-op PSR-14 dispatcher
 ├── Event/*.php                    # 38 event classes
 ├── Cache/InMemoryCache.php        # PSR-16 in-memory cache
 ├── Cache/FileCache.php            # PSR-16 file-based cache
 ├── Repository/ExtensionObjectRepository.php  # Per-client codec registry
-├── Testing/MockClient.php        # In-memory test double (no TCP)
-└── Exception/*.php               # 8 exception classes
+├── Testing/MockClient.php        # In-memory test double (no TCP, hasMethod, hasModule)
+└── Exception/*.php               # Exception classes (includes ModuleConflictException, MissingModuleDependencyException)
 ```
 
 Binary encoding: little-endian, length-prefixed strings, NodeId compact encoding, DateTime as 100ns intervals since 1601-01-01 UTC.
@@ -922,30 +962,37 @@ Alarm-specific events are deduced from event notification fields:
 
 ## Main Classes
 
-- PhpOpcua\Client\ClientBuilder — builder / entry point, implements ClientBuilderInterface, static create() factory
-- PhpOpcua\Client\ClientBuilderInterface — builder interface (configuration methods + connect)
-- PhpOpcua\Client\Client — connected client (operations), implements OpcUaClientInterface
-- PhpOpcua\Client\OpcUaClientInterface — public API contract (operations on a connected client)
+- PhpOpcua\Client\ClientBuilder — builder / entry point, implements ClientBuilderInterface, static create() factory, addModule(), replaceModule()
+- PhpOpcua\Client\ClientBuilderInterface — builder interface (configuration methods + connect + addModule + replaceModule)
+- PhpOpcua\Client\Client — connected client (proxy to modules), implements OpcUaClientInterface, hasMethod(), hasModule(), __call() for custom module methods
+- PhpOpcua\Client\OpcUaClientInterface — public API contract (all built-in service methods + hasMethod(string): bool + hasModule(string): bool)
+- PhpOpcua\Client\Kernel\ClientKernel — shared infrastructure for modules (executeWithRetry, ensureConnected, send, receive, createDecoder, dispatch, logContext)
+- PhpOpcua\Client\Kernel\ClientKernelInterface — kernel contract that modules depend on
+- PhpOpcua\Client\Kernel\ModuleRegistry — module lifecycle, topological dependency sort, method conflict detection
+- PhpOpcua\Client\Module\ServiceModule — abstract base class for modules (register, boot, reset, requires)
 - PhpOpcua\Client\Types\NodeId — public readonly: namespaceIndex, identifier, type
 - PhpOpcua\Client\Types\Variant — public readonly: type, value, dimensions
 - PhpOpcua\Client\Types\DataValue — public readonly: statusCode, sourceTimestamp, serverTimestamp; method: getValue()
 - PhpOpcua\Client\Types\ReferenceDescription — public readonly: referenceTypeId, isForward, nodeId, browseName, displayName, nodeClass, typeDefinition
-- PhpOpcua\Client\Types\SubscriptionResult — public readonly: subscriptionId, revisedPublishingInterval, revisedLifetimeCount, revisedMaxKeepAliveCount
-- PhpOpcua\Client\Types\MonitoredItemResult — public readonly: statusCode, monitoredItemId, revisedSamplingInterval, revisedQueueSize
-- PhpOpcua\Client\Types\CallResult — public readonly: statusCode, inputArgumentResults, outputArguments
-- PhpOpcua\Client\Types\PublishResult — public readonly: subscriptionId, sequenceNumber, moreNotifications, notifications
-- PhpOpcua\Client\Types\TransferResult — public readonly: statusCode, availableSequenceNumbers
-- PhpOpcua\Client\Types\BrowseResultSet — public readonly: references, continuationPoint
-- PhpOpcua\Client\Types\BrowsePathResult — public readonly: statusCode, targets
+- PhpOpcua\Client\Module\Subscription\SubscriptionResult — public readonly: subscriptionId, revisedPublishingInterval, revisedLifetimeCount, revisedMaxKeepAliveCount
+- PhpOpcua\Client\Module\Subscription\MonitoredItemResult — public readonly: statusCode, monitoredItemId, revisedSamplingInterval, revisedQueueSize
+- PhpOpcua\Client\Module\ReadWrite\CallResult — public readonly: statusCode, inputArgumentResults, outputArguments
+- PhpOpcua\Client\Module\Subscription\PublishResult — public readonly: subscriptionId, sequenceNumber, moreNotifications, notifications
+- PhpOpcua\Client\Module\Subscription\TransferResult — public readonly: statusCode, availableSequenceNumbers
+- PhpOpcua\Client\Module\Browse\BrowseResultSet — public readonly: references, continuationPoint
+- PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePathResult — public readonly: statusCode, targets
 - PhpOpcua\Client\Types\BrowsePathTarget — public readonly: targetId, remainingPathIndex
-- PhpOpcua\Client\Types\BuildInfo — public readonly: productName, manufacturerName, softwareVersion, buildNumber, buildDate
+- PhpOpcua\Client\Module\NodeManagement\AddNodesResult — public readonly: statusCode, addedNodeId (NodeId)
+- PhpOpcua\Client\Module\ServerInfo\BuildInfo — public readonly: productName, manufacturerName, softwareVersion, buildNumber, buildDate
 - PhpOpcua\Client\Event\NullEventDispatcher — no-op PSR-14 dispatcher (default, zero overhead)
+- PhpOpcua\Client\Exception\ModuleConflictException — thrown when two modules register the same method name
+- PhpOpcua\Client\Exception\MissingModuleDependencyException — thrown when a module's required dependency is not registered
 - PhpOpcua\Client\Exception\WriteTypeDetectionException — thrown when write type cannot be auto-detected
 - PhpOpcua\Client\Exception\WriteTypeMismatchException — thrown when explicit write type mismatches detected type (public readonly: nodeId, expectedType, givenType)
 - PhpOpcua\Client\Event\WriteTypeDetecting — dispatched before write type detection starts (public readonly: client, nodeId)
 - PhpOpcua\Client\Event\WriteTypeDetected — dispatched after write type detection (public readonly: client, nodeId, detectedType, fromCache)
 - PhpOpcua\Client\Event\* — 42 readonly event classes with $client property (ClientConnecting, ClientConnected, ConnectionFailed, SessionCreated, SessionActivated, SubscriptionCreated, DataChangeReceived, EventNotificationReceived, AlarmEventReceived, AlarmActivated, AlarmDeactivated, NodeValueRead, NodeValueWritten, NodeBrowsed, WriteTypeDetecting, WriteTypeDetected, CacheHit, CacheMiss, RetryAttempt, etc.)
-- PhpOpcua\Client\Testing\MockClient — in-memory test double (static create(), onRead/onWrite/onBrowse/onCall/onResolveNodeId, getCalls/getCallsFor/callCount/resetCalls)
+- PhpOpcua\Client\Testing\MockClient — in-memory test double (static create(), onRead/onWrite/onBrowse/onCall/onResolveNodeId, getCalls/getCallsFor/callCount/resetCalls, hasMethod, hasModule)
 - PhpOpcua\Client\Repository\ExtensionObjectRepository — per-client codec registry (instance-level)
 - PhpOpcua\Client\Encoding\DynamicCodec — auto-generated codec from StructureDefinition
 - PhpOpcua\Client\Encoding\DataTypeMapping — maps DataType NodeIds to BuiltinTypes

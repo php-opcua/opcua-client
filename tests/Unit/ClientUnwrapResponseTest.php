@@ -9,27 +9,28 @@ use PhpOpcua\Client\Types\NodeId;
 
 describe('Client operations that exercise error paths', function () {
 
+    beforeEach(function () {
+        $this->client = createClientWithoutConnect();
+        registerClientModules($this->client);
+    });
+
     it('throws ConnectionException on browseAll when not connected', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->browseAll(NodeId::numeric(0, 85)))
+        expect(fn () => $this->client->browseAll(NodeId::numeric(0, 85)))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws ConnectionException on browseRecursive when not connected', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->browseRecursive(NodeId::numeric(0, 85)))
+        expect(fn () => $this->client->browseRecursive(NodeId::numeric(0, 85)))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws ConnectionException on getEndpoints when not connected', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->getEndpoints('opc.tcp://localhost:4840'))
+        expect(fn () => $this->client->getEndpoints('opc.tcp://localhost:4840'))
             ->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws ConnectionException on historyReadProcessed when not connected', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->historyReadProcessed(
+        expect(fn () => $this->client->historyReadProcessed(
             NodeId::numeric(2, 1001),
             new DateTimeImmutable('-1 hour'),
             new DateTimeImmutable(),
@@ -39,16 +40,14 @@ describe('Client operations that exercise error paths', function () {
     });
 
     it('throws ConnectionException on historyReadAtTime when not connected', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->historyReadAtTime(
+        expect(fn () => $this->client->historyReadAtTime(
             NodeId::numeric(2, 1001),
             [new DateTimeImmutable()],
         ))->toThrow(ConnectionException::class, 'Not connected: call connect() first');
     });
 
     it('throws ConnectionException on translateBrowsePaths when not connected', function () {
-        $client = createClientWithoutConnect();
-        expect(fn () => $client->translateBrowsePaths([
+        expect(fn () => $this->client->translateBrowsePaths([
             [
                 'startingNodeId' => NodeId::numeric(0, 85),
                 'relativePath' => [

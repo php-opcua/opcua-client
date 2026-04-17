@@ -104,7 +104,7 @@ trait ManagesConnectionTrait
      *
      * @throws ConnectionException If the client is not connected.
      */
-    private function ensureConnected(): void
+    public function ensureConnected(): void
     {
         if ($this->connectionState === ConnectionState::Connected) {
             return;
@@ -126,7 +126,7 @@ trait ManagesConnectionTrait
      *
      * @throws ConnectionException If all retry attempts are exhausted.
      */
-    private function executeWithRetry(Closure $operation): mixed
+    public function executeWithRetry(Closure $operation): mixed
     {
         $maxRetries = $this->autoRetry ?? 0;
 
@@ -224,21 +224,15 @@ trait ManagesConnectionTrait
     private function resetConnectionState(): void
     {
         $this->session = null;
-        $this->browseService = null;
-        $this->readService = null;
-        $this->writeService = null;
-        $this->callService = null;
-        $this->getEndpointsService = null;
-        $this->subscriptionService = null;
-        $this->monitoredItemService = null;
-        $this->publishService = null;
-        $this->historyReadService = null;
-        $this->translateBrowsePathService = null;
-        $this->nodeManagementService = null;
         $this->authenticationToken = null;
         $this->secureChannelId = 0;
         $this->secureChannel = null;
         $this->serverNonce = null;
         $this->resetBatchingState();
+        $this->methodHandlers = [];
+        $this->methodOwners = [];
+        if (isset($this->moduleRegistry)) {
+            $this->moduleRegistry->resetAll();
+        }
     }
 }

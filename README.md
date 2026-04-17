@@ -422,6 +422,33 @@ $point = $client->read($pointNodeId)->getValue();
 // ['x' => 1.5, 'y' => 2.5, 'z' => 3.5] — no codec needed
 ```
 
+### Extend the client with custom modules
+
+```php
+use PhpOpcua\Client\ClientBuilder;
+use PhpOpcua\Client\Module\ReadWrite\ReadWriteModule;
+
+// Add a custom module
+$client = ClientBuilder::create()
+    ->addModule(new MyQueryServiceModule())
+    ->connect('opc.tcp://localhost:4840');
+
+$client->queryFirst(...); // custom method from your module
+
+// Replace a built-in module
+$client = ClientBuilder::create()
+    ->replaceModule(ReadWriteModule::class, new MyCustomReadWriteModule())
+    ->connect('opc.tcp://localhost:4840');
+
+$client->read(...); // uses your custom implementation
+
+// Introspection
+$client->hasMethod('read');                 // true
+$client->hasModule(ReadWriteModule::class); // true
+```
+
+The client ships with 8 built-in modules (ReadWrite, Browse, Subscription, History, NodeManagement, TranslateBrowsePath, ServerInfo, TypeDiscovery). Add your own or swap built-ins with `addModule()` and `replaceModule()`. See [Architecture](doc/11-architecture.md#module-system) for details.
+
 ### Use pre-built OPC UA companion types
 
 Instead of writing codecs by hand or relying on runtime discovery, install [`opcua-client-nodeset`](https://github.com/php-opcua/opcua-client-nodeset) to get pre-generated PHP types for 51 OPC Foundation companion specifications — DI, Robotics, Machinery, MachineTool, ISA-95, CNC, MTConnect, and many more:
@@ -489,6 +516,7 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 | **Auto-Batching** | Transparent batching for `readMulti`/`writeMulti` |
 | **ExtensionObject Codecs** | Pluggable per-client codec system for custom structures |
 | **Auto-Discovery** | `discoverDataTypes()` auto-detects custom structures without manual codecs |
+| **Modular Architecture** | 8 built-in service modules (ReadWrite, Browse, Subscription, History, NodeManagement, TranslateBrowsePath, ServerInfo, TypeDiscovery). Add custom modules with `addModule()`, swap built-ins with `replaceModule()` |
 | **MockClient** | In-memory test double — register handlers, assert calls, no TCP connection needed |
 | **Logging** | Optional structured logging via any PSR-3 logger — connect, retry, errors, protocol details |
 | **Cache** | Browse, resolve, and metadata read results cached (InMemoryCache, 300s TTL). Plug in any PSR-16 driver (FileCache, Laravel, Redis). Metadata cache opt-in via `setReadMetadataCache(true)` |
@@ -516,6 +544,7 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 | 14 | [Events](doc/14-events.md) | PSR-14 event system, 47 events, alarm deduction, Laravel integration, examples |
 | 15 | [Trust Store](doc/15-trust-store.md) | Server certificate trust management, policies, TOFU |
 | 16 | [Node Management](doc/16-node-management.md) | Add/delete nodes and references at runtime |
+| 17 | [Module System](doc/17-module-system.md) | Kernel architecture, built-in modules, custom modules, extending the client |
 
 ## Testing
 

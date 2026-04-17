@@ -32,8 +32,8 @@ describe('String NodeId parameter support', function () {
 
     it('read throws InvalidNodeIdException for invalid string', function () {
         $client = createClientWithoutConnect();
-        $ref = new ReflectionProperty($client, 'connectionState');
-        $ref->setValue($client, ConnectionState::Connected);
+        registerClientModules($client);
+        setClientProperty($client, 'connectionState', ConnectionState::Connected);
 
         expect(fn () => $client->read('invalid!!!'))
             ->toThrow(InvalidNodeIdException::class);
@@ -79,46 +79,41 @@ describe('String NodeId parameter support', function () {
         expect($values)->toBe([]);
     });
 
-    it('resolveNodeIdParam returns NodeId when given NodeId', function () {
+    it('resolveNodeId returns NodeId when given NodeId', function () {
         $client = createClientWithoutConnect();
-        $ref = new ReflectionMethod($client, 'resolveNodeIdParam');
         $nodeId = NodeId::numeric(0, 85);
 
-        expect($ref->invoke($client, $nodeId))->toBe($nodeId);
+        expect($client->resolveNodeId($nodeId))->toBe($nodeId);
     });
 
-    it('resolveNodeIdParam parses string to NodeId', function () {
+    it('resolveNodeId parses string to NodeId', function () {
         $client = createClientWithoutConnect();
-        $ref = new ReflectionMethod($client, 'resolveNodeIdParam');
-        $result = $ref->invoke($client, 'ns=2;i=1001');
+        $result = $client->resolveNodeId('ns=2;i=1001');
 
         expect($result->namespaceIndex)->toBe(2);
         expect($result->identifier)->toBe(1001);
     });
 
-    it('resolveNodeIdParam parses short format i=X', function () {
+    it('resolveNodeId parses short format i=X', function () {
         $client = createClientWithoutConnect();
-        $ref = new ReflectionMethod($client, 'resolveNodeIdParam');
-        $result = $ref->invoke($client, 'i=85');
+        $result = $client->resolveNodeId('i=85');
 
         expect($result->namespaceIndex)->toBe(0);
         expect($result->identifier)->toBe(85);
     });
 
-    it('resolveNodeIdParam parses string NodeId', function () {
+    it('resolveNodeId parses string NodeId', function () {
         $client = createClientWithoutConnect();
-        $ref = new ReflectionMethod($client, 'resolveNodeIdParam');
-        $result = $ref->invoke($client, 'ns=2;s=MyVariable');
+        $result = $client->resolveNodeId('ns=2;s=MyVariable');
 
         expect($result->namespaceIndex)->toBe(2);
         expect($result->identifier)->toBe('MyVariable');
     });
 
-    it('resolveNodeIdParam throws on invalid format', function () {
+    it('resolveNodeId throws on invalid format', function () {
         $client = createClientWithoutConnect();
-        $ref = new ReflectionMethod($client, 'resolveNodeIdParam');
 
-        expect(fn () => $ref->invoke($client, 'garbage'))
+        expect(fn () => $client->resolveNodeId('garbage'))
             ->toThrow(InvalidNodeIdException::class);
     });
 

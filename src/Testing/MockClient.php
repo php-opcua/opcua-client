@@ -11,28 +11,28 @@ use PhpOpcua\Client\Builder\ReadMultiBuilder;
 use PhpOpcua\Client\Builder\WriteMultiBuilder;
 use PhpOpcua\Client\Cache\InMemoryCache;
 use PhpOpcua\Client\Event\NullEventDispatcher;
+use PhpOpcua\Client\Module\Browse\BrowseResultSet;
+use PhpOpcua\Client\Module\NodeManagement\AddNodesResult;
+use PhpOpcua\Client\Module\ReadWrite\CallResult;
+use PhpOpcua\Client\Module\ServerInfo\BuildInfo;
+use PhpOpcua\Client\Module\Subscription\MonitoredItemModifyResult;
+use PhpOpcua\Client\Module\Subscription\MonitoredItemResult;
+use PhpOpcua\Client\Module\Subscription\PublishResult;
+use PhpOpcua\Client\Module\Subscription\SetTriggeringResult;
+use PhpOpcua\Client\Module\Subscription\SubscriptionResult;
+use PhpOpcua\Client\Module\Subscription\TransferResult;
 use PhpOpcua\Client\OpcUaClientInterface;
 use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\Repository\GeneratedTypeRegistrar;
 use PhpOpcua\Client\TrustStore\TrustPolicy;
 use PhpOpcua\Client\TrustStore\TrustStoreInterface;
-use PhpOpcua\Client\Types\AddNodesResult;
 use PhpOpcua\Client\Types\AttributeId;
 use PhpOpcua\Client\Types\BrowseDirection;
-use PhpOpcua\Client\Types\BrowseResultSet;
-use PhpOpcua\Client\Types\BuildInfo;
 use PhpOpcua\Client\Types\BuiltinType;
-use PhpOpcua\Client\Types\CallResult;
 use PhpOpcua\Client\Types\ConnectionState;
 use PhpOpcua\Client\Types\DataValue;
-use PhpOpcua\Client\Types\MonitoredItemModifyResult;
-use PhpOpcua\Client\Types\MonitoredItemResult;
 use PhpOpcua\Client\Types\NodeId;
-use PhpOpcua\Client\Types\PublishResult;
 use PhpOpcua\Client\Types\ReferenceDescription;
-use PhpOpcua\Client\Types\SetTriggeringResult;
-use PhpOpcua\Client\Types\SubscriptionResult;
-use PhpOpcua\Client\Types\TransferResult;
 use PhpOpcua\Client\Types\Variant;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -270,6 +270,22 @@ class MockClient implements OpcUaClientInterface
     public function getConnectionState(): ConnectionState
     {
         return $this->state;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function hasMethod(string $name): bool
+    {
+        return method_exists($this, $name);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function hasModule(string $moduleClass): bool
+    {
+        return false;
     }
 
     /**

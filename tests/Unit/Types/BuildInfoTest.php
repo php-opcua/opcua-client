@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use PhpOpcua\Client\Types\BuildInfo;
+use PhpOpcua\Client\Module\ServerInfo\BuildInfo;
 
 describe('BuildInfo', function () {
 

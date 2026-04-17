@@ -10,28 +10,28 @@ use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\InvalidNodeIdException;
 use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Exception\WriteTypeDetectionException;
+use PhpOpcua\Client\Module\Browse\BrowseResultSet;
+use PhpOpcua\Client\Module\NodeManagement\AddNodesResult;
+use PhpOpcua\Client\Module\ReadWrite\CallResult;
+use PhpOpcua\Client\Module\ServerInfo\BuildInfo;
+use PhpOpcua\Client\Module\Subscription\MonitoredItemResult;
+use PhpOpcua\Client\Module\Subscription\PublishResult;
+use PhpOpcua\Client\Module\Subscription\SubscriptionResult;
+use PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePathResult;
 use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\TrustStore\TrustPolicy;
 use PhpOpcua\Client\TrustStore\TrustStoreInterface;
-use PhpOpcua\Client\Types\AddNodesResult;
 use PhpOpcua\Client\Types\AttributeId;
 use PhpOpcua\Client\Types\BrowseDirection;
 use PhpOpcua\Client\Types\BrowseNode;
-use PhpOpcua\Client\Types\BrowsePathResult;
-use PhpOpcua\Client\Types\BrowseResultSet;
-use PhpOpcua\Client\Types\BuildInfo;
 use PhpOpcua\Client\Types\BuiltinType;
-use PhpOpcua\Client\Types\CallResult;
 use PhpOpcua\Client\Types\ConnectionState;
 use PhpOpcua\Client\Types\DataValue;
 use PhpOpcua\Client\Types\EndpointDescription;
-use PhpOpcua\Client\Types\MonitoredItemResult;
 use PhpOpcua\Client\Types\NodeClass;
 use PhpOpcua\Client\Types\NodeId;
-use PhpOpcua\Client\Types\PublishResult;
 use PhpOpcua\Client\Types\QualifiedName;
 use PhpOpcua\Client\Types\ReferenceDescription;
-use PhpOpcua\Client\Types\SubscriptionResult;
 use PhpOpcua\Client\Types\Variant;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -198,6 +198,22 @@ interface OpcUaClientInterface
      * @see ConnectionState
      */
     public function getConnectionState(): ConnectionState;
+
+    /**
+     * Check whether a method is registered by any loaded module.
+     *
+     * @param string $name The method name.
+     * @return bool
+     */
+    public function hasMethod(string $name): bool;
+
+    /**
+     * Check whether a module class is loaded.
+     *
+     * @param string $moduleClass The fully-qualified module class name.
+     * @return bool
+     */
+    public function hasModule(string $moduleClass): bool;
 
     /**
      * Discover server-defined structured data types and register dynamic codecs for them.
@@ -582,7 +598,7 @@ interface OpcUaClientInterface
      *
      * @param int $subscriptionId The subscription owning the monitored items.
      * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool}> $itemsToModify Items to modify.
-     * @return Types\MonitoredItemModifyResult[]
+     * @return Module\Subscription\MonitoredItemModifyResult[]
      *
      * @throws ConnectionException If the connection is lost during the request.
      * @throws ServiceException If the server returns an error response.
@@ -596,12 +612,12 @@ interface OpcUaClientInterface
      * @param int $triggeringItemId The monitored item that acts as the trigger.
      * @param int[] $linksToAdd Monitored item IDs to link as triggered items.
      * @param int[] $linksToRemove Monitored item IDs to unlink.
-     * @return Types\SetTriggeringResult
+     * @return Module\Subscription\SetTriggeringResult
      *
      * @throws ConnectionException If the connection is lost during the request.
      * @throws ServiceException If the server returns an error response.
      */
-    public function setTriggering(int $subscriptionId, int $triggeringItemId, array $linksToAdd = [], array $linksToRemove = []): Types\SetTriggeringResult;
+    public function setTriggering(int $subscriptionId, int $triggeringItemId, array $linksToAdd = [], array $linksToRemove = []): Module\Subscription\SetTriggeringResult;
 
     /**
      * Delete a subscription and all its monitored items.
@@ -630,7 +646,7 @@ interface OpcUaClientInterface
     /**
      * @param int[] $subscriptionIds
      * @param bool $sendInitialValues
-     * @return Types\TransferResult[]
+     * @return Module\Subscription\TransferResult[]
      *
      * @throws ConnectionException If the connection is lost during the request.
      * @throws ServiceException If the server returns an error response.

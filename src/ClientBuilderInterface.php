@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client;
 
+use PhpOpcua\Client\Module\ServiceModule;
 use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\Repository\GeneratedTypeRegistrar;
 use PhpOpcua\Client\Security\SecurityMode;
@@ -255,6 +256,23 @@ interface ClientBuilderInterface
      * @return ExtensionObjectRepository
      */
     public function getExtensionObjectRepository(): ExtensionObjectRepository;
+
+    /**
+     * Add a custom service module to the client.
+     *
+     * @param ServiceModule $module The module instance to add.
+     * @return static
+     */
+    public function addModule(ServiceModule $module): static;
+
+    /**
+     * Replace a built-in module with a custom implementation.
+     *
+     * @param class-string<ServiceModule> $moduleClass The class name of the module to replace.
+     * @param ServiceModule $replacement The replacement module instance.
+     * @return static
+     */
+    public function replaceModule(string $moduleClass, ServiceModule $replacement): static;
 
     /**
      * Connect to an OPC UA server endpoint.

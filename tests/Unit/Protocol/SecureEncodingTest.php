@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-use PhpOpcua\Client\Protocol\BrowseService;
-use PhpOpcua\Client\Protocol\CallService;
-use PhpOpcua\Client\Protocol\GetEndpointsService;
-use PhpOpcua\Client\Protocol\HistoryReadService;
-use PhpOpcua\Client\Protocol\MonitoredItemService;
-use PhpOpcua\Client\Protocol\PublishService;
-use PhpOpcua\Client\Protocol\ReadService;
+use PhpOpcua\Client\Module\Browse\BrowseService;
+use PhpOpcua\Client\Module\Browse\GetEndpointsService;
+use PhpOpcua\Client\Module\History\HistoryReadService;
+use PhpOpcua\Client\Module\ReadWrite\CallService;
+use PhpOpcua\Client\Module\ReadWrite\ReadService;
+use PhpOpcua\Client\Module\ReadWrite\WriteService;
+use PhpOpcua\Client\Module\Subscription\MonitoredItemService;
+use PhpOpcua\Client\Module\Subscription\PublishService;
+use PhpOpcua\Client\Module\Subscription\SubscriptionService;
 use PhpOpcua\Client\Protocol\SessionService;
-use PhpOpcua\Client\Protocol\SubscriptionService;
-use PhpOpcua\Client\Protocol\WriteService;
 use PhpOpcua\Client\Security\CertificateManager;
 use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Security\SecurityMode;

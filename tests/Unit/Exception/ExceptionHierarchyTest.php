@@ -72,6 +72,7 @@ describe('Exception thrown in correct context', function () {
 
     it('throws ConnectionException when calling browse without connecting', function () {
         $client = createClientWithoutConnect();
+        registerClientModules($client);
         expect(fn () => $client->browse(NodeId::numeric(0, 85)))
             ->toThrow(ConnectionException::class);
     });

@@ -44,7 +44,7 @@ trait ManagesCacheRuntimeTrait
             return;
         }
 
-        $nodeId = $this->resolveNodeIdParam($nodeId);
+        $nodeId = $this->resolveNodeId($nodeId);
         $prefix = $this->buildCacheKeyPrefix($nodeId);
 
         if ($this->cache instanceof InMemoryCache) {
@@ -84,7 +84,7 @@ trait ManagesCacheRuntimeTrait
      * @param string $paramsSuffix Additional parameters suffix.
      * @return string
      */
-    private function buildCacheKey(string $type, NodeId $nodeId, string $paramsSuffix = ''): string
+    public function buildCacheKey(string $type, NodeId $nodeId, string $paramsSuffix = ''): string
     {
         $endpointHash = md5($this->lastEndpointUrl ?? 'unknown');
         $key = sprintf('opcua:%s:%s:%s', $endpointHash, $type, $nodeId->__toString());
@@ -115,7 +115,7 @@ trait ManagesCacheRuntimeTrait
      * @param string $paramsSuffix Additional parameters suffix.
      * @return string
      */
-    private function buildSimpleCacheKey(string $type, string $paramsSuffix = ''): string
+    public function buildSimpleCacheKey(string $type, string $paramsSuffix = ''): string
     {
         $endpointHash = md5($this->lastEndpointUrl ?? 'unknown');
         $key = sprintf('opcua:%s:%s', $endpointHash, $type);
@@ -149,7 +149,7 @@ trait ManagesCacheRuntimeTrait
      * @param bool $useCache Whether to use cache for this fetch.
      * @return mixed
      */
-    private function cachedFetch(string $key, callable $fetcher, bool $useCache): mixed
+    public function cachedFetch(string $key, callable $fetcher, bool $useCache): mixed
     {
         $this->ensureCacheInitialized();
 
@@ -210,7 +210,6 @@ trait ManagesCacheRuntimeTrait
             return $result !== false ? $result : null;
         }
 
-        // Legacy: unwrapped value stored before this fix.
         return $raw;
     }
 
@@ -219,7 +218,7 @@ trait ManagesCacheRuntimeTrait
      *
      * @return void
      */
-    private function ensureCacheInitialized(): void
+    public function ensureCacheInitialized(): void
     {
         if (! $this->cacheInitialized) {
             $this->cache = new InMemoryCache(300);

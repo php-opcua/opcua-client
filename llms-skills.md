@@ -875,6 +875,141 @@ foreach ($endpoints as $ep) {
 
 ---
 
+## Skill: Create a Custom Module
+
+### When to use
+The user wants to add a new OPC UA service set to the client that is not provided by the 8 built-in modules -- e.g., QueryFirst/QueryNext, custom vendor-specific services, or domain-specific operations.
+
+### Code
+
+```php
+use PhpOpcua\Client\Module\ServiceModule;
+use PhpOpcua\Client\Kernel\ClientKernelInterface;
+use PhpOpcua\Client\Module\ReadWrite\ReadWriteModule;
+
+class MyQueryModule extends ServiceModule
+{
+    private ?MyQueryService $queryService = null;
+
+    public function requires(): array
+    {
+        return [ReadWriteModule::class]; // declare dependencies
+    }
+
+    public function register(): void
+    {
+        $this->client->registerMethod('queryFirst', $this->queryFirst(...));
+        $this->client->registerMethod('queryNext', $this->queryNext(...));
+    }
+
+    public function boot(): void
+    {
+        $this->queryService = new MyQueryService($this->kernel->getSessionService());
+    }
+
+    public function reset(): void
+    {
+        $this->queryService = null;
+    }
+
+    public function queryFirst(array $filter): array
+    {
+        return $this->kernel->executeWithRetry(function () use ($filter) {
+            $this->kernel->ensureConnected();
+            $request = $this->queryService->encodeQueryFirstRequest($filter);
+            $this->kernel->send($request);
+            $response = $this->kernel->receive();
+            return $this->queryService->decodeQueryFirstResponse($response);
+        });
+    }
+
+    public function queryNext(string $continuationPoint): array
+    {
+        // similar pattern
+    }
+}
+```
+
+Register it on the builder:
+
+```php
+use PhpOpcua\Client\ClientBuilder;
+
+$client = ClientBuilder::create()
+    ->addModule(new MyQueryModule())
+    ->connect('opc.tcp://localhost:4840');
+
+// Custom methods accessible via __call()
+$results = $client->queryFirst(['nodeClass' => NodeClass::Variable]);
+```
+
+### Important rules
+- Extend `ServiceModule` and implement `register()`, `boot()`, `reset()`
+- Use `$this->client->registerMethod()` in `register()` to inject methods onto the Client
+- Use `$this->kernel` to access shared infrastructure (send, receive, retry, etc.)
+- Declare dependencies via `requires()` -- the registry resolves them in order
+- Custom module methods are accessible via `__call()` (not typed on the interface)
+- If two modules register the same method name, `ModuleConflictException` is thrown -- use `replaceModule()` instead
+- Module DTOs and protocol services should live alongside the module class for co-location
+
+---
+
+## Skill: Replace a Built-in Module
+
+### When to use
+The user wants to swap a built-in module with a custom implementation -- e.g., adding custom retry logic to reads, logging all writes to a database, or implementing a custom browse strategy.
+
+### Code
+
+```php
+use PhpOpcua\Client\ClientBuilder;
+use PhpOpcua\Client\Module\ReadWrite\ReadWriteModule;
+use PhpOpcua\Client\Module\ServiceModule;
+
+class MyCustomReadWriteModule extends ReadWriteModule
+{
+    public function register(): void
+    {
+        parent::register(); // keep all built-in methods
+
+        // Override just the read method
+        $this->client->registerMethod('read', $this->customRead(...));
+    }
+
+    public function customRead(string|NodeId $nodeId, int $attributeId = 13, bool $refresh = false): DataValue
+    {
+        // Custom logic before the read
+        Log::info("Reading {$nodeId}");
+
+        // Call the kernel to do the actual read
+        $result = parent::read($nodeId, $attributeId, $refresh);
+
+        // Custom logic after the read
+        MyAuditLog::record('read', $nodeId, $result->statusCode);
+
+        return $result;
+    }
+}
+
+$client = ClientBuilder::create()
+    ->replaceModule(ReadWriteModule::class, new MyCustomReadWriteModule())
+    ->connect('opc.tcp://localhost:4840');
+
+// All modules that call $this->client->read() automatically use the replacement
+$value = $client->read('i=2259'); // uses MyCustomReadWriteModule
+```
+
+### Important rules
+- `replaceModule()` swaps a built-in module class with your custom implementation
+- Your replacement must provide the same methods -- other modules may depend on them
+- Extend the original module class when you only want to override specific behavior
+- All other modules that call `$this->client->read()` automatically use the replacement -- no additional wiring needed
+- You cannot use `addModule()` if your module has the same method names as an existing one -- use `replaceModule()` instead
+- `hasModule(ReadWriteModule::class)` returns `false` after replacement; `hasModule(MyCustomReadWriteModule::class)` returns `true`
+- Check module availability with `hasMethod()` and `hasModule()` for defensive code
+
+---
+
 ## Common Mistakes to Avoid
 
 ### 1. Configuring after connect

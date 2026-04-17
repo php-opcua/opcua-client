@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
-use PhpOpcua\Client\Protocol\HistoryReadService;
+use PhpOpcua\Client\Module\History\HistoryReadService;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\BuiltinType;

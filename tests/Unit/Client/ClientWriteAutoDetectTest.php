@@ -110,6 +110,7 @@ describe('Write auto-detect type', function () {
 
     it('throws WriteTypeDetectionException when auto-detect is off and no type provided', function () {
         $client = createClientWithoutConnect();
+        registerClientModules($client);
         setClientProperty($client, 'connectionState', PhpOpcua\Client\Types\ConnectionState::Connected);
         setClientProperty($client, 'autoDetectWriteType', false);
 

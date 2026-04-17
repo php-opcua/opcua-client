@@ -28,7 +28,7 @@ trait ManagesEventDispatchTrait
      * @param object $event The event object or a Closure that creates one.
      * @return void
      */
-    private function dispatch(object $event): void
+    public function dispatch(object $event): void
     {
         if ($this->eventDispatcher instanceof NullEventDispatcher) {
             return;

@@ -13,6 +13,16 @@ use PhpOpcua\Client\ClientBuilder\ManagesReadWriteConfigTrait;
 use PhpOpcua\Client\ClientBuilder\ManagesTimeoutTrait;
 use PhpOpcua\Client\ClientBuilder\ManagesTrustStoreTrait;
 use PhpOpcua\Client\Event\NullEventDispatcher;
+use PhpOpcua\Client\Module\Browse\BrowseModule;
+use PhpOpcua\Client\Module\History\HistoryModule;
+use PhpOpcua\Client\Module\ModuleRegistry;
+use PhpOpcua\Client\Module\NodeManagement\NodeManagementModule;
+use PhpOpcua\Client\Module\ReadWrite\ReadWriteModule;
+use PhpOpcua\Client\Module\ServerInfo\ServerInfoModule;
+use PhpOpcua\Client\Module\ServiceModule;
+use PhpOpcua\Client\Module\Subscription\SubscriptionModule;
+use PhpOpcua\Client\Module\TranslateBrowsePath\TranslateBrowsePathModule;
+use PhpOpcua\Client\Module\TypeDiscovery\TypeDiscoveryModule;
 use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
@@ -66,6 +76,8 @@ class ClientBuilder implements ClientBuilderInterface
 
     private LoggerInterface $logger;
 
+    private ModuleRegistry $moduleRegistry;
+
     /**
      * Create a new client builder instance.
      *
@@ -87,6 +99,69 @@ class ClientBuilder implements ClientBuilderInterface
         $this->extensionObjectRepository = $extensionObjectRepository ?? new ExtensionObjectRepository();
         $this->logger = $logger ?? new NullLogger();
         $this->eventDispatcher = new NullEventDispatcher();
+        $this->moduleRegistry = $this->createDefaultModuleRegistry();
+    }
+
+    /**
+     * Add a custom service module to the client.
+     *
+     * @param ServiceModule $module The module instance to add.
+     * @return static
+     */
+    public function addModule(ServiceModule $module): static
+    {
+        $this->moduleRegistry->add($module);
+
+        return $this;
+    }
+
+    /**
+     * Replace a built-in module with a custom implementation.
+     *
+     * @param class-string<ServiceModule> $moduleClass The class name of the module to replace.
+     * @param ServiceModule $replacement The replacement module instance.
+     * @return static
+     */
+    public function replaceModule(string $moduleClass, ServiceModule $replacement): static
+    {
+        $this->moduleRegistry->replace($moduleClass, $replacement);
+
+        return $this;
+    }
+
+    /**
+     * Create the default module registry with all built-in modules.
+     *
+     * @return ModuleRegistry
+     */
+    private function createDefaultModuleRegistry(): ModuleRegistry
+    {
+        $registry = new ModuleRegistry();
+
+        foreach ($this->defaultModules() as $moduleClass) {
+            $registry->add(new $moduleClass());
+        }
+
+        return $registry;
+    }
+
+    /**
+     * Return the list of default built-in module classes.
+     *
+     * @return array<class-string<ServiceModule>>
+     */
+    private function defaultModules(): array
+    {
+        return [
+            ReadWriteModule::class,
+            BrowseModule::class,
+            SubscriptionModule::class,
+            HistoryModule::class,
+            NodeManagementModule::class,
+            TranslateBrowsePathModule::class,
+            ServerInfoModule::class,
+            TypeDiscoveryModule::class,
+        ];
     }
 
     /**
@@ -245,6 +320,7 @@ class ClientBuilder implements ClientBuilderInterface
             readMetadataCache: $this->readMetadataCache,
             extensionObjectRepository: $this->extensionObjectRepository,
             enumMappings: $this->enumMappings,
+            moduleRegistry: $this->moduleRegistry,
         );
     }
 }

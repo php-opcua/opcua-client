@@ -50,22 +50,35 @@ All Type classes and result DTOs use public readonly properties. Access is $ref-
 
 ## Architecture
 
-- ClientBuilder (src/ClientBuilder.php): builder / entry point, implements ClientBuilderInterface, uses 8 config traits in src/ClientBuilder/
-- Client (src/Client.php): connected client (operations), implements OpcUaClientInterface, uses 14 runtime traits in src/Client/
-- ClientBuilder/ (src/ClientBuilder/): builder traits for configuration (cache, events, timeout, trust store, batching, etc.)
-- Client/ (src/Client/): client traits for runtime operations (browse, read/write, subscriptions, history, etc.)
+- ClientBuilder (src/ClientBuilder.php): builder / entry point, implements ClientBuilderInterface, uses config traits in src/ClientBuilder/ (including addModule/replaceModule)
+- Client (src/Client.php): connected client (proxy), implements OpcUaClientInterface, delegates all service methods to module handlers, __call() for custom module methods
+- OpcUaClientInterface: public API contract — all built-in service methods + hasMethod(string): bool + hasModule(string): bool
+- Kernel/ (src/Kernel/): shared infrastructure for modules
+  - ClientKernel: executeWithRetry, ensureConnected, send, receive, createDecoder, dispatch, logContext, etc.
+  - ClientKernelInterface: public contract that modules depend on
+  - ModuleRegistry: module lifecycle, topological dependency sort, method conflict detection
+- Module/ (src/Module/): 8 self-contained service modules, each with its own protocol service(s) and DTOs
+  - ServiceModule: abstract base class (register, boot, reset, requires)
+  - ReadWrite/: ReadWriteModule, ReadService, WriteService, CallService, CallResult
+  - Browse/: BrowseModule, BrowseService, GetEndpointsService, BrowseResultSet
+  - Subscription/: SubscriptionModule, SubscriptionService, MonitoredItemService, PublishService, SubscriptionResult, MonitoredItemResult, PublishResult, TransferResult
+  - History/: HistoryModule, HistoryReadService
+  - NodeManagement/: NodeManagementModule, NodeManagementService, AddNodesResult
+  - TranslateBrowsePath/: TranslateBrowsePathModule, TranslateBrowsePathService, BrowsePathResult
+  - ServerInfo/: ServerInfoModule, BuildInfo
+  - TypeDiscovery/: TypeDiscoveryModule
+- ClientBuilder/ (src/ClientBuilder/): builder traits for configuration (cache, events, timeout, trust store, batching, modules)
 - Transport (src/Transport/): TCP socket communication
-- Protocol (src/Protocol/): OPC UA service encoding/decoding, AbstractProtocolService base class, ServiceTypeId constants
+- Protocol (src/Protocol/): shared protocol infrastructure — AbstractProtocolService base class, ServiceTypeId constants, SessionService (kernel-level)
 - Encoding (src/Encoding/): binary serialization (BinaryEncoder, BinaryDecoder)
 - Security (src/Security/): secure channel, crypto operations, certificate management
-- Types (src/Types/): OPC UA data types, enums, and result DTOs
+- Types (src/Types/): shared OPC UA data types and enums (NodeId, DataValue, Variant, StatusCode, etc.). Module-specific DTOs live in their module namespace.
 - Repository (src/Repository/): per-client ExtensionObject codec registry
 - Cache (src/Cache/): PSR-16 cache drivers (InMemoryCache, FileCache)
 - Event (src/Event/): 40 PSR-14 event classes + NullEventDispatcher
-- Cli (src/Cli/): CLI tool — browse, read, write, endpoints, watch, generate:nodeset, dump:nodeset, trust, trust:list, trust:remove commands (10 total)
 - TrustStore (src/TrustStore/): server certificate trust management (FileTrustStore, TrustPolicy, TrustResult)
-- Testing (src/Testing/): MockClient — in-memory test double
-- Exception (src/Exception/): exception hierarchy
+- Testing (src/Testing/): MockClient — in-memory test double (implements full OpcUaClientInterface, adds hasMethod/hasModule)
+- Exception (src/Exception/): exception hierarchy (includes ModuleConflictException, MissingModuleDependencyException)
 
 ## Installation
 
@@ -156,30 +169,34 @@ $client = ClientBuilder::create()
 
 ## Main classes
 
-- PhpOpcua\Client\ClientBuilder — builder / entry point, implements ClientBuilderInterface, static create() factory
-- PhpOpcua\Client\ClientBuilderInterface — builder interface (configuration methods + connect)
-- PhpOpcua\Client\Client — connected client (operations), implements OpcUaClientInterface
-- PhpOpcua\Client\OpcUaClientInterface — public API contract (operations on a connected client)
+- PhpOpcua\Client\ClientBuilder — builder / entry point, implements ClientBuilderInterface, static create() factory, addModule(), replaceModule()
+- PhpOpcua\Client\ClientBuilderInterface — builder interface (configuration methods + connect + addModule + replaceModule)
+- PhpOpcua\Client\Client — connected client (proxy to modules), implements OpcUaClientInterface, hasMethod(), hasModule(), __call() for custom module methods
+- PhpOpcua\Client\OpcUaClientInterface — public API contract (all built-in service methods + hasMethod + hasModule)
+- PhpOpcua\Client\Kernel\ClientKernel — shared infrastructure for modules (executeWithRetry, send, receive, etc.)
+- PhpOpcua\Client\Kernel\ClientKernelInterface — kernel contract that modules depend on
+- PhpOpcua\Client\Kernel\ModuleRegistry — module lifecycle, topological dependency sort, method conflict detection
+- PhpOpcua\Client\Module\ServiceModule — abstract base class for modules (register, boot, reset, requires)
 - PhpOpcua\Client\Types\NodeId — node identifier (public readonly: namespaceIndex, identifier, type)
 - PhpOpcua\Client\Types\Variant — typed value (public readonly: type, value, dimensions)
 - PhpOpcua\Client\Types\DataValue — value with metadata (public readonly: statusCode, sourceTimestamp, serverTimestamp; method: getValue())
 - PhpOpcua\Client\Types\BuiltinType — enum of 25 OPC UA primitive types
 - PhpOpcua\Client\Types\ReferenceDescription — browse result (public readonly: referenceTypeId, isForward, nodeId, browseName, displayName, nodeClass, typeDefinition)
 - PhpOpcua\Client\Types\BrowseNode — tree node (public readonly: reference; methods: getChildren(), hasChildren())
-- PhpOpcua\Client\Types\SubscriptionResult — public readonly: subscriptionId, revisedPublishingInterval, revisedLifetimeCount, revisedMaxKeepAliveCount
-- PhpOpcua\Client\Types\MonitoredItemResult — public readonly: statusCode, monitoredItemId, revisedSamplingInterval, revisedQueueSize
-- PhpOpcua\Client\Types\CallResult — public readonly: statusCode, inputArgumentResults, outputArguments
-- PhpOpcua\Client\Types\PublishResult — public readonly: subscriptionId, sequenceNumber, moreNotifications, notifications
-- PhpOpcua\Client\Types\TransferResult — public readonly: statusCode, availableSequenceNumbers
-- PhpOpcua\Client\Types\BrowseResultSet — public readonly: references, continuationPoint
-- PhpOpcua\Client\Types\BrowsePathResult — public readonly: statusCode, targets
+- PhpOpcua\Client\Module\Subscription\SubscriptionResult — public readonly: subscriptionId, revisedPublishingInterval, revisedLifetimeCount, revisedMaxKeepAliveCount
+- PhpOpcua\Client\Module\Subscription\MonitoredItemResult — public readonly: statusCode, monitoredItemId, revisedSamplingInterval, revisedQueueSize
+- PhpOpcua\Client\Module\ReadWrite\CallResult — public readonly: statusCode, inputArgumentResults, outputArguments
+- PhpOpcua\Client\Module\Subscription\PublishResult — public readonly: subscriptionId, sequenceNumber, moreNotifications, notifications
+- PhpOpcua\Client\Module\Subscription\TransferResult — public readonly: statusCode, availableSequenceNumbers
+- PhpOpcua\Client\Module\Browse\BrowseResultSet — public readonly: references, continuationPoint
+- PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePathResult — public readonly: statusCode, targets
 - PhpOpcua\Client\Types\BrowsePathTarget — public readonly: targetId, remainingPathIndex
-- PhpOpcua\Client\Types\AddNodesResult — public readonly: statusCode, addedNodeId (NodeId)
-- PhpOpcua\Client\Types\BuildInfo — public readonly: productName, manufacturerName, softwareVersion, buildNumber, buildDate
+- PhpOpcua\Client\Module\NodeManagement\AddNodesResult — public readonly: statusCode, addedNodeId (NodeId)
+- PhpOpcua\Client\Module\ServerInfo\BuildInfo — public readonly: productName, manufacturerName, softwareVersion, buildNumber, buildDate
 - PhpOpcua\Client\Security\SecurityPolicy — enum of 10 security policies (6 RSA + 4 ECC)
 - PhpOpcua\Client\Security\SecurityMode — enum (None, Sign, SignAndEncrypt)
 - PhpOpcua\Client\Encoding\ExtensionObjectCodec — interface for custom type codecs
-- PhpOpcua\Client\Testing\MockClient — in-memory test double (no TCP); static create(), handler registration, call tracking
+- PhpOpcua\Client\Testing\MockClient — in-memory test double (no TCP); static create(), handler registration, call tracking, hasMethod(), hasModule()
 - PhpOpcua\Client\Repository\ExtensionObjectRepository — per-client codec registry (instance-level, not static)
 - PhpOpcua\Client\Types\ExtensionObject — typed DTO for OPC UA ExtensionObject (public readonly: typeId, encoding, body, value; methods: isDecoded(), isRaw())
 - PhpOpcua\Client\Protocol\AbstractProtocolService — shared base class for protocol services (encodeRequestAuto, writeRequestHeader, readResponseMetadata, wrapInMessage)
@@ -187,6 +204,8 @@ $client = ClientBuilder::create()
 - PhpOpcua\Client\Cache\InMemoryCache — PSR-16 in-memory cache with configurable TTL
 - PhpOpcua\Client\Cache\FileCache — PSR-16 file-based cache with configurable TTL
 - PhpOpcua\Client\Event\NullEventDispatcher — no-op PSR-14 dispatcher (default, zero overhead)
+- PhpOpcua\Client\Exception\ModuleConflictException — thrown when two modules register the same method name
+- PhpOpcua\Client\Exception\MissingModuleDependencyException — thrown when a module's required dependency is not registered
 - PhpOpcua\Client\Exception\WriteTypeDetectionException — thrown when write type cannot be auto-detected
 - PhpOpcua\Client\Exception\WriteTypeMismatchException — thrown when explicit write type mismatches detected type (public readonly: nodeId, expectedType, givenType)
 - PhpOpcua\Client\Event\WriteTypeDetecting — dispatched before write type detection starts (public readonly: client, nodeId)

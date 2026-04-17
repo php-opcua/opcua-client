@@ -186,6 +186,21 @@ DataValue::of('raw', BuiltinType::ByteString, StatusCode::Good);
 DataValue::bad(StatusCode::BadNodeIdUnknown);
 ```
 
+## Module Introspection
+
+The mock supports `hasMethod()` and `hasModule()` for testing code that checks module availability:
+
+```php
+$mock = MockClient::create();
+
+$mock->hasMethod('read');                    // true (all built-in methods)
+$mock->hasMethod('customMethod');            // false
+$mock->hasModule('ReadWriteModule');         // true (all built-in modules)
+$mock->hasModule('MyCustomModule');          // false
+```
+
+These methods always return `true` for built-in methods/modules and `false` for unregistered custom ones. This matches the behavior of a real `Client` with only the default modules loaded.
+
 ## Configuration
 
 All configuration methods work on the mock and store values:

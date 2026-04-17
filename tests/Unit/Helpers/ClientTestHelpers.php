@@ -225,7 +225,7 @@ if (! class_exists('SecureMockTransport')) {
 if (! function_exists('setClientProperty')) {
     function setClientProperty(Client $client, string $name, mixed $value): void
     {
-        $ref = new ReflectionProperty($client, $name);
+        $ref = new ReflectionProperty(Client::class, $name);
         $ref->setValue($client, $value);
     }
 }
@@ -668,28 +668,60 @@ if (! function_exists('createClientWithoutConnect')) {
         setClientProperty($client, 'enumMappings', []);
         setClientProperty($client, 'transport', new TcpTransport());
         setClientProperty($client, 'session', null);
-        setClientProperty($client, 'browseService', null);
-        setClientProperty($client, 'readService', null);
-        setClientProperty($client, 'writeService', null);
-        setClientProperty($client, 'callService', null);
-        setClientProperty($client, 'getEndpointsService', null);
-        setClientProperty($client, 'subscriptionService', null);
-        setClientProperty($client, 'monitoredItemService', null);
-        setClientProperty($client, 'publishService', null);
-        setClientProperty($client, 'historyReadService', null);
-        setClientProperty($client, 'translateBrowsePathService', null);
+        $moduleRegistry = new PhpOpcua\Client\Module\ModuleRegistry();
+        $moduleRegistry->add(new PhpOpcua\Client\Module\ReadWrite\ReadWriteModule());
+        $moduleRegistry->add(new PhpOpcua\Client\Module\Browse\BrowseModule());
+        $moduleRegistry->add(new PhpOpcua\Client\Module\Subscription\SubscriptionModule());
+        $moduleRegistry->add(new PhpOpcua\Client\Module\History\HistoryModule());
+        $moduleRegistry->add(new PhpOpcua\Client\Module\NodeManagement\NodeManagementModule());
+        $moduleRegistry->add(new PhpOpcua\Client\Module\TranslateBrowsePath\TranslateBrowsePathModule());
+        $moduleRegistry->add(new PhpOpcua\Client\Module\ServerInfo\ServerInfoModule());
+        $moduleRegistry->add(new PhpOpcua\Client\Module\TypeDiscovery\TypeDiscoveryModule());
+        setClientProperty($client, 'moduleRegistry', $moduleRegistry);
+        setClientProperty($client, 'methodHandlers', []);
+        setClientProperty($client, 'methodOwners', []);
+        setClientProperty($client, 'currentModuleClass', '');
         setClientProperty($client, 'authenticationToken', null);
         setClientProperty($client, 'secureChannelId', 0);
         setClientProperty($client, 'requestId', 10);
         setClientProperty($client, 'serverCertDer', null);
         setClientProperty($client, 'secureChannel', null);
         setClientProperty($client, 'serverNonce', null);
+        setClientProperty($client, 'eccServerEphemeralKey', null);
         setClientProperty($client, 'usernamePolicyId', null);
         setClientProperty($client, 'certificatePolicyId', null);
         setClientProperty($client, 'anonymousPolicyId', null);
         setClientProperty($client, 'lastEndpointUrl', null);
 
         return $client;
+    }
+}
+
+if (! function_exists('registerClientModules')) {
+    function registerClientModules(Client $client): void
+    {
+        $ref = new ReflectionProperty(Client::class, 'moduleRegistry');
+        $moduleRegistry = $ref->getValue($client);
+
+        foreach ($moduleRegistry->getModuleClasses() as $moduleClass) {
+            $module = $moduleRegistry->get($moduleClass);
+            $module->setKernel($client);
+            $module->setClient($client);
+            $client->setCurrentModuleClass($moduleClass);
+            $module->register();
+        }
+    }
+}
+
+if (! function_exists('bootClientModules')) {
+    function bootClientModules(Client $client, SessionService $session): void
+    {
+        $ref = new ReflectionProperty(Client::class, 'moduleRegistry');
+        $moduleRegistry = $ref->getValue($client);
+
+        foreach ($moduleRegistry->getModuleClasses() as $moduleClass) {
+            $moduleRegistry->get($moduleClass)->boot($session);
+        }
     }
 }
 
@@ -705,7 +737,8 @@ if (! function_exists('setupConnectedClient')) {
         setClientProperty($client, 'authenticationToken', NodeId::numeric(0, 2));
         setClientProperty($client, 'secureChannelId', 1);
         setClientProperty($client, 'lastEndpointUrl', 'opc.tcp://mock:4840');
-        callClientMethod($client, 'initServices', [$session]);
+        registerClientModules($client);
+        bootClientModules($client, $session);
 
         return $client;
     }
@@ -726,7 +759,8 @@ if (! function_exists('makeConnectedClient')) {
         if ($sc !== null) {
             setClientProperty($client, 'secureChannel', $sc);
         }
-        callClientMethod($client, 'initServices', [$session]);
+        registerClientModules($client);
+        bootClientModules($client, $session);
 
         return $client;
     }

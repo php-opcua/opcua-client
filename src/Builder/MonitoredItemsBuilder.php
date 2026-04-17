@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Builder;
 
+use PhpOpcua\Client\Module\Subscription\MonitoredItemResult;
 use PhpOpcua\Client\OpcUaClientInterface;
-use PhpOpcua\Client\Types\MonitoredItemResult;
 use PhpOpcua\Client\Types\NodeId;
 
 /**

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use PhpOpcua\Client\Types\AddNodesResult;
+use PhpOpcua\Client\Module\NodeManagement\AddNodesResult;
 use PhpOpcua\Client\Types\NodeId;
 
 describe('AddNodesResult', function () {

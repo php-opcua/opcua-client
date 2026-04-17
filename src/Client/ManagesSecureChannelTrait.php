@@ -11,22 +11,11 @@ use PhpOpcua\Client\Event\SecureChannelOpened;
 use PhpOpcua\Client\Exception\ConfigurationException;
 use PhpOpcua\Client\Exception\MessageTypeException;
 use PhpOpcua\Client\Exception\ProtocolException;
-use PhpOpcua\Client\Protocol\BrowseService;
-use PhpOpcua\Client\Protocol\CallService;
-use PhpOpcua\Client\Protocol\GetEndpointsService;
-use PhpOpcua\Client\Protocol\HistoryReadService;
 use PhpOpcua\Client\Protocol\MessageHeader;
-use PhpOpcua\Client\Protocol\MonitoredItemService;
-use PhpOpcua\Client\Protocol\NodeManagementService;
-use PhpOpcua\Client\Protocol\PublishService;
-use PhpOpcua\Client\Protocol\ReadService;
 use PhpOpcua\Client\Protocol\SecureChannelRequest;
 use PhpOpcua\Client\Protocol\SecureChannelResponse;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Protocol\SessionService;
-use PhpOpcua\Client\Protocol\SubscriptionService;
-use PhpOpcua\Client\Protocol\TranslateBrowsePathService;
-use PhpOpcua\Client\Protocol\WriteService;
 use PhpOpcua\Client\Security\CertificateManager;
 use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Security\SecurityMode;
@@ -266,23 +255,17 @@ trait ManagesSecureChannelTrait
     }
 
     /**
-     * Initialize all protocol service instances from a session.
+     * Initialize services from a session by booting all registered modules.
      *
      * @param SessionService $session The session service to derive services from.
      * @return void
      */
     private function initServices(SessionService $session): void
     {
-        $this->browseService = new BrowseService($session);
-        $this->readService = new ReadService($session);
-        $this->writeService = new WriteService($session);
-        $this->callService = new CallService($session);
-        $this->getEndpointsService = new GetEndpointsService($session);
-        $this->subscriptionService = new SubscriptionService($session);
-        $this->monitoredItemService = new MonitoredItemService($session);
-        $this->publishService = new PublishService($session);
-        $this->historyReadService = new HistoryReadService($session);
-        $this->translateBrowsePathService = new TranslateBrowsePathService($session);
-        $this->nodeManagementService = new NodeManagementService($session);
+        $this->session = $session;
+
+        if (isset($this->moduleRegistry)) {
+            $this->moduleRegistry->bootAll($this, $this, $session);
+        }
     }
 }

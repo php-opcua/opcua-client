@@ -52,7 +52,7 @@ enum SecurityPolicy: string
     {
         return match ($this) {
             self::None => 1,
-            default => 16, // AES block size is always 16
+            default => 16,
         };
     }
 

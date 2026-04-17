@@ -6,7 +6,7 @@
 src/
 ├── ClientBuilder.php                    # Builder / entry point
 ├── ClientBuilderInterface.php           # Builder interface
-├── Client.php                           # Connected client (operations)
+├── Client.php                           # Connected client (proxy to modules)
 ├── OpcUaClientInterface.php             # Public API interface
 │
 ├── ClientBuilder/                       # Builder traits (configuration)
@@ -15,25 +15,62 @@ src/
 │   ├── ManagesBrowseDepthTrait.php      # Recursive browse depth config
 │   ├── ManagesCacheTrait.php            # PSR-16 cache configuration
 │   ├── ManagesEventDispatcherTrait.php  # PSR-14 event dispatcher config
+│   ├── ManagesModulesTrait.php          # addModule(), replaceModule()
 │   ├── ManagesReadWriteConfigTrait.php  # Read/write config (auto-detect, metadata cache)
 │   ├── ManagesTimeoutTrait.php          # Timeout configuration
 │   └── ManagesTrustStoreTrait.php       # Trust store configuration
 │
-├── Client/                              # Connected client traits (operations, runtime)
-│   ├── ManagesBatchingRuntimeTrait.php  # Runtime batch splitting
-│   ├── ManagesBrowseTrait.php           # Browse operations
-│   ├── ManagesCacheRuntimeTrait.php     # Runtime cache operations
-│   ├── ManagesConnectionTrait.php       # Connect / disconnect / reconnect
-│   ├── ManagesEventDispatchTrait.php    # Runtime event dispatching
-│   ├── ManagesHandshakeTrait.php        # HEL/ACK handshake
-│   ├── ManagesHistoryTrait.php          # History read operations
-│   ├── ManagesReadWriteTrait.php        # Read / write operations
-│   ├── ManagesSecureChannelTrait.php    # Secure channel lifecycle
-│   ├── ManagesSessionTrait.php          # Session create / activate
-│   ├── ManagesSubscriptionsTrait.php    # Subscriptions and monitored items
-│   ├── ManagesTranslateBrowsePathTrait.php # Browse path translation
-│   ├── ManagesTrustStoreRuntimeTrait.php # Runtime trust store validation
-│   └── ManagesTypeDiscoveryTrait.php    # Automatic DataType discovery
+├── Kernel/                              # Shared infrastructure for modules
+│   ├── ClientKernel.php                 # Kernel implementation
+│   ├── ClientKernelInterface.php        # Kernel contract (for modules)
+│   └── ModuleRegistry.php              # Module lifecycle, dependency sort, method registry
+│
+├── Module/                              # Self-contained service modules
+│   ├── ServiceModule.php               # Abstract base class (register, boot, reset, requires)
+│   │
+│   ├── ReadWrite/                       # Read, Write, Call operations
+│   │   ├── ReadWriteModule.php          # Module class
+│   │   ├── ReadService.php              # Protocol encoding/decoding
+│   │   ├── WriteService.php             # Protocol encoding/decoding
+│   │   ├── CallService.php              # Protocol encoding/decoding
+│   │   └── CallResult.php              # Module-specific DTO
+│   │
+│   ├── Browse/                          # Browse and GetEndpoints
+│   │   ├── BrowseModule.php
+│   │   ├── BrowseService.php
+│   │   ├── GetEndpointsService.php
+│   │   └── BrowseResultSet.php
+│   │
+│   ├── Subscription/                    # Subscriptions, monitored items, publish
+│   │   ├── SubscriptionModule.php
+│   │   ├── SubscriptionService.php
+│   │   ├── MonitoredItemService.php
+│   │   ├── PublishService.php
+│   │   ├── SubscriptionResult.php
+│   │   ├── MonitoredItemResult.php
+│   │   ├── PublishResult.php
+│   │   └── TransferResult.php
+│   │
+│   ├── History/                         # History read operations
+│   │   ├── HistoryModule.php
+│   │   └── HistoryReadService.php
+│   │
+│   ├── NodeManagement/                  # Add/delete nodes and references
+│   │   ├── NodeManagementModule.php
+│   │   ├── NodeManagementService.php
+│   │   └── AddNodesResult.php
+│   │
+│   ├── TranslateBrowsePath/             # Browse path translation
+│   │   ├── TranslateBrowsePathModule.php
+│   │   ├── TranslateBrowsePathService.php
+│   │   └── BrowsePathResult.php
+│   │
+│   ├── ServerInfo/                      # Server BuildInfo methods
+│   │   ├── ServerInfoModule.php
+│   │   └── BuildInfo.php
+│   │
+│   └── TypeDiscovery/                   # Automatic DataType discovery
+│       └── TypeDiscoveryModule.php
 │
 ├── Transport/
 │   └── TcpTransport.php                # TCP socket I/O
@@ -46,7 +83,7 @@ src/
 │   ├── DataTypeMapping.php            # Maps DataType NodeIds to BuiltinTypes
 │   └── StructureDefinitionParser.php  # Parses DataTypeDefinition attributes
 │
-├── Protocol/
+├── Protocol/                            # Shared protocol infrastructure
 │   ├── AbstractProtocolService.php     # Shared encode/decode base class
 │   ├── ServiceTypeId.php              # Named constants for OPC UA service NodeIds
 │   ├── MessageHeader.php               # OPC UA message framing
@@ -54,17 +91,7 @@ src/
 │   ├── AcknowledgeMessage.php          # ACK message
 │   ├── SecureChannelRequest.php        # OPN request
 │   ├── SecureChannelResponse.php       # OPN response
-│   ├── SessionService.php             # CreateSession / ActivateSession
-│   ├── BrowseService.php              # Browse / BrowseNext
-│   ├── ReadService.php                # Read
-│   ├── WriteService.php               # Write
-│   ├── CallService.php                # Call (method invocation)
-│   ├── GetEndpointsService.php        # GetEndpoints
-│   ├── SubscriptionService.php        # Create / Modify / Delete Subscription
-│   ├── MonitoredItemService.php       # Create / Delete MonitoredItems
-│   ├── PublishService.php             # Publish (notifications)
-│   ├── HistoryReadService.php         # HistoryRead (raw / processed / attime)
-│   └── TranslateBrowsePathService.php # TranslateBrowsePathsToNodeIds
+│   └── SessionService.php             # CreateSession / ActivateSession (kernel-level)
 │
 ├── Security/
 │   ├── SecurityPolicy.php             # Security policy enum + algorithm config
@@ -73,7 +100,7 @@ src/
 │   ├── MessageSecurity.php            # Cryptographic operations
 │   └── CertificateManager.php        # Certificate loading & utilities
 │
-├── Types/
+├── Types/                               # Shared types (used across modules)
 │   ├── BuiltinType.php                # OPC UA type enum
 │   ├── NodeClass.php                  # Node class enum
 │   ├── NodeId.php                     # Node identifier
@@ -89,13 +116,7 @@ src/
 │   ├── ConnectionState.php           # Connection state enum
 │   ├── BrowseDirection.php           # Browse direction enum
 │   ├── BrowseNode.php                # Recursive browse tree node DTO
-│   ├── BrowseResultSet.php           # Browse with continuation result DTO
-│   ├── BrowsePathResult.php          # Translate browse path result DTO
 │   ├── BrowsePathTarget.php          # Single resolved browse path target DTO
-│   ├── CallResult.php                # Method call result DTO
-│   ├── SubscriptionResult.php        # Create subscription result DTO
-│   ├── MonitoredItemResult.php       # Create monitored item result DTO
-│   ├── PublishResult.php             # Publish response result DTO
 │   ├── ExtensionObject.php           # Typed ExtensionObject DTO (raw or decoded)
 │   ├── StructureField.php            # Field descriptor for structure definitions
 │   └── StructureDefinition.php       # Structure layout for dynamic codecs
@@ -149,6 +170,8 @@ src/
     ├── ConnectionException.php        # TCP errors
     ├── EncodingException.php          # Binary codec errors
     ├── InvalidNodeIdException.php     # Malformed NodeId errors
+    ├── ModuleConflictException.php    # Two modules register the same method
+    ├── MissingModuleDependencyException.php # Module dependency not satisfied
     ├── ProtocolException.php          # Protocol violations
     ├── SecurityException.php          # Crypto errors
     ├── UntrustedCertificateException.php # Untrusted server cert (extends SecurityException)
@@ -160,12 +183,18 @@ src/
 ```
 ┌─────────────────────────────────┐
 │       ClientBuilder             │  Configuration & entry point
-│  (+ ClientBuilder/*Trait.php)   │  Config traits (cache, events, etc.)
+│  (+ ClientBuilder/*Trait.php)   │  Config traits (cache, events, modules, etc.)
 ├─────────────────────────────────┤
-│           Client                │  Connected client (operations)
-│     (+ Client/*Trait.php)       │  Runtime traits (browse, read, etc.)
+│           Client                │  Proxy: typed one-liners → module handlers
+│         (+ __call)              │  Custom module methods via __call()
 ├─────────────────────────────────┤
-│     Protocol/*Service           │  OPC UA service encoding/decoding
+│    ModuleRegistry               │  Module lifecycle, dependency sort, method map
+├──────────┬──────────────────────┤
+│ Module/* │   ClientKernel       │  Service modules ←→ shared infrastructure
+│ (8 built │  (executeWithRetry,  │  Each module = protocol service + DTOs + methods
+│  -in)    │   send, receive...)  │
+├──────────┴──────────────────────┤
+│     Protocol (shared base)      │  AbstractProtocolService, ServiceTypeId, SessionService
 ├──────────────┬──────────────────┤
 │ BinaryEncoder│  BinaryDecoder   │  Binary serialization
 ├──────────────┴──────────────────┤
@@ -178,7 +207,98 @@ src/
 └─────────────────────────────────┘
 ```
 
-`ClientBuilder` is the entry point for configuration. Calling `connect()` returns a `Client` for operations. Each layer only talks to the one directly below it.
+`ClientBuilder` is the entry point for configuration. Calling `connect()` boots the kernel, registers all modules, and returns a `Client` for operations. Each layer only talks to the one directly below it.
+
+## Module System
+
+The Client uses a **module architecture** where each OPC UA service set is a self-contained `ServiceModule`. This replaces the previous trait-based approach.
+
+### How It Works
+
+1. **`ClientKernel`** provides the shared infrastructure that every module needs: retry logic, connection management, request ID generation, send/receive, binary encoding, event dispatching, caching, and logging.
+
+2. **`ServiceModule`** is the abstract base class. Each module implements:
+   - `register()` — injects its methods onto the Client via `$this->client->registerMethod('read', $this->read(...))`
+   - `boot()` — creates its protocol service instance
+   - `reset()` — cleans up on disconnect
+   - `requires()` — declares dependencies on other modules (optional)
+
+3. **`ModuleRegistry`** manages the module lifecycle:
+   - Resolves dependencies with topological sort
+   - Detects method name conflicts between modules
+   - Boots modules in dependency order
+   - Resets modules on disconnect
+
+### Boot Flow
+
+```
+ClientBuilder::connect()
+  → creates ClientKernel (transport, security, session)
+  → creates ModuleRegistry
+  → registers all modules (8 built-in + custom)
+  → ModuleRegistry resolves dependencies (topological sort)
+  → ModuleRegistry boots all modules in order
+  → returns Client (with method handlers populated)
+```
+
+### Built-in Modules
+
+| Module | Methods | DTOs |
+|---|---|---|
+| `ReadWriteModule` | `read`, `readMulti`, `write`, `writeMulti`, `call` | `CallResult` |
+| `BrowseModule` | `browse`, `browseAll`, `browseWithContinuation`, `browseNext`, `browseRecursive`, `getEndpoints` | `BrowseResultSet` |
+| `SubscriptionModule` | `createSubscription`, `createMonitoredItems`, `createEventMonitoredItem`, `modifyMonitoredItems`, `setTriggering`, `deleteMonitoredItems`, `deleteSubscription`, `publish`, `transferSubscriptions`, `republish` | `SubscriptionResult`, `MonitoredItemResult`, `PublishResult`, `TransferResult` |
+| `HistoryModule` | `historyReadRaw`, `historyReadProcessed`, `historyReadAtTime` | (none) |
+| `NodeManagementModule` | `addNodes`, `deleteNodes`, `addReferences`, `deleteReferences` | `AddNodesResult` |
+| `TranslateBrowsePathModule` | `translateBrowsePaths`, `resolveNodeId` | `BrowsePathResult` |
+| `ServerInfoModule` | `getServerBuildInfo`, `getServerProductName`, `getServerManufacturerName`, `getServerSoftwareVersion`, `getServerBuildNumber`, `getServerBuildDate` | `BuildInfo` |
+| `TypeDiscoveryModule` | `discoverDataTypes` | (none) |
+
+### Extending with Custom Modules
+
+Add a custom module:
+
+```php
+$client = ClientBuilder::create()
+    ->addModule(new MyQueryServiceModule())
+    ->connect('opc.tcp://localhost:4840');
+
+$client->queryFirst(...); // accessible via __call()
+```
+
+Replace a built-in module:
+
+```php
+$client = ClientBuilder::create()
+    ->replaceModule(ReadWriteModule::class, new MyCustomReadWriteModule())
+    ->connect('opc.tcp://localhost:4840');
+
+$client->read(...); // uses your custom implementation
+```
+
+### Dependency Declaration
+
+Modules can declare dependencies on other modules:
+
+```php
+class ServerInfoModule extends ServiceModule
+{
+    public function requires(): array
+    {
+        return [ReadWriteModule::class];
+    }
+}
+```
+
+The `ModuleRegistry` resolves the dependency graph and boots modules in the correct order. Missing dependencies throw `MissingModuleDependencyException` at connect time.
+
+### Introspection
+
+```php
+$client->hasMethod('read');                    // true
+$client->hasModule(ReadWriteModule::class);    // true
+$client->hasModule(MyCustomModule::class);     // false (unless added)
+```
 
 ## Dependencies
 

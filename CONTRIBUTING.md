@@ -58,21 +58,36 @@ All tests must pass before submitting a pull request.
 
 ```
 src/
-├── Client.php                  # Main entry point
+├── Client.php                  # Thin proxy — typed one-liners delegating to modules
+├── ClientBuilder.php           # Builder / entry point (addModule, replaceModule)
 ├── OpcUaClientInterface.php    # Public API interface
-├── Client/                     # Client traits (connection, read/write, browse, etc.)
+├── Kernel/                     # Shared infrastructure for all modules
+│   ├── ClientKernel.php        # Infrastructure API (send, receive, retry, resolve, etc.)
+│   └── ClientKernelInterface.php
+├── Module/                     # Self-contained service modules
+│   ├── ServiceModule.php       # Abstract base (register, boot, reset, requires)
+│   ├── ModuleRegistry.php      # Lifecycle, dependency sort, conflict detection
+│   ├── ReadWrite/              # read, write, call + ReadService, WriteService, CallService, CallResult
+│   ├── Browse/                 # browse, getEndpoints + BrowseService, BrowseResultSet
+│   ├── Subscription/           # subscriptions, monitoring + protocol services + DTOs
+│   ├── History/                # history read + HistoryReadService
+│   ├── NodeManagement/         # add/delete nodes + NodeManagementService, AddNodesResult
+│   ├── TranslateBrowsePath/    # path resolution + BrowsePathResult
+│   ├── ServerInfo/             # server build info + BuildInfo
+│   └── TypeDiscovery/          # auto type discovery
+├── Client/                     # Kernel traits (connection, handshake, secure channel, session)
 ├── Transport/                  # TCP socket communication
-├── Protocol/                   # OPC UA service encoding/decoding (AbstractProtocolService base, ServiceTypeId constants)
+├── Protocol/                   # Shared protocol infrastructure (AbstractProtocolService, ServiceTypeId)
 ├── Encoding/                   # Binary serialization
 ├── Security/                   # Secure channel, crypto, certificates
 ├── Cache/                      # PSR-16 cache drivers (InMemoryCache, FileCache)
-├── TrustStore/                 # Server certificate trust management (FileTrustStore, TrustPolicy)
+├── TrustStore/                 # Server certificate trust management
 ├── Event/                      # PSR-14 events (47 event classes + NullEventDispatcher)
 ├── Builder/                    # Fluent builders for multi-operations
 ├── Repository/                 # Per-client codec registry
 ├── Testing/                    # MockClient for consumer testing
-├── Types/                      # OPC UA data types, enums, and DTOs
-└── Exception/                  # Exception hierarchy (12 classes, granular subclasses)
+├── Types/                      # Shared OPC UA data types and enums (module-specific DTOs live in Module/)
+└── Exception/                  # Exception hierarchy
 
 tests/
 ├── Unit/                       # Unit tests (no server required)
@@ -146,9 +161,9 @@ composer format:check
 
 ### Public API Changes
 
-- Any new public method must be added to `OpcUaClientInterface`
+- Any new built-in public method must be added to `OpcUaClientInterface` and implemented as a typed one-liner in `Client.php` that delegates to `$this->methodHandlers['name']`
+- New service sets should be implemented as a `ServiceModule` in `src/Module/YourModule/` — include the module class, protocol service(s), and any module-specific DTOs in the same directory
 - Configuration methods should return `self` for fluent chaining
-- Use traits (`Client/Manages*Trait.php`) to organize client functionality
 - All methods accepting a `NodeId` should also accept `string` (OPC UA format: `'i=2259'`, `'ns=2;s=MyNode'`)
 - Use `AttributeId` constants instead of magic numbers for attribute IDs
 

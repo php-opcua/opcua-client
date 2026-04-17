@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Builder;
 
+use PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePathResult;
 use PhpOpcua\Client\OpcUaClientInterface;
-use PhpOpcua\Client\Types\BrowsePathResult;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\QualifiedName;
 
