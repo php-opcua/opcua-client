@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpOpcua\Client;
 
 use DateTimeImmutable;
+use PhpOpcua\Client\Cache\CacheCodecInterface;
 use PhpOpcua\Client\Client\ManagesBatchingRuntimeTrait;
 use PhpOpcua\Client\Client\ManagesCacheRuntimeTrait;
 use PhpOpcua\Client\Client\ManagesConnectionTrait;
@@ -57,8 +58,8 @@ use Psr\SimpleCache\CacheInterface;
  * Instances are created via {@see ClientBuilder::connect()}. Do not instantiate directly.
  * Service operations are provided by modules loaded via the {@see ModuleRegistry}.
  *
- * @implements OpcUaClientInterface
- * @implements ClientKernelInterface
+ * This class also implements {@see ClientKernelInterface} and is injected as the
+ * kernel into every module, so modules only see the infrastructure surface.
  *
  * @see OpcUaClientInterface
  * @see ClientKernelInterface
@@ -137,6 +138,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
 
     private bool $cacheInitialized;
 
+    private CacheCodecInterface $cacheCodec;
+
     private float $timeout;
 
     private ?int $autoRetry;
@@ -189,6 +192,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
      * @param bool $autoAcceptForce Force auto-accept.
      * @param ?CacheInterface $cache PSR-16 cache.
      * @param bool $cacheInitialized Whether cache is initialized.
+     * @param CacheCodecInterface $cacheCodec Codec used to (de)serialise cache values.
      * @param float $timeout Network timeout in seconds.
      * @param ?int $autoRetry Max retry count.
      * @param ?int $batchSize Batch size for multi operations.
@@ -222,6 +226,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
         bool $autoAcceptForce,
         ?CacheInterface $cache,
         bool $cacheInitialized,
+        CacheCodecInterface $cacheCodec,
         float $timeout,
         ?int $autoRetry,
         ?int $batchSize,
@@ -249,6 +254,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
         $this->autoAcceptForce = $autoAcceptForce;
         $this->cache = $cache;
         $this->cacheInitialized = $cacheInitialized;
+        $this->cacheCodec = $cacheCodec;
         $this->timeout = $timeout;
         $this->autoRetry = $autoRetry;
         $this->batchSize = $batchSize;

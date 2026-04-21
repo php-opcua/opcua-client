@@ -9,6 +9,7 @@ use PhpOpcua\Client\Encoding\DynamicCodec;
 use PhpOpcua\Client\Encoding\ExtensionObjectCodec;
 use PhpOpcua\Client\Encoding\StructureDefinitionParser;
 use PhpOpcua\Client\Event\DataTypesDiscovered;
+use PhpOpcua\Client\Exception\CacheCorruptedException;
 use PhpOpcua\Client\Module\Browse\BrowseModule;
 use PhpOpcua\Client\Module\ReadWrite\ReadWriteModule;
 use PhpOpcua\Client\Module\ServiceModule;
@@ -62,7 +63,19 @@ class TypeDiscoveryModule extends ServiceModule
 
         $this->kernel->ensureCacheInitialized();
         $cache = $this->kernel->getCache();
-        $cached = ($useCache && $cache !== null) ? $cache->get($cacheKey) : null;
+        $codec = $this->kernel->getCacheCodec();
+        $cached = null;
+        if ($useCache && $cache !== null) {
+            $raw = $cache->get($cacheKey);
+            if (is_string($raw)) {
+                try {
+                    $cached = $codec->decode($raw);
+                } catch (CacheCorruptedException) {
+                    $cache->delete($cacheKey);
+                    $cached = null;
+                }
+            }
+        }
 
         if ($cached !== null && is_array($cached)) {
             $registered = 0;
@@ -91,7 +104,7 @@ class TypeDiscoveryModule extends ServiceModule
         $this->discoverFromTree($tree, $namespaceIndex, $registered, $discoveredEntries);
 
         if ($useCache && $cache !== null && ! empty($discoveredEntries)) {
-            $cache->set($cacheKey, $discoveredEntries);
+            $cache->set($cacheKey, $codec->encode($discoveredEntries));
         }
 
         $this->kernel->log()->info('Discovered {count} data type(s)', $this->kernel->logContext(['count' => $registered]));

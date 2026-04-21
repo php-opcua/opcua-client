@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Cache;
 
+use JsonException;
 use Psr\SimpleCache\CacheInterface;
 
 /**
- * File-based PSR-16 cache implementation. Data survives PHP process restarts.
- *
- * Each cache entry is stored as a serialized file in the specified directory.
+ * File-based PSR-16 cache. Each entry is stored as JSON `{"v": <value>, "e": <expiresAt|null>}`.
+ * Entries written by pre-4.3.0 versions use `serialize()` and are discarded on first access.
  *
  * @implements CacheInterface<mixed>
  */
@@ -49,13 +49,13 @@ class FileCache implements CacheInterface
             return $default;
         }
 
-        if (isset($entry['expiresAt']) && $entry['expiresAt'] < time()) {
+        if (isset($entry['e']) && $entry['e'] !== null && $entry['e'] < time()) {
             @unlink($path);
 
             return $default;
         }
 
-        return $entry['value'] ?? $default;
+        return $entry['v'] ?? $default;
     }
 
     /**
@@ -66,8 +66,8 @@ class FileCache implements CacheInterface
         $seconds = $this->resolveTtl($ttl);
 
         $entry = [
-            'value' => $value,
-            'expiresAt' => $seconds > 0 ? time() + $seconds : null,
+            'v' => $value,
+            'e' => $seconds > 0 ? time() + $seconds : null,
         ];
 
         $path = $this->path($key);
@@ -76,7 +76,13 @@ class FileCache implements CacheInterface
             mkdir($dir, 0775, true);
         }
 
-        return file_put_contents($path, serialize($entry), LOCK_EX) !== false;
+        try {
+            $encoded = json_encode($entry, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        } catch (JsonException) {
+            return false;
+        }
+
+        return file_put_contents($path, $encoded, LOCK_EX) !== false;
     }
 
     /**
@@ -161,20 +167,29 @@ class FileCache implements CacheInterface
     }
 
     /**
-     * Read and unserialize a cache entry from disk.
-     *
      * @param string $path
-     * @return ?array
+     * @return ?array{v: mixed, e: ?int}
      */
     private function readEntry(string $path): ?array
     {
-        $raw = file_get_contents($path);
+        if (! is_file($path)) {
+            return null;
+        }
+
+        $raw = @file_get_contents($path);
         if ($raw === false) {
             return null;
         }
 
-        $entry = @unserialize($raw);
-        if ($entry === false) {
+        try {
+            $entry = json_decode($raw, true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            @unlink($path);
+
+            return null;
+        }
+
+        if (! is_array($entry) || ! array_key_exists('v', $entry) || ! array_key_exists('e', $entry)) {
             @unlink($path);
 
             return null;

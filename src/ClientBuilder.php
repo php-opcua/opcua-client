@@ -147,12 +147,8 @@ class ClientBuilder implements ClientBuilderInterface
     /**
      * Return the list of default built-in module classes.
      *
-     * NodeManagementModule is intentionally disabled by default — see ROADMAP.md.
-     * The module is fully implemented but cannot be validated against the UA .NET
-     * Standard test suite, which returns a top-level ServiceFault (BadServiceUnsupported)
-     * for every NodeManagement request. Re-enable by passing the module through
-     * `ClientBuilder::addModule(new NodeManagementModule())` when targeting a server
-     * that implements the service set.
+     * `NodeManagementModule` is intentionally disabled — opt in with
+     * `ClientBuilder::addModule(new NodeManagementModule())`. See ROADMAP.md.
      *
      * @return array<class-string<ServiceModule>>
      */
@@ -163,7 +159,6 @@ class ClientBuilder implements ClientBuilderInterface
             BrowseModule::class,
             SubscriptionModule::class,
             HistoryModule::class,
-            // TODO: AGAINT: NodeManagementModule::class — re-enable once the client decodes top-level ServiceFault responses and integration coverage against a server that implements the service set is in place.
             TranslateBrowsePathModule::class,
             ServerInfoModule::class,
             TypeDiscoveryModule::class,
@@ -318,6 +313,7 @@ class ClientBuilder implements ClientBuilderInterface
             autoAcceptForce: $this->autoAcceptForce,
             cache: $this->cache,
             cacheInitialized: $this->cacheInitialized,
+            cacheCodec: $this->getCacheCodec(),
             timeout: $this->timeout,
             autoRetry: $this->autoRetry,
             batchSize: $this->batchSize,

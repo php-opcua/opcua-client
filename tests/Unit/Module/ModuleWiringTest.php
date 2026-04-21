@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Exception\MissingModuleDependencyException;
 use PhpOpcua\Client\Exception\ModuleConflictException;
-use PhpOpcua\Client\Kernel\ClientKernel;
+use PhpOpcua\Client\Kernel\ClientKernelInterface;
 use PhpOpcua\Client\Module\Browse\BrowseModule;
 use PhpOpcua\Client\Module\History\HistoryModule;
 use PhpOpcua\Client\Module\ModuleRegistry;
@@ -183,7 +183,7 @@ describe('Module wiring', function () {
 
         $handlers = [];
         $client = createMethodTrackingClient($handlers);
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $session = new SessionService(1, 1);
 
         $registry->bootAll($kernel, $client, $session);
@@ -207,7 +207,7 @@ describe('Module wiring', function () {
 
         $handlers = [];
         $client = createMethodTrackingClient($handlers);
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $session = new SessionService(1, 1);
 
         expect(fn () => $registry->bootAll($kernel, $client, $session))
@@ -222,7 +222,7 @@ describe('Module wiring', function () {
 
         $handlers = [];
         $client = createMethodTrackingClient($handlers);
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $session = new SessionService(1, 1);
 
         expect(fn () => $registry->bootAll($kernel, $client, $session))
@@ -240,7 +240,7 @@ describe('Module wiring', function () {
 
         $handlers = [];
         $client = createMethodTrackingClient($handlers);
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $session = new SessionService(1, 1);
 
         $registry->bootAll($kernel, $client, $session);
@@ -260,7 +260,7 @@ describe('Module wiring', function () {
 
         $handlers = [];
         $client = createMethodTrackingClient($handlers);
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $session = new SessionService(1, 1);
 
         $registry->bootAll($kernel, $client, $session);
@@ -297,7 +297,7 @@ describe('Built-in modules register expected methods', function () {
             }
         };
 
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $module->setKernel($kernel);
         $module->setClient($client);
         $module->register();
@@ -328,7 +328,7 @@ describe('Built-in modules register expected methods', function () {
             }
         };
 
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $module->setKernel($kernel);
         $module->setClient($client);
         $module->register();
@@ -366,7 +366,7 @@ describe('Built-in modules register expected methods', function () {
             }
         };
 
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $module->setKernel($kernel);
         $module->setClient($client);
         $module->register();
@@ -404,7 +404,7 @@ describe('Built-in modules register expected methods', function () {
             }
         };
 
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $module->setKernel($kernel);
         $module->setClient($client);
         $module->register();
@@ -446,7 +446,7 @@ describe('Built-in modules register expected methods', function () {
             }
         };
 
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $module->setKernel($kernel);
         $module->setClient($client);
         $module->register();
@@ -481,7 +481,7 @@ describe('Built-in modules register expected methods', function () {
             }
         };
 
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $module->setKernel($kernel);
         $module->setClient($client);
         $module->register();
@@ -517,7 +517,7 @@ describe('Built-in modules register expected methods', function () {
             }
         };
 
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $module->setKernel($kernel);
         $module->setClient($client);
         $module->register();
@@ -551,7 +551,7 @@ describe('Built-in modules register expected methods', function () {
             }
         };
 
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $module->setKernel($kernel);
         $module->setClient($client);
         $module->register();

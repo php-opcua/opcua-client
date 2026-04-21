@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpOpcua\Client\Kernel;
 
 use Closure;
+use PhpOpcua\Client\Cache\CacheCodecInterface;
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\Types\NodeId;
@@ -57,6 +58,8 @@ interface ClientKernelInterface
     public function ensureCacheInitialized(): void;
 
     public function getCache(): ?CacheInterface;
+
+    public function getCacheCodec(): CacheCodecInterface;
 
     public function getEffectiveReadBatchSize(): ?int;
 

@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\ClientBuilder;
 
+use PhpOpcua\Client\Cache\CacheCodecInterface;
 use PhpOpcua\Client\Cache\InMemoryCache;
+use PhpOpcua\Client\Cache\WireCacheCodec;
+use PhpOpcua\Client\Wire\CoreWireTypes;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
 use Psr\SimpleCache\CacheInterface;
 
 /**
@@ -15,6 +19,8 @@ trait ManagesCacheTrait
     private ?CacheInterface $cache = null;
 
     private bool $cacheInitialized = false;
+
+    private ?CacheCodecInterface $cacheCodec = null;
 
     /**
      * Set the cache driver. Pass null to disable caching entirely.
@@ -40,6 +46,33 @@ trait ManagesCacheTrait
         $this->ensureCacheInitialized();
 
         return $this->cache;
+    }
+
+    /**
+     * Override the cache value codec. Pass null to use the default {@see WireCacheCodec}.
+     *
+     * @param ?CacheCodecInterface $codec
+     * @return self
+     */
+    public function setCacheCodec(?CacheCodecInterface $codec): self
+    {
+        $this->cacheCodec = $codec;
+
+        return $this;
+    }
+
+    /**
+     * @return CacheCodecInterface
+     */
+    public function getCacheCodec(): CacheCodecInterface
+    {
+        if ($this->cacheCodec === null) {
+            $registry = new WireTypeRegistry();
+            CoreWireTypes::registerForCache($registry);
+            $this->cacheCodec = new WireCacheCodec($registry);
+        }
+
+        return $this->cacheCodec;
     }
 
     /**

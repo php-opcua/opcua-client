@@ -124,7 +124,7 @@ describe('Custom module via __call', function () {
         $module = new CustomGreetingModule();
         $client = new FakeClientForCustomModuleTest();
 
-        $kernel = $this->createMock(PhpOpcua\Client\Kernel\ClientKernel::class);
+        $kernel = $this->createMock(PhpOpcua\Client\Kernel\ClientKernelInterface::class);
         $module->setKernel($kernel);
         $module->setClient($client);
         $module->register();
@@ -140,7 +140,7 @@ describe('Custom module via __call', function () {
         $math = new CustomMathModule();
         $client = new FakeClientForCustomModuleTest();
 
-        $kernel = $this->createMock(PhpOpcua\Client\Kernel\ClientKernel::class);
+        $kernel = $this->createMock(PhpOpcua\Client\Kernel\ClientKernelInterface::class);
 
         $greeting->setKernel($kernel);
         $greeting->setClient($client);
@@ -166,7 +166,7 @@ describe('Custom module via __call', function () {
         $greeting2 = new CustomGreetingModule();
         $client = new FakeClientForCustomModuleTest();
 
-        $kernel = $this->createMock(PhpOpcua\Client\Kernel\ClientKernel::class);
+        $kernel = $this->createMock(PhpOpcua\Client\Kernel\ClientKernelInterface::class);
 
         $greeting1->setKernel($kernel);
         $greeting1->setClient($client);

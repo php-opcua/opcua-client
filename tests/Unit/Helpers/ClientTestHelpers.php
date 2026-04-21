@@ -656,6 +656,9 @@ if (! function_exists('createClientWithoutConnect')) {
         setClientProperty($client, 'autoAcceptForce', false);
         setClientProperty($client, 'cache', null);
         setClientProperty($client, 'cacheInitialized', false);
+        $codecRegistry = new PhpOpcua\Client\Wire\WireTypeRegistry();
+        PhpOpcua\Client\Wire\CoreWireTypes::registerForCache($codecRegistry);
+        setClientProperty($client, 'cacheCodec', new PhpOpcua\Client\Cache\WireCacheCodec($codecRegistry));
         setClientProperty($client, 'timeout', 5.0);
         setClientProperty($client, 'autoRetry', null);
         setClientProperty($client, 'batchSize', null);

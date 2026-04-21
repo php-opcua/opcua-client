@@ -24,7 +24,7 @@ describe('NodeManagementModule', function () {
             }
         };
 
-        $kernel = $this->createMock(PhpOpcua\Client\Kernel\ClientKernel::class);
+        $kernel = $this->createMock(PhpOpcua\Client\Kernel\ClientKernelInterface::class);
         $module->setKernel($kernel);
         $module->setClient($client);
         $module->register();

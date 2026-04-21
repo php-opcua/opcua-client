@@ -94,7 +94,7 @@ class ReadWriteModule extends ServiceModule
             $this->kernel->ensureCacheInitialized();
             $cache = $this->kernel->getCache();
             if ($cache !== null) {
-                $cache->set($cacheKey, $dataValue);
+                $cache->set($cacheKey, $this->kernel->getCacheCodec()->encode($dataValue));
             }
 
             return $dataValue;
@@ -417,6 +417,7 @@ class ReadWriteModule extends ServiceModule
 
         $this->kernel->ensureCacheInitialized();
         $cache = $this->kernel->getCache();
+        $codec = $this->kernel->getCacheCodec();
 
         $uncachedNodes = [];
         $seen = [];
@@ -447,7 +448,7 @@ class ReadWriteModule extends ServiceModule
         foreach ($uncachedNodes as $i => $node) {
             $variant = $dataValues[$i]->getVariant();
             if ($variant !== null && $cache !== null) {
-                $cache->set($node['cacheKey'], $variant->type);
+                $cache->set($node['cacheKey'], $codec->encode($variant->type));
             }
         }
     }

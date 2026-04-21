@@ -38,7 +38,13 @@ class SecureChannel
 
     private int $tokenId = 0;
 
-    private int $sequenceNumber = 1;
+    private int $sequenceNumber;
+
+    /** OPC UA Part 6 §6.7.2.4: RSA wrap threshold (UInt32.MaxValue - 1024). */
+    private const RSA_MAX_SEQUENCE_NUMBER = 0xFFFFFBFF;
+
+    /** OPC UA Part 6 §6.7.2.4: ECC wrap threshold (UInt32.MaxValue). */
+    private const ECC_MAX_SEQUENCE_NUMBER = 0xFFFFFFFF;
 
     private ?string $clientSigningKey = null;
 
@@ -80,6 +86,7 @@ class SecureChannel
         $this->serverCertDer = $serverCertDer;
         $this->certManager = new CertificateManager();
         $this->messageSecurity = new MessageSecurity($this->certManager);
+        $this->sequenceNumber = $policy->isEcc() ? 0 : 1;
     }
 
     public function getPolicy(): SecurityPolicy
@@ -104,7 +111,15 @@ class SecureChannel
 
     public function getNextSequenceNumber(): int
     {
-        return $this->sequenceNumber++;
+        $current = $this->sequenceNumber;
+
+        if ($this->policy->isEcc()) {
+            $this->sequenceNumber = $current >= self::ECC_MAX_SEQUENCE_NUMBER ? 0 : $current + 1;
+        } else {
+            $this->sequenceNumber = $current >= self::RSA_MAX_SEQUENCE_NUMBER ? 1 : $current + 1;
+        }
+
+        return $current;
     }
 
     public function getClientNonce(): string

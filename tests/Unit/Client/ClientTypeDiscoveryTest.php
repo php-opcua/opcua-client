@@ -306,4 +306,26 @@ describe('ManagesTypeDiscoveryTrait via MockTransport', function () {
         $client = setupConnectedClient($mock);
         expect($client->discoverDataTypes())->toBe(0);
     });
+
+    it('discoverDataTypes discards a corrupted cached entry and refetches from the server', function () {
+        $mock = new MockTransport();
+        // Empty browseRecursive response so the refetch resolves to 0 discovered types.
+        $mock->addResponse(buildMsgResponse(530, function (BinaryEncoder $e) {
+            $e->writeInt32(1);
+            $e->writeUInt32(0);
+            $e->writeByteString(null);
+            $e->writeInt32(0);
+            $e->writeInt32(0);
+        }));
+
+        $client = setupConnectedClient($mock);
+        $cache = $client->getCache();
+        $cacheKey = 'opcua:' . md5('opc.tcp://mock:4840') . ':dataTypes:all';
+        // Write a payload that looks wire-encoded but uses an unknown __t so decode() fails.
+        $cache->set($cacheKey, 'opcua.wire.v1:' . json_encode(['__t' => 'NotRegisteredTypeId', 'v' => 0]));
+
+        expect($client->discoverDataTypes(useCache: true))->toBe(0);
+        // The corrupted entry must have been evicted so the next call sees a miss.
+        expect($cache->get($cacheKey))->toBeNull();
+    });
 });

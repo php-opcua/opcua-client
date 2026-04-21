@@ -90,6 +90,9 @@ function createCacheClientWithoutConnect(): Client
     setCacheClientProperty($client, 'autoAcceptForce', false);
     setCacheClientProperty($client, 'cache', null);
     setCacheClientProperty($client, 'cacheInitialized', false);
+    $codecRegistry = new PhpOpcua\Client\Wire\WireTypeRegistry();
+    PhpOpcua\Client\Wire\CoreWireTypes::registerForCache($codecRegistry);
+    setCacheClientProperty($client, 'cacheCodec', new PhpOpcua\Client\Cache\WireCacheCodec($codecRegistry));
     setCacheClientProperty($client, 'timeout', 5.0);
     setCacheClientProperty($client, 'autoRetry', null);
     setCacheClientProperty($client, 'batchSize', null);
@@ -427,9 +430,9 @@ describe('FileCache', function () {
     it('expires entries after TTL', function () {
         $this->cache->set('expiring', 'value', 1);
         $path = $this->cacheDir . DIRECTORY_SEPARATOR . sha1('expiring') . '.cache';
-        $entry = unserialize(file_get_contents($path));
-        $entry['expiresAt'] = time() - 10;
-        file_put_contents($path, serialize($entry));
+        $entry = json_decode(file_get_contents($path), true);
+        $entry['e'] = time() - 10;
+        file_put_contents($path, json_encode($entry));
 
         expect($this->cache->get('expiring', 'gone'))->toBe('gone');
         expect(file_exists($path))->toBeFalse();
@@ -723,31 +726,35 @@ describe('Cache serialization with restricted allowed_classes', function () {
         expect($nodeId2->getIdentifier())->toBe(2253);
     });
 
-    it('handles corrupted wrapped value gracefully', function () {
+    it('rejects a pre-4.3.0 CACHE_SAFE_PREFIX payload as corrupted and refetches', function () {
         $mock = new CacheMockTransport();
-        $mock->addResponse(cacheBrowseResponseMsg());
         $mock->addResponse(cacheBrowseResponseMsg());
         $client = setupCacheConnectedClient($mock);
 
-        // Store a value with the correct prefix but invalid base64 payload
+        // Simulate a value written by a pre-4.3.0 client (CACHE_SAFE_PREFIX
+        // + base64(serialize(...))). The new WireCacheCodec must refuse it
+        // rather than unserialize() it, and the cache layer treats that
+        // refusal as a miss.
         $cache = $client->getCache();
         $key = 'opcua:' . md5('opc.tcp://mock:4840') . ':browse:i=85:0:1:0';
-        $cache->set($key, "\x00opcua\x00" . '!!!not-valid-base64!!!');
+        $cache->set($key, "\x00opcua\x00" . base64_encode(serialize(['pretending to be cached'])));
 
-        // Browse should treat it as a cache miss and fetch from server
         $refs = $client->browse(NodeId::numeric(0, 85), useCache: true);
         expect($refs)->toHaveCount(1);
         expect($refs[0])->toBeInstanceOf(PhpOpcua\Client\Types\ReferenceDescription::class);
     });
 
-    it('handles legacy unwrapped cached values transparently', function () {
+    it('rejects raw (non-wire-encoded) cache values and refetches', function () {
         $mock = new CacheMockTransport();
+        $mock->addResponse(cacheBrowseResponseMsg());
         $client = setupCacheConnectedClient($mock);
 
-        // Store a legacy (pre-fix) unwrapped value directly in the cache
+        // A client using a foreign cache layer could write a plain array
+        // directly. With the v4.3.0 codec the only valid in-cache format is
+        // a "opcua.wire.v1:" string, so this gets treated as a miss.
         $cache = $client->getCache();
         $key = 'opcua:' . md5('opc.tcp://mock:4840') . ':browse:i=85:0:1:0';
-        $legacyRefs = [new PhpOpcua\Client\Types\ReferenceDescription(
+        $cache->set($key, [new PhpOpcua\Client\Types\ReferenceDescription(
             NodeId::numeric(0, 35),
             true,
             NodeId::numeric(0, 2253),
@@ -755,14 +762,11 @@ describe('Cache serialization with restricted allowed_classes', function () {
             new PhpOpcua\Client\Types\LocalizedText(null, 'Server'),
             PhpOpcua\Client\Types\NodeClass::Object,
             NodeId::numeric(0, 2004),
-        )];
-        $cache->set($key, $legacyRefs);
+        )]);
 
-        // Browse should use the legacy value as-is (backward compatibility)
         $refs = $client->browse(NodeId::numeric(0, 85), useCache: true);
         expect($refs)->toHaveCount(1);
         expect($refs[0])->toBeInstanceOf(PhpOpcua\Client\Types\ReferenceDescription::class);
-        expect($refs[0]->browseName->name)->toBe('Server');
     });
 });
 
@@ -786,7 +790,9 @@ describe('discoverDataTypes caching', function () {
 
         $cache = $client->getCache();
         $cacheKey = 'opcua:' . md5('opc.tcp://mock:4840') . ':dataTypes:all';
-        $cache->set($cacheKey, $cachedData);
+        $codecRegistry = new PhpOpcua\Client\Wire\WireTypeRegistry();
+        PhpOpcua\Client\Wire\CoreWireTypes::registerForCache($codecRegistry);
+        $cache->set($cacheKey, (new PhpOpcua\Client\Cache\WireCacheCodec($codecRegistry))->encode($cachedData));
 
         $count = $client->discoverDataTypes(useCache: true);
 
@@ -814,7 +820,9 @@ describe('discoverDataTypes caching', function () {
 
         $cache = $client->getCache();
         $cacheKey = 'opcua:' . md5('opc.tcp://mock:4840') . ':dataTypes:all';
-        $cache->set($cacheKey, $cachedData);
+        $codecRegistry = new PhpOpcua\Client\Wire\WireTypeRegistry();
+        PhpOpcua\Client\Wire\CoreWireTypes::registerForCache($codecRegistry);
+        $cache->set($cacheKey, (new PhpOpcua\Client\Cache\WireCacheCodec($codecRegistry))->encode($cachedData));
 
         $count = $client->discoverDataTypes(useCache: true);
 

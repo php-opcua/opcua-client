@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use PhpOpcua\Client\Exception\MissingModuleDependencyException;
-use PhpOpcua\Client\Kernel\ClientKernel;
+use PhpOpcua\Client\Kernel\ClientKernelInterface;
 use PhpOpcua\Client\Module\ModuleRegistry;
 use PhpOpcua\Client\Module\ServiceModule;
 use PhpOpcua\Client\Protocol\SessionService;
@@ -123,7 +123,7 @@ describe('ModuleRegistry', function () {
         $registry->add($moduleB);
 
         $session = new SessionService(1, 1);
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
 
         $registry->bootAll($kernel, new stdClass(), $session);
 
@@ -142,7 +142,7 @@ describe('ModuleRegistry', function () {
         $registry->add($moduleB);
 
         $session = new SessionService(1, 1);
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
 
         $registry->bootAll($kernel, new stdClass(), $session);
 
@@ -166,7 +166,7 @@ describe('ModuleRegistry', function () {
         $registry->add($moduleA);
 
         $session = new SessionService(1, 1);
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
 
         $registry->bootAll($kernel, new stdClass(), $session);
 
@@ -182,7 +182,7 @@ describe('ModuleRegistry', function () {
         $registry->add($module);
 
         $session = new SessionService(1, 1);
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
 
         expect(fn () => $registry->bootAll($kernel, new stdClass(), $session))
             ->toThrow(MissingModuleDependencyException::class);
@@ -195,7 +195,7 @@ describe('ModuleRegistry', function () {
         $registry->add($module);
 
         $session = new SessionService(1, 1);
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
         $client = new stdClass();
 
         $registry->bootAll($kernel, $client, $session);
@@ -214,7 +214,7 @@ describe('ModuleRegistry', function () {
         $registry->add($module);
 
         $session = new SessionService(1, 1);
-        $kernel = $this->createMock(ClientKernel::class);
+        $kernel = $this->createMock(ClientKernelInterface::class);
 
         $registry->bootAll($kernel, new stdClass(), $session);
         expect($module->log)->toBe(['register', 'boot']);

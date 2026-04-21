@@ -9,7 +9,7 @@ use PhpOpcua\Client\OpcUaClientInterface;
 /**
  * Dispatched when a cache lookup does not find a cached result.
  *
- * @see \PhpOpcua\Client\Client\ManagesCacheTrait::cachedFetch()
+ * @see \PhpOpcua\Client\Client\ManagesCacheRuntimeTrait::cachedFetch()
  */
 readonly class CacheMiss
 {
