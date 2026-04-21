@@ -78,4 +78,14 @@ describe('NodeManagement AddNodesResult DTO', function () {
         $ref = new ReflectionClass($result);
         expect($ref->isReadOnly())->toBeTrue();
     });
+
+    it('fromWireArray rejects payloads where "added" is not a NodeId', function () {
+        expect(fn () => AddNodesResult::fromWireArray(['status' => 0, 'added' => 'not-a-nodeid']))
+            ->toThrow(PhpOpcua\Client\Exception\EncodingException::class);
+    });
+
+    it('fromWireArray rejects payloads missing "added"', function () {
+        expect(fn () => AddNodesResult::fromWireArray(['status' => 0]))
+            ->toThrow(PhpOpcua\Client\Exception\EncodingException::class);
+    });
 });

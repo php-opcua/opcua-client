@@ -192,6 +192,14 @@ describe('WireCacheCodec security', function () {
             ->toThrow(EncodingException::class);
     });
 
+    it('throws EncodingException when json_encode fails (invalid UTF-8 string)', function () {
+        $codec = makeCacheCodec();
+        $invalidUtf8 = "\xB1\x31";
+
+        expect(fn () => $codec->encode($invalidUtf8))
+            ->toThrow(EncodingException::class);
+    });
+
     it('produces a stable, JSON-shaped output', function () {
         $codec = makeCacheCodec();
         $raw = $codec->encode(['k' => 1]);

@@ -82,6 +82,38 @@ class StubModuleMissingDep extends ServiceModule
     }
 }
 
+class StubModuleCycleA extends ServiceModule
+{
+    public function requires(): array
+    {
+        return [StubModuleCycleB::class];
+    }
+
+    public function register(): void
+    {
+    }
+
+    public function boot(SessionService $session): void
+    {
+    }
+}
+
+class StubModuleCycleB extends ServiceModule
+{
+    public function requires(): array
+    {
+        return [StubModuleCycleA::class];
+    }
+
+    public function register(): void
+    {
+    }
+
+    public function boot(SessionService $session): void
+    {
+    }
+}
+
 // ─── Tests ──────────────────────────────────────────────────────
 
 describe('ModuleRegistry', function () {
@@ -186,6 +218,18 @@ describe('ModuleRegistry', function () {
 
         expect(fn () => $registry->bootAll($kernel, new stdClass(), $session))
             ->toThrow(MissingModuleDependencyException::class);
+    });
+
+    it('throws MissingModuleDependencyException on a circular dependency', function () {
+        $registry = new ModuleRegistry();
+        $registry->add(new StubModuleCycleA());
+        $registry->add(new StubModuleCycleB());
+
+        $session = new SessionService(1, 1);
+        $kernel = $this->createMock(ClientKernelInterface::class);
+
+        expect(fn () => $registry->bootAll($kernel, new stdClass(), $session))
+            ->toThrow(MissingModuleDependencyException::class, 'Circular dependency');
     });
 
     it('sets kernel and client on each module during boot', function () {

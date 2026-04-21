@@ -551,6 +551,43 @@ describe('MockClient', function () {
     });
 });
 
+describe('MockClient introspection', function () {
+
+    it('hasMethod returns true for a method declared on MockClient', function () {
+        $mock = MockClient::create();
+        expect($mock->hasMethod('read'))->toBeTrue();
+        expect($mock->hasMethod('browse'))->toBeTrue();
+    });
+
+    it('hasMethod returns false for a method not declared on MockClient', function () {
+        $mock = MockClient::create();
+        expect($mock->hasMethod('thisMethodDoesNotExist'))->toBeFalse();
+    });
+
+    it('hasModule always returns false (MockClient has no modules)', function () {
+        $mock = MockClient::create();
+        expect($mock->hasModule('Any\\Module\\Class'))->toBeFalse();
+        expect($mock->hasModule('PhpOpcua\\Client\\Module\\Browse\\BrowseModule'))->toBeFalse();
+    });
+
+    it('getRegisteredMethods returns the OpcUaClientInterface method names', function () {
+        $mock = MockClient::create();
+        $methods = $mock->getRegisteredMethods();
+
+        expect($methods)->toBeArray();
+        expect($methods)->toContain('read');
+        expect($methods)->toContain('write');
+        expect($methods)->toContain('browse');
+        expect($methods)->toContain('call');
+        expect(count($methods))->toBe(count(array_unique($methods)));
+    });
+
+    it('getLoadedModules returns an empty array', function () {
+        $mock = MockClient::create();
+        expect($mock->getLoadedModules())->toBe([]);
+    });
+});
+
 describe('DataValue factory methods', function () {
 
     it('ofInt32 creates correct DataValue', function () {

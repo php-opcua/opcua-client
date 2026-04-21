@@ -75,6 +75,24 @@ final class WireRegistryTestBadEmittedT implements WireSerializable
     }
 }
 
+final class WireRegistryTestPointClone implements WireSerializable
+{
+    public function jsonSerialize(): array
+    {
+        return [];
+    }
+
+    public static function fromWireArray(array $data): static
+    {
+        return new self();
+    }
+
+    public static function wireTypeId(): string
+    {
+        return 'WireRegistryTestPoint';
+    }
+}
+
 enum WireRegistryTestColor: string
 {
     case Red = 'r';
@@ -152,6 +170,13 @@ describe('WireTypeRegistry: registration', function () {
         $registry->register(WireRegistryTestPoint::class);
         $registry->register(WireRegistryTestPoint::class);
         expect($registry->has('WireRegistryTestPoint'))->toBeTrue();
+    });
+
+    it('rejects re-binding the same wireTypeId to a different WireSerializable class', function () {
+        $registry = new WireTypeRegistry();
+        $registry->register(WireRegistryTestPoint::class);
+        expect(fn () => $registry->register(WireRegistryTestPointClone::class))
+            ->toThrow(EncodingException::class, 'already bound');
     });
 });
 
@@ -243,6 +268,17 @@ describe('WireTypeRegistry: encode', function () {
         $r->register(WireRegistryTestBadEmittedT::class);
         expect(fn () => $r->encode(new WireRegistryTestBadEmittedT()))
             ->toThrow(EncodingException::class, 'reserved key "__t"');
+    });
+
+    it('throws for resources (not scalar, not array, not object)', function () {
+        $r = new WireTypeRegistry();
+        $resource = fopen('php://memory', 'r');
+        try {
+            expect(fn () => $r->encode($resource))
+                ->toThrow(EncodingException::class, 'Cannot encode value of type');
+        } finally {
+            fclose($resource);
+        }
     });
 
     it('throws for arbitrary objects that are not WireSerializable / BackedEnum / DateTime', function () {
@@ -352,6 +388,18 @@ describe('WireTypeRegistry: decode', function () {
         $r = new WireTypeRegistry();
         expect(fn () => $r->decode(['__t' => 'DateTime', 'v' => 'not-a-date']))
             ->toThrow(EncodingException::class, 'could not parse');
+    });
+
+    it('rejects a DateTime payload missing the v field', function () {
+        $r = new WireTypeRegistry();
+        expect(fn () => $r->decode(['__t' => 'DateTime']))
+            ->toThrow(EncodingException::class, 'missing string "v"');
+    });
+
+    it('rejects a non-scalar non-array input (object)', function () {
+        $r = new WireTypeRegistry();
+        expect(fn () => $r->decode(new stdClass()))
+            ->toThrow(EncodingException::class, 'expected JSON-decoded array or scalar');
     });
 
     it('walks plain arrays without a __t unchanged', function () {

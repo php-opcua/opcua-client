@@ -3,10 +3,12 @@
 declare(strict_types=1);
 
 use PhpOpcua\Client\Cache\InMemoryCache;
+use PhpOpcua\Client\Cache\WireCacheCodec;
 use PhpOpcua\Client\ClientBuilder;
 use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\Repository\GeneratedTypeRegistrar;
 use PhpOpcua\Client\Types\BuiltinType;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
 
 describe('ClientBuilder: create factory', function () {
     it('creates a builder via static factory', function () {
@@ -36,6 +38,33 @@ describe('ClientBuilder: ManagesCacheTrait', function () {
 
     it('getCache returns default InMemoryCache when not configured', function () {
         expect(ClientBuilder::create()->getCache())->toBeInstanceOf(InMemoryCache::class);
+    });
+
+    it('setCacheCodec stores the codec fluently and getCacheCodec returns it', function () {
+        $builder = ClientBuilder::create();
+        $custom = new WireCacheCodec(new WireTypeRegistry());
+
+        expect($builder->setCacheCodec($custom))->toBe($builder);
+        expect($builder->getCacheCodec())->toBe($custom);
+    });
+
+    it('setCacheCodec(null) restores the default WireCacheCodec', function () {
+        $builder = ClientBuilder::create();
+        $custom = new WireCacheCodec(new WireTypeRegistry());
+        $builder->setCacheCodec($custom);
+        $builder->setCacheCodec(null);
+
+        $codec = $builder->getCacheCodec();
+        expect($codec)->toBeInstanceOf(WireCacheCodec::class);
+        expect($codec)->not->toBe($custom);
+    });
+
+    it('getCacheCodec returns the same instance across repeated calls', function () {
+        $builder = ClientBuilder::create();
+        $first = $builder->getCacheCodec();
+        $second = $builder->getCacheCodec();
+
+        expect($second)->toBe($first);
     });
 });
 

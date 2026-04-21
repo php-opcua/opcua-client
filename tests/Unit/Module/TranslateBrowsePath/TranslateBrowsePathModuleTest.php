@@ -96,4 +96,14 @@ describe('TranslateBrowsePath BrowsePathTarget DTO', function () {
         $ref = new ReflectionClass($target);
         expect($ref->isReadOnly())->toBeTrue();
     });
+
+    it('fromWireArray rejects payloads where "target" is not a NodeId', function () {
+        expect(fn () => BrowsePathTarget::fromWireArray(['target' => 'not-a-nodeid', 'remaining' => 0]))
+            ->toThrow(PhpOpcua\Client\Exception\EncodingException::class);
+    });
+
+    it('fromWireArray rejects payloads missing "target"', function () {
+        expect(fn () => BrowsePathTarget::fromWireArray(['remaining' => 0]))
+            ->toThrow(PhpOpcua\Client\Exception\EncodingException::class);
+    });
 });

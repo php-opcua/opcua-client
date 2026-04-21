@@ -446,6 +446,43 @@ describe('FileCache', function () {
         $this->cache->set('interval', 'data', new DateInterval('PT60S'));
         expect($this->cache->get('interval'))->toBe('data');
     });
+
+    it('set returns false when json_encode fails (invalid UTF-8)', function () {
+        $invalidUtf8 = "\xB1\x31";
+        expect($this->cache->set('bad', $invalidUtf8))->toBeFalse();
+    });
+
+    it('readEntry returns null when the file exists but cannot be read', function () {
+        if (DIRECTORY_SEPARATOR === '\\' || (function_exists('posix_getuid') && posix_getuid() === 0)) {
+            $this->markTestSkipped('chmod-based unreadable test requires a non-root UNIX environment');
+        }
+        $path = $this->cacheDir . DIRECTORY_SEPARATOR . 'unreadable.cache';
+        file_put_contents($path, '{"v":1,"e":null}');
+        chmod($path, 0o000);
+
+        $method = new ReflectionMethod($this->cache, 'readEntry');
+        expect($method->invoke($this->cache, $path))->toBeNull();
+
+        chmod($path, 0o644);
+    });
+
+    it('readEntry discards JSON with the wrong shape and unlinks the file', function () {
+        $path = $this->cacheDir . DIRECTORY_SEPARATOR . 'wrong-shape.cache';
+        file_put_contents($path, json_encode(['only_v' => 1]));
+
+        $method = new ReflectionMethod($this->cache, 'readEntry');
+        expect($method->invoke($this->cache, $path))->toBeNull();
+        expect(file_exists($path))->toBeFalse();
+    });
+
+    it('readEntry discards non-array JSON and unlinks the file', function () {
+        $path = $this->cacheDir . DIRECTORY_SEPARATOR . 'scalar.cache';
+        file_put_contents($path, '42');
+
+        $method = new ReflectionMethod($this->cache, 'readEntry');
+        expect($method->invoke($this->cache, $path))->toBeNull();
+        expect(file_exists($path))->toBeFalse();
+    });
 });
 
 describe('ManagesCacheTrait / Client integration', function () {
