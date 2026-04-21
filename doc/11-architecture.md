@@ -21,8 +21,7 @@ src/
 │   └── ManagesTrustStoreTrait.php       # Trust store configuration
 │
 ├── Kernel/                              # Shared infrastructure for modules
-│   ├── ClientKernel.php                 # Kernel implementation
-│   ├── ClientKernelInterface.php        # Kernel contract (for modules)
+│   ├── ClientKernelInterface.php        # Kernel contract (implemented by Client via its Manages*Traits)
 │   └── ModuleRegistry.php              # Module lifecycle, dependency sort, method registry
 │
 ├── Module/                              # Self-contained service modules
@@ -190,9 +189,9 @@ src/
 ├─────────────────────────────────┤
 │    ModuleRegistry               │  Module lifecycle, dependency sort, method map
 ├──────────┬──────────────────────┤
-│ Module/* │   ClientKernel       │  Service modules ←→ shared infrastructure
-│ (8 built │  (executeWithRetry,  │  Each module = protocol service + DTOs + methods
-│  -in)    │   send, receive...)  │
+│ Module/* │ ClientKernelInterface│  Service modules ←→ shared infrastructure
+│ (8 built │  (executeWithRetry,  │  Interface implemented by Client; each module
+│  -in)    │   send, receive...)  │  = protocol service + DTOs + methods
 ├──────────┴──────────────────────┤
 │     Protocol (shared base)      │  AbstractProtocolService, ServiceTypeId, SessionService
 ├──────────────┬──────────────────┤
@@ -215,7 +214,7 @@ The Client uses a **module architecture** where each OPC UA service set is a sel
 
 ### How It Works
 
-1. **`ClientKernel`** provides the shared infrastructure that every module needs: retry logic, connection management, request ID generation, send/receive, binary encoding, event dispatching, caching, and logging.
+1. **`ClientKernelInterface`** defines the shared infrastructure that every module needs: retry logic, connection management, request ID generation, send/receive, binary encoding, event dispatching, caching, and logging. The `Client` class implements this contract directly via its `Manages*Trait` traits, so modules receive the live `Client` instance (typed to the interface) when they boot.
 
 2. **`ServiceModule`** is the abstract base class. Each module implements:
    - `register()` — injects its methods onto the Client via `$this->client->registerMethod('read', $this->read(...))`
@@ -233,11 +232,11 @@ The Client uses a **module architecture** where each OPC UA service set is a sel
 
 ```
 ClientBuilder::connect()
-  → creates ClientKernel (transport, security, session)
+  → creates Client (transport, security, session; implements ClientKernelInterface)
   → creates ModuleRegistry
   → registers all modules (8 built-in + custom)
   → ModuleRegistry resolves dependencies (topological sort)
-  → ModuleRegistry boots all modules in order
+  → ModuleRegistry boots all modules in order, injecting the Client as the kernel
   → returns Client (with method handlers populated)
 ```
 

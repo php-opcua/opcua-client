@@ -25,14 +25,14 @@ Four components form the module system:
 │              ModuleRegistry                     │
 │  Lifecycle: dependency sort → boot → reset      │
 ├──────────────────────┬──────────────────────────┤
-│   ServiceModule(s)   │     ClientKernel         │
+│   ServiceModule(s)   │  ClientKernelInterface   │
 │  register, boot,     │  executeWithRetry,       │
 │  reset, requires     │  send/receive, cache,    │
 │                      │  logging, events, etc.   │
 └──────────────────────┴──────────────────────────┘
 ```
 
-**ClientKernel** provides shared infrastructure: transport I/O, retry logic, request/response handling, caching, logging, and event dispatching. Every module receives the kernel via `$this->kernel`.
+**ClientKernelInterface** is the infrastructure contract implemented directly by the `Client` class: transport I/O, retry logic, request/response handling, caching, logging, and event dispatching. Every module receives the kernel via `$this->kernel` (typed to the interface, so modules can only see infrastructure operations, not service methods).
 
 **ServiceModule** is the abstract base class. Each module implements `register()` to inject methods, `boot()` to create protocol services, `reset()` to clean up on disconnect, and optionally `requires()` to declare dependencies.
 

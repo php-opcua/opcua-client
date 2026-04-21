@@ -1,16 +1,17 @@
 # Roadmap
 
+> **Note:** The CLI tool has been extracted to a separate package: [`php-opcua/opcua-cli`](https://github.com/php-opcua/opcua-cli). CLI-related roadmap items are tracked there.
 
+## Next minor releases
 
-### NodeManagement Services — Implemented, disabled by default
+### NodeManagement Services — implemented, disabled by default
 
 `AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences` are fully implemented
 (`Module\NodeManagement\NodeManagementModule` + `NodeManagementService`, 8 node classes
-with class-specific attribute extension objects, unit tests at 100%). See
-[CHANGELOG.md](CHANGELOG.md).
+with class-specific attribute extension objects, unit tests at 100%).
 
-However, `NodeManagementModule` has been **removed from the default module list** in
-`ClientBuilder::defaultModules()` for v4.2.0. Reasons:
+`NodeManagementModule` is **removed from the default module list** in
+`ClientBuilder::defaultModules()` since v4.2.0. Reasons:
 
 1. **No reference server available for integration validation.** The UA .NET Standard
    stack — which powers the entire `uanetstandard-test-suite` used by this project —
@@ -35,7 +36,7 @@ However, `NodeManagementModule` has been **removed from the default module list*
    this document. Unit tests (encoding, module wiring, DTOs) continue to run and remain
    part of the coverage target.
 
-**Re-enablement plan (post v4.2.0):**
+**Re-enablement plan:**
 
 - [ ] Implement client-side `ServiceFault` detection in `AbstractProtocolService` /
       `readResponseMetadata()` so that every service decoder short-circuits into a
@@ -59,21 +60,45 @@ $client = (new ClientBuilder())
     ->connect($endpointUrl);
 ```
 
-> **Note:** The CLI tool has been extracted to a separate package: [`php-opcua/opcua-cli`](https://github.com/php-opcua/opcua-cli). CLI-related roadmap items are tracked there.
+### IDE helper stub generator
+
+- [ ] A `composer generate-ide-helper` command (or `vendor/bin/opcua-ide-helper`) that auto-generates `_ide_helper_opcua.php` from the registered modules via reflection. The stub file contains PHPDoc `@method` annotations for the `Client` class, covering both built-in and custom module methods. The file is not loaded at runtime — it is only consumed by the IDE for autocomplete and static analysis. Custom modules are included when the generator is re-run after adding them to the builder. The generated file should be added to `.gitignore`.
+
+### PHPStan level 5
+
+- [ ] Static analysis with `phpstan/phpstan` as dev dependency, CI integration, and `composer analyse` script. Target level 5 first; raise in subsequent releases.
 
 ---
 
-- [ ] **IDE helper stub generator** — a `composer generate-ide-helper` command (or `vendor/bin/opcua-ide-helper`) that auto-generates `_ide_helper_opcua.php` from the registered modules via reflection. The stub file contains PHPDoc `@method` annotations for the `Client` class, covering both built-in and custom module methods. The file is not loaded at runtime — it is only consumed by the IDE for autocomplete and static analysis. Replaces the hardcoded `@method` annotations on the `Client` class introduced in v5.0.0, keeping them always in sync with the actual module code. Custom modules are included when the generator is re-run after adding them to the builder. The generated file should be added to `.gitignore`.
+## v5.0.0 (breaking)
 
----
+### Remove deprecated accessor methods on Types DTOs
 
+All readonly DTOs in `src/Types/` currently ship with **38 `@deprecated` getter methods** across 9 classes, each delegating to the public readonly property of the same name. They exist for backwards compatibility with pre-v3 API consumers that used `->getNodeId()`, `->getIdentifier()`, `->getNamespaceIndex()`, etc., before the types were migrated to public readonly properties.
 
+**Affected classes:**
 
+| File | Deprecated getters |
+|---|---|
+| `Types/NodeId.php` | 3 (`getNamespaceIndex`, `getIdentifier`, `getType`) |
+| `Types/QualifiedName.php` | 2 (`getNamespaceIndex`, `getName`) |
+| `Types/LocalizedText.php` | 2 (`getLocale`, `getText`) |
+| `Types/DataValue.php` | 4 (`getValue`, `getStatusCode`, `getSourceTimestamp`, `getServerTimestamp`) |
+| `Types/Variant.php` | 3 (`getType`, `getValue`, `getDimensions`) |
+| `Types/ReferenceDescription.php` | 7 (`getReferenceTypeId`, `getIsForward`, `getNodeId`, `getBrowseName`, `getDisplayName`, `getNodeClass`, `getTypeDefinition`) |
+| `Types/BrowseNode.php` | 5 (`getReference`, `getNodeId`, `getDisplayName`, `getBrowseName`, `getNodeClass`) |
+| `Types/EndpointDescription.php` | 7 (`getEndpointUrl`, `getServerCertificate`, `getSecurityMode`, `getSecurityPolicyUri`, `getUserIdentityTokens`, `getTransportProfileUri`, `getSecurityLevel`) |
+| `Types/UserTokenPolicy.php` | 5 (`getPolicyId`, `getTokenType`, `getIssuedTokenType`, `getIssuerEndpointUrl`, `getSecurityPolicyUri`) |
 
-- [ ] **PHPStan level 5** — static analysis with `phpstan/phpstan` as dev dependency, CI integration, and `composer analyse` script
+**Migration for users:** purely mechanical — every `->getFoo()` call becomes `->foo`. Since the properties are `public readonly`, behaviour is identical.
 
+**Tasks:**
 
-## v5.0.0
+- [ ] Remove all 38 deprecated getter methods from the 9 DTOs listed above.
+- [ ] Update `doc/08-types.md` and any doc block examples that still show the getter syntax.
+- [ ] Update `llms-full.txt` if it references the getters.
+- [ ] CHANGELOG entry under "Removed" with a migration snippet.
+- [ ] Scan `tests/` for internal usages and convert (should be near-zero — most tests already use properties).
 
 ### Query Services
 
@@ -89,96 +114,52 @@ $client = (new ClientBuilder())
 
 ---
 
-## ECC 1.05.4 Compliance
+## ECC 1.05.4 compliance
 
-The ECC security policies (ECC_nistP256, ECC_nistP384, ECC_brainpoolP256r1, ECC_brainpoolP384r1) are currently implemented following the OPC UA 1.05.3 specification and tested against [UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard). The implementation works correctly against that reference stack because both sides share the same 1.05.3 behavior.
+The ECC security policies (`ECC_nistP256`, `ECC_nistP384`, `ECC_brainpoolP256r1`, `ECC_brainpoolP384r1`) have historically been implemented following the OPC UA 1.05.3 specification and tested against [UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard).
 
-The 1.05.4 revision (and the consolidated 1.05.06 text) introduced three ECC-specific protocol changes that are **not yet implemented** in this library. They are documented here in detail so the scope is clear.
+UA-.NETStandard itself is moving to strict 1.05.4 semantics: master commit [`d188383`](https://github.com/OPCFoundation/UA-.NETStandard/commit/d188383) (merged 2026-04-16, not yet on NuGet as of this writing — latest published is `1.5.378.134`) adds the strict ECC sequence number check at `UaSCBinaryChannel.cs:341-349` (first received sequence number for ECC **must be 0**). The next NuGet release will ship this change, at which point any client sending ECC sequence numbers starting from 1 will be rejected at the first message.
 
-### 1. LegacySequenceNumbers = FALSE
+To keep the interop pinning under explicit control, [`uanetstandard-test-suite`](https://github.com/php-opcua/uanetstandard-test-suite) now pins NuGet `1.5.378.134` (was `1.5.*`). See its CHANGELOG for the rationale.
 
-**Spec reference:** Table 56, SecurityPolicy parameter `LegacySequenceNumbers`.
+### Table 56 — LegacySequenceNumbers = FALSE for ECC — **implemented (v4.3.x)**
 
-**What changed:** ECC policies define `LegacySequenceNumbers = FALSE`, which changes the sequence number lifecycle:
-- **RSA (TRUE):** starts from a random value < 1024, wraps before `UInt32.MaxValue - 1024` (4,294,966,271), then restarts from a value < 1024.
-- **ECC (FALSE):** starts from 0, increments monotonically, wraps at `UInt32.MaxValue` (4,294,967,295), then restarts from 0.
+**Spec:** OPC UA Part 6 §6.7.2.4. For ECC policies, `LegacySequenceNumbers = FALSE`:
+- **RSA (TRUE):** may start from any value < 1024; wraps at `UInt32.MaxValue - 1024`; post-wrap value is again < 1024.
+- **ECC (FALSE):** starts from 0; increments monotonically; wraps at `UInt32.MaxValue`; post-wrap restarts from 0.
 
-**Current behavior:** The implementation starts from 1 for all policies (`SecureChannel::$sequenceNumber = 1`) and has no wrap logic. This works today because UA-.NETStandard is lenient about the starting value and typical test sessions never approach the wrap threshold.
-
-**Impact:** Only affects extremely long-lived connections (billions of messages). On short/medium sessions the behavior is indistinguishable.
-
-**Fix:** Initialize `$sequenceNumber = 0` when `$policy->isEcc()`, and implement wrap logic differentiating RSA/ECC policies.
-
-### 2. Per-message IV via TokenId + LastSequenceNumber XOR
-
-**Spec reference:** Table 68, `SymmetricEncryptionInitializationVector` for ECC policies.
-
-**What changed:** For ECC policies, the AES-CBC initialization vector must be unique for every message. Instead of using the static base IV derived from HKDF, the spec requires XORing the first 8 bytes of the base IV with two values:
-- Bytes 0-3: XOR with `TokenId` (UInt32, little-endian)
-- Bytes 4-7: XOR with `SequenceNumber` of the **previous** MessageChunk (UInt32, little-endian; 0 if this is the first chunk on the SecureChannel)
-
-For RSA policies, the base IV is used as-is (unchanged behavior).
-
-**Current behavior:** The implementation uses the static base IV (`$this->clientIv` / `$this->serverIv`) for all messages, both RSA and ECC. This works today because UA-.NETStandard (in the version used for testing) implements the same static-IV behavior.
-
-**Impact:** This is a **cryptographic weakness**, not a protocol error — both sides use the same static IV, so encryption/decryption succeeds. However, reusing the same IV with the same key across multiple AES-CBC messages allows an attacker observing ciphertext to detect when two plaintext blocks at the same position are identical. In practice, OPC UA message payloads vary enough that exploitation is unlikely, but it violates the spec's security intent.
-
-**Fix:** Track `lastSequenceNumber` per-direction (client send, server receive). Before each `symmetricEncrypt` / `symmetricDecrypt`, compute the per-message IV:
-
-```php
-$msgIv = $baseIv;
-$msgIv[0] = $msgIv[0] ^ chr($tokenId & 0xFF);
-$msgIv[1] = $msgIv[1] ^ chr(($tokenId >> 8) & 0xFF);
-$msgIv[2] = $msgIv[2] ^ chr(($tokenId >> 16) & 0xFF);
-$msgIv[3] = $msgIv[3] ^ chr(($tokenId >> 24) & 0xFF);
-$msgIv[4] = $msgIv[4] ^ chr($lastSeqNum & 0xFF);
-$msgIv[5] = $msgIv[5] ^ chr(($lastSeqNum >> 8) & 0xFF);
-$msgIv[6] = $msgIv[6] ^ chr(($lastSeqNum >> 16) & 0xFF);
-$msgIv[7] = $msgIv[7] ^ chr(($lastSeqNum >> 24) & 0xFF);
-```
-
-### 3. HKDF salt L value — already conformant
-
-**Spec reference:** Section 6.8.1, key derivation for ECC.
-
-The HKDF salt is defined as: `L | UTF8(label) | ClientNonce | ServerNonce`, where `L` is the derived key material length encoded as a **16-bit little-endian** unsigned integer.
-
-**Current behavior:** `pack('v', $saltKeyLen)` — PHP's `'v'` format is unsigned 16-bit little-endian. **Already conformant.**
-
-### 4. ReceiverCertificateThumbprint — already conformant
-
-**Spec reference:** Table 57, `ReceiverCertificateThumbprint`.
-
-For ECC policies, the thumbprint is always 20 bytes (SHA-1 of the receiver certificate), even when the OPN message is sign-only (not encrypted). For RSA, it can be empty when no encryption is used.
-
-**Current behavior:** `$this->certManager->getThumbprint($this->serverCertDer)` is called for all security-active policies, returning 20 bytes of SHA-1. **Already conformant.**
-
-### Summary
-
-| Requirement | Status | Risk |
-|---|---|---|
-| ReceiverCertificateThumbprint always 20 bytes | Conformant | None |
-| HKDF L as uint16 little-endian | Conformant | None |
-| LegacySequenceNumbers = FALSE | Not implemented | Low (long sessions only) |
-| Per-message IV via XOR | Not implemented | Medium (cryptographic weakness) |
-
-### Why it works today
-
-Both the client and UA-.NETStandard (the only available ECC counterpart) implement the same 1.05.3 behavior. When both sides use a static IV and sequence numbers starting from 1, encryption and decryption succeed — the data is correct. The issues are a spec-level security improvement (per-message IV) and a wrap-behavior edge case (sequence numbers) that only matter on very long sessions or when one side upgrades to strict 1.05.4 behavior.
-
-When UA-.NETStandard updates its ECC implementation to enforce 1.05.4 semantics, the two fixes above will be needed for interoperability.
+**Fix landed:** `SecureChannel::$sequenceNumber` is now initialized to `0` when `$policy->isEcc()` and to `1` otherwise. `getNextSequenceNumber()` implements policy-dependent wrap logic with `RSA_MAX_SEQUENCE_NUMBER = 0xFFFFFBFF` and `ECC_MAX_SEQUENCE_NUMBER = 0xFFFFFFFF`. Covered by `tests/Unit/Security/SecureChannelSequenceNumberTest.php` (12 test cases, 22 assertions). The fix is compatible with both lenient (`≤ 1.5.378.134`) and strict (post-`d188383`) UA-.NETStandard servers: strict servers require 0, lenient servers accept 0.
 
 ---
 
-## Won't Do (by design)
+## New ECC AEAD policies (future, v5.x or later)
 
-### BuiltinTypes as Codecs
+UA-.NETStandard master commit [`d188383`](https://github.com/OPCFoundation/UA-.NETStandard/commit/d188383) also registers eight new security policy variants using AEAD ciphers:
+
+- `ECC_nistP256_AesGcm`, `ECC_nistP384_AesGcm`, `ECC_brainpoolP256r1_AesGcm`, `ECC_brainpoolP384r1_AesGcm`
+- `ECC_nistP256_ChaChaPoly`, `ECC_nistP384_ChaChaPoly`, `ECC_brainpoolP256r1_ChaChaPoly`, `ECC_brainpoolP384r1_ChaChaPoly`
+
+These policies use AES-128/256-GCM or ChaCha20-Poly1305 instead of AES-CBC + HMAC. They are genuinely different crypto — not a tweak of the existing ECC code — and require:
+
+- [ ] New `SecurityPolicy` enum cases and policy metadata
+- [ ] `MessageSecurity::symmetricEncrypt`/`symmetricDecrypt` AEAD code paths (PHP has `openssl_encrypt` with `aes-128-gcm` / `aes-256-gcm`; ChaCha20-Poly1305 is available via `chacha20-poly1305` from OpenSSL 1.1.1+)
+- [ ] **Per-message IV via XOR** (`TokenId | LastSequenceNumber`) — mandatory for AEAD because IV reuse under the same key breaks the security guarantee
+- [ ] Tracking of `lastSequenceNumber` per direction on `SecureChannel`
+- [ ] Integration test coverage against a server that ships these policies (depends on an upstream NuGet release that includes commit `d188383` **and** a `uanetstandard-test-suite` bump)
+
+**Deferred** until at least one of: (a) an OPC Foundation NuGet release ships the AEAD variants as enabled endpoints, (b) a user requests them for a specific server target, (c) the test suite adds an endpoint for them.
+
+---
+
+## Won't do (by design)
+
+### BuiltinTypes as codecs
 The `ExtensionObjectCodec` system is intentionally limited to `ExtensionObject`. OPC UA `BuiltinType` values (Int32, String, Double, etc.) are protocol-level primitives with a fixed binary encoding — making them pluggable would add complexity without benefit. See the [design rationale](doc/12-extension-object-codecs.md#design-note-why-builtintypes-are-not-codecs).
 
 ### Browse ResultMask
 The OPC UA `ResultMask` controls which fields of `ReferenceDescription` are returned in browse results (ReferenceType, IsForward, NodeClass, BrowseName, DisplayName, TypeDefinition). Exposing this would require making most `ReferenceDescription` properties nullable, forcing null-checks on every consumer for a marginal bandwidth saving. The default (all fields) is what 99% of use cases need, and the few bytes saved per reference are irrelevant in typical PHP deployment scenarios (local/LAN connections). No mainstream OPC UA client library (node-opcua, opcua-asyncio) exposes this as a public parameter either.
 
-### Session Manager Integration (here)
+### Session Manager integration (here)
 The session manager ([`php-opcua/opcua-session-manager`](https://github.com/php-opcua/opcua-session-manager)) is intentionally kept as a separate package and will not be merged into this library. The reasons:
 
 - **Cross-platform compatibility.** This client works on Linux, macOS, and Windows. The session manager uses Unix domain sockets for IPC, which are not available on Windows. Integrating it would either break Windows support or leave dead code on that platform.
@@ -186,26 +167,21 @@ The session manager ([`php-opcua/opcua-session-manager`](https://github.com/php-
 - **Architectural separation.** The client is a synchronous library. The session manager runs as a separate long-lived daemon process with an async event loop. These are fundamentally different execution models that don't belong in the same package.
 - **The daemon is a separate process anyway.** Even if the code lived in the same package, you'd still need to start a separate `php bin/opcua-session-manager` process. It's not middleware you plug in — it's infrastructure you deploy.
 
-The session manager is fully functional as a standalone package. See the [Ecosystem](#ecosystem) section for all related packages.
-
 ### PSR-20 Clock
-I don't see a valid use case for it in this library.
+No valid use case identified in this library.
 
 ### RedisDriver / MemcachedDriver cache drivers
 These would require `ext-redis` or `ext-memcached` (or `predis/predis`), breaking the zero-dependency philosophy. The cache system uses PSR-16 `CacheInterface`, so any Redis or Memcached adapter that implements PSR-16 works out of the box — including `illuminate/cache` (Laravel), `symfony/cache`, and `cache/redis-adapter`. There is no reason to bundle drivers that would force all users to install extensions they may not need.
 
-### OpenTelemetry Integration (here)
+### OpenTelemetry integration (here)
 Telemetry (distributed tracing, metrics) belongs in the session manager ([`php-opcua/opcua-session-manager`](https://github.com/php-opcua/opcua-session-manager)), not in this library. The reasons:
 
 - **Short-lived connections make spans meaningless.** This client is synchronous — each PHP request opens a connection, performs a few operations, and disconnects. An OpenTelemetry span wrapping `connect → read → disconnect` in a 50ms request adds no insight you don't already get from APM tools already instrumenting your HTTP layer (Laravel Telescope, Datadog APM, New Relic, etc.).
 - **Telemetry shines on long-lived processes.** The session manager runs as a persistent daemon, maintaining connections across hundreds of PHP requests. That's where spans like `opcua.publish`, retry histograms, active session counts, and subscription latency distributions actually provide value — correlating OPC UA operations across time, not within a single request.
 
-Telemetry support will be implemented in `php-opcua/opcua-session-manager` where persistent connections make it meaningful.
-
-### Full OPC UA Server Implementation (here)
+### Full OPC UA server implementation (here)
 This library is a client-only implementation. Building a server requires a fundamentally different architecture (address space management, session handling, subscription engine, etc.).
 
 ---
 
 Have a suggestion? Open an [issue](https://github.com/php-opcua/opcua-client/issues) or check the [contributing guide](CONTRIBUTING.md).
-

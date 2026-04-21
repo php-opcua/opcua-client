@@ -1,6 +1,62 @@
 # Changelog
 
 
+## [v4.3.0] - 2026-04-x
+
+This is a **consolidation release**. For end users the only action required is
+to flush any persistent cache on upgrade. The public `Client`, `ClientBuilder`,
+and `ClientKernelInterface` surfaces are unchanged (only additive).
+
+### Compliance
+
+- **ECC sequence numbers now follow OPC UA 1.05.4 (Part 6 §6.7.2.4).** For ECC
+  policies the first sequence number is `0` (was `1`) and wraps at
+  `UInt32.MaxValue`. RSA is unchanged. Compatible with both pre- and
+  post-`d188383` UA-.NETStandard servers. No public API change. Covered by 12
+  new tests in `tests/Unit/Security/SecureChannelSequenceNumberTest.php`.
+
+### Security (BREAKING for persistent caches)
+
+- **Removed `unserialize()` from every cache code path.** `FileCache`, the
+  `Client` cache runtime, and the module-level cache writes now go through
+  `Cache\WireCacheCodec` — plain JSON gated by the existing `Wire\WireTypeRegistry`
+  allowlist. Prevents PHP object-injection attacks on cache backends writable
+  by an untrusted party.
+- Pre-v4.3.0 cache entries are discarded on first access (cache miss +
+  refetch). Flush persistent caches on upgrade to avoid the transient
+  cold-cache period.
+- New: `Cache\CacheCodecInterface`, `Cache\WireCacheCodec`, `Exception\CacheCorruptedException`.
+- `Types\StructureDefinition` and `Types\StructureField` now implement
+  `Wire\WireSerializable` (they are cached by `discoverDataTypes()`).
+
+### Added
+
+- `ClientBuilder::setCacheCodec(?CacheCodecInterface)` — override the default
+  codec. Omit to get the secure `WireCacheCodec` default.
+- `CoreWireTypes::registerForCache(WireTypeRegistry)` — register only the
+  types actually cached (subset of `::register()`).
+- `ClientKernelInterface::getCacheCodec(): CacheCodecInterface` — additive;
+  third-party implementations of the interface must add the method.
+
+### Fixed
+
+- Cleaned up dead `executeWithRetry()` code in the (now-removed) concrete
+  `Kernel\ClientKernel`. `Client\ManagesConnectionTrait::executeWithRetry()`
+  is the single source of truth. The old method logged "retrying" and
+  re-threw without calling `reconnect()`, so no behaviour change for users.
+
+### Changed
+
+- **Removed the unused `Kernel\ClientKernel` concrete class.** It was never
+  instantiated at runtime — `Client` implements `ClientKernelInterface`
+  itself. The interface is unchanged. Third-party code mocking the concrete
+  class in tests should switch to mocking the interface.
+
+### Testing
+
+- Expanded unit coverage with new and extended test files across `Cache`,
+  `Security`, `Types`, `Module`, `Wire`, `Client`, and `Testing` namespaces.
+
 ## [v4.2.0] - 2026-04-17
 
 ### Added
