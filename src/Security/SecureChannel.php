@@ -206,7 +206,7 @@ class SecureChannel
         $plainBody->writeNodeId(NodeId::numeric(0, 446));
 
         $plainBody->writeNodeId(NodeId::numeric(0, 0));
-        $plainBody->writeInt64(0);
+        $plainBody->writeDateTime(new \DateTimeImmutable());
         $plainBody->writeUInt32(1);
         $plainBody->writeUInt32(0);
         $plainBody->writeString(null);

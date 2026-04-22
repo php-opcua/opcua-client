@@ -54,7 +54,7 @@ All of this with zero external dependencies beyond `ext-openssl`, and full suppo
 
 This library is integration-tested against **[UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard)** — the **reference implementation** maintained by the OPC Foundation, the organization that defines the OPC UA specification. This is the same stack used by major industrial vendors to certify their products.
 
-1300+ tests (1040+ unit, 250+ integration) run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec — with 99%+ unit test code coverage. Unit tests run on **Linux, macOS, and Windows** across PHP 8.2–8.5.
+1300+ tests (1040+ unit, 250+ integration) run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec — with 99%+ unit test code coverage. Unit tests run on **Linux, macOS, and Windows** across PHP 8.2–8.5. NodeManagement integration tests run against an additional `open62541` server (UA-.NETStandard does not implement that service set) — see [testing docs](doc/13-testing.md#nodemanagement-integration-tests).
 
 **This library is already used in production with real industrial equipment** in factory automation and process control environments.
 

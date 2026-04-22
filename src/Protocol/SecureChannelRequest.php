@@ -29,7 +29,7 @@ class SecureChannelRequest
         $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::OPEN_SECURE_CHANNEL_REQUEST));
 
         $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
-        $body->writeInt64(0);
+        $body->writeDateTime(new \DateTimeImmutable());
         $body->writeUInt32(1);
         $body->writeUInt32(0);
         $body->writeString(null);

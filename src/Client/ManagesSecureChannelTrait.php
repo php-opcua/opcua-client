@@ -242,7 +242,7 @@ trait ManagesSecureChannelTrait
         $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::CLOSE_SECURE_CHANNEL_REQUEST));
 
         $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
-        $innerBody->writeInt64(0);
+        $innerBody->writeDateTime(new \DateTimeImmutable());
         $innerBody->writeUInt32($requestId);
         $innerBody->writeUInt32(0);
         $innerBody->writeString(null);

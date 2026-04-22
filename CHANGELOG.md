@@ -5,7 +5,9 @@
 
 This is a **consolidation release**. For end users the only action required is
 to flush any persistent cache on upgrade. The public `Client`, `ClientBuilder`,
-and `ClientKernelInterface` surfaces are unchanged (only additive).
+and `ClientKernelInterface` surfaces are unchanged (only additive) — with one
+visible behaviour change: `NodeManagementModule` is back in the default module
+list (see *Changed* below).
 
 ### Compliance
 
@@ -14,6 +16,11 @@ and `ClientKernelInterface` surfaces are unchanged (only additive).
   `UInt32.MaxValue`. RSA is unchanged. Compatible with both pre- and
   post-`d188383` UA-.NETStandard servers. No public API change. Covered by 12
   new tests in `tests/Unit/Security/SecureChannelSequenceNumberTest.php`.
+- **`RequestHeader.timestamp` is now a valid `UtcTime`.** Per OPC UA 1.05 Part 4 §7.33 the field is 100-ns ticks since 1601-01-01; the client was writing `0` (which decodes to 1601-01-01), so servers with `verifyRequestTimestamp` enabled (e.g. open62541) rejected every request with `BadInvalidTimestamp (0x80230000)`. Fixed in all 7 call sites that build a RequestHeader: `Protocol/AbstractProtocolService::writeRequestHeader`, `Protocol/SessionService` (CreateSession + ActivateSession, secure + non-secure variants), `Protocol/SecureChannelRequest` (OpenSecureChannel), `Security/SecureChannel` (OPN inner), `Client/ManagesSessionTrait` (CloseSession), `Client/ManagesSecureChannelTrait` (CloseSecureChannel). Now every RequestHeader carries `writeDateTime(new \DateTimeImmutable())`.
+- **Anonymous `policyId` is now discovered for all security modes.** `Client\ManagesConnectionTrait::performConnect` guarded the GetEndpoints discovery call with `$isSecure`, so with `SecurityPolicy::None` the client never read the server's advertised `UserTokenPolicy[0].policyId` and fell back to a hardcoded `"anonymous"` — the value UA-.NETStandard happens to use. Other servers (open62541: `"open62541-anonymous-policy"`) replied with `BadIdentityTokenInvalid (0x80200000)`. Discovery now runs whenever either the server certificate or the anonymous policy ID is still unknown, independent of the security mode. The cert-required-but-missing error is still raised only when the connection actually needs a cert.
+- **NodeManagement service type IDs now reference the DefaultBinary encoding.** `Protocol\ServiceTypeId::{ADD_NODES,ADD_REFERENCES,DELETE_NODES,DELETE_REFERENCES}_REQUEST` held the abstract `*Request` DataType NodeIds (`486 / 492 / 498 / 504`); the binary protocol dispatches on the `*Request_Encoding_DefaultBinary` object NodeIds (`488 / 494 / 500 / 506`). Browse / Read / Write were already correct. The bug never surfaced in CI because UA-.NETStandard replies with `ServiceFault` to unsupported services and the client's former crash-on-ServiceFault (`EncodingException: Buffer underflow`) masked the wrong-type-id symptom.
+
+The three `RequestHeader` / discovery / type-id items above were latent wire-format bugs — all three had no visible effect against UA-.NETStandard (permissive enough to tolerate them) and only surfaced once integration testing reached open62541 (see *CI* below).
 
 ### Security (BREAKING for persistent caches)
 
@@ -37,6 +44,8 @@ and `ClientKernelInterface` surfaces are unchanged (only additive).
   types actually cached (subset of `::register()`).
 - `ClientKernelInterface::getCacheCodec(): CacheCodecInterface` — additive;
   third-party implementations of the interface must add the method.
+- **Client-side `ServiceFault` decoding.** When a server returns a top-level `ServiceFault` (TypeId `ns=0;i=397`, OPC UA 1.05 Part 4 §7.35) the client now raises `ServiceException` carrying the `ResponseHeader.ServiceResult` instead of reading past the empty fault body and throwing the misleading `EncodingException: Buffer underflow: need 4 bytes, have 0`. New helper `Protocol\ServiceFault::throwIf(NodeId, int)` is invoked from `AbstractProtocolService::readResponseMetadata()` (covers every module service in one hook) and from the two `SessionService` decoders that have dedicated read paths (`decodeCreateSessionResponse` / `decodeActivateSessionResponse`). New constant `Protocol\ServiceTypeId::SERVICE_FAULT = 397`.
+- **`Exception\ServiceUnsupportedException`** — dedicated subclass of `ServiceException`, raised by `ServiceFault::throwIf` specifically when the `ServiceResult` is `BadServiceUnsupported (0x800B0000)`. Lets callers distinguish "this server does not implement this service set" from other transport-level faults without string-matching on the exception message. Extends `ServiceException`, so existing handlers continue to match.
 
 ### Fixed
 
@@ -44,6 +53,7 @@ and `ClientKernelInterface` surfaces are unchanged (only additive).
   `Kernel\ClientKernel`. `Client\ManagesConnectionTrait::executeWithRetry()`
   is the single source of truth. The old method logged "retrying" and
   re-threw without calling `reconnect()`, so no behaviour change for users.
+- `ManagesHandshakeTrait::performDiscoveryHandshake()` now recognises an `ERR` response during the HEL/ACK exchange and raises the same `HandshakeException("Server error during handshake: [<code>] <message>")` as the main handshake. Previously the discovery path threw a generic `MessageTypeException("Expected ACK response, got: ERR")`, which was less informative and became the observed error whenever the main connect was preceded by discovery.
 
 ### Changed
 
@@ -51,11 +61,21 @@ and `ClientKernelInterface` surfaces are unchanged (only additive).
   instantiated at runtime — `Client` implements `ClientKernelInterface`
   itself. The interface is unchanged. Third-party code mocking the concrete
   class in tests should switch to mocking the interface.
+- **`NodeManagementModule` is back in `ClientBuilder::defaultModules()`.** With `ServiceFault` decoding and `ServiceUnsupportedException` in place, the module is wired unconditionally — the builder does not probe the server at connect time, so there is zero added latency or network traffic for users who never call NodeManagement. If the server does not implement the service set, the **first** call to `addNodes()` / `deleteNodes()` / `addReferences()` / `deleteReferences()` raises `ServiceUnsupportedException("Server returned ServiceFault: 0x800B0000 BadServiceUnsupported")`; subsequent calls behave identically. Default module count is now 8 (was 7 in v4.2.x, 8 in v4.1.x and earlier).
+
+### CI
+
+- **open62541 test server wired into the `integration` workflow.** New `.github/opcua-nodemanagement/Dockerfile` builds `open62541 v1.4.8` from source with `UA_ENABLE_NODEMANAGEMENT=ON`, selects `ci_server` at runtime (with a fallback chain in case the binary name drifts across versions), and exposes `24840:4840` on the GitHub runner. The existing `integration` job spins this container up on the PHP 8.5 matrix leg (the leg that already owns coverage), exports `OPCUA_NODE_MANAGEMENT_ENDPOINT` via `$GITHUB_ENV`, and runs the six previously-skipped NodeManagement integration tests in the same `pest` invocation that runs the UA-.NETStandard suite. Docker layer cache via `type=gha` brings warm builds down to under one minute.
 
 ### Testing
 
 - Expanded unit coverage with new and extended test files across `Cache`,
   `Security`, `Types`, `Module`, `Wire`, `Client`, and `Testing` namespaces.
+- `tests/Unit/Protocol/ServiceFaultTest.php` — 9 cases covering positive detection, status-code preservation, non-fault typeIds, namespace-0 guard, string-identifier guard, buggy-good-status edge case, `ServiceUnsupportedException` for `BadServiceUnsupported`, base `ServiceException` for other statuses, subclass-of-`ServiceException` backward compatibility.
+- `tests/Unit/ClientBuilder/ModuleBuilderTest.php` — updated to reflect the 8-module default.
+- `tests/Integration/NodeManagementTest.php` — six tests un-skipped, tagged `->group('integration', 'node-management')`, gated behind `OPCUA_NODE_MANAGEMENT_ENDPOINT` (skip message points at the Dockerfile). New-node namespace switched from `2` (UA-.NETStandard-specific) to `1` (standard Application namespace).
+- `tests/Integration/Helpers/TestHelper::connectForNodeManagement()` — helper that resolves `OPCUA_NODE_MANAGEMENT_ENDPOINT` (or the compose default `opc.tcp://localhost:24840`) and connects. No longer calls `->addModule(new NodeManagementModule())`: the module is in the defaults.
+- `scripts/prosys-nodemanagement-smoke.php` — standalone probe that exercises all four NodeManagement services plus a Write+Read round-trip on the created Variable. Used to validate a candidate server before wiring it into CI; exit-code semantics documented at the top of the file.
 
 ## [v4.2.0] - 2026-04-17
 

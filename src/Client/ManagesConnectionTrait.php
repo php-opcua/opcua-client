@@ -177,8 +177,8 @@ trait ManagesConnectionTrait
         $isSecure = $this->securityPolicy !== SecurityPolicy::None
             && $this->securityMode !== SecurityMode::None;
 
-        if ($isSecure && $this->serverCertDer === null) {
-            $this->discoverServerCertificate($host, $port, $endpointUrl);
+        if ($this->serverCertDer === null || $this->anonymousPolicyId === null) {
+            $this->discoverServerCertificate($host, $port, $endpointUrl, $isSecure);
         }
 
         if ($isSecure) {

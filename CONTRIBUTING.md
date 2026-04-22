@@ -14,6 +14,7 @@ If you have any questions or need help getting started, don't hesitate to open a
 - `ext-openssl`
 - Composer
 - [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) (for integration tests)
+- Docker (optional — required only to run the NodeManagement integration tests against the bundled open62541 server)
 
 ### Installation
 
@@ -33,6 +34,25 @@ cd uanetstandard-test-suite
 docker compose up -d
 ```
 
+### NodeManagement Test Server (optional)
+
+The six `tests/Integration/NodeManagementTest.php` tests exercise the `AddNodes` /
+`DeleteNodes` / `AddReferences` / `DeleteReferences` service set. UA-.NETStandard
+(which powers `uanetstandard-test-suite`) does not implement that set, so these
+tests run against a separate `open62541` container. The Dockerfile lives at
+`.github/opcua-nodemanagement/Dockerfile`:
+
+```bash
+docker build -t open62541-nm:local .github/opcua-nodemanagement
+docker run -d --name opcua-nm -p 24840:4840 open62541-nm:local
+export OPCUA_NODE_MANAGEMENT_ENDPOINT=opc.tcp://localhost:24840
+```
+
+With `OPCUA_NODE_MANAGEMENT_ENDPOINT` set, the NodeManagement tests run; without
+it, they self-skip (so day-to-day test runs don't need the container). The CI
+workflow builds the same image on the PHP 8.5 integration leg with GHA layer
+cache.
+
 ## Running Tests
 
 ```bash
@@ -44,6 +64,10 @@ docker compose up -d
 
 # Integration tests only
 ./vendor/bin/pest tests/Integration/ --group=integration
+
+# Only the NodeManagement integration tests (requires open62541 container + env var)
+OPCUA_NODE_MANAGEMENT_ENDPOINT=opc.tcp://localhost:24840 \
+  ./vendor/bin/pest --group=node-management
 
 # A specific test file
 ./vendor/bin/pest tests/Unit/ClientBatchingTest.php

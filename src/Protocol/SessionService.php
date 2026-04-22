@@ -124,9 +124,11 @@ class SessionService
         $this->readSecurityHeader($decoder);
         $this->readSequenceHeader($decoder);
 
-        $decoder->readNodeId();
+        $typeId = $decoder->readNodeId();
 
-        $this->readResponseHeader($decoder);
+        $status = $this->readResponseHeader($decoder);
+
+        ServiceFault::throwIf($typeId, $status);
 
         $sessionId = $decoder->readNodeId();
         $authenticationToken = $decoder->readNodeId();
@@ -199,7 +201,7 @@ class SessionService
         $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::ACTIVATE_SESSION_REQUEST));
 
         $body->writeNodeId($authenticationToken);
-        $body->writeInt64(0);
+        $body->writeDateTime(new \DateTimeImmutable());
         $body->writeUInt32($requestId);
         $body->writeUInt32(0);
         $body->writeString(null);
@@ -244,6 +246,8 @@ class SessionService
         $typeId = $decoder->readNodeId();
         $statusCode = $this->readResponseHeader($decoder);
 
+        ServiceFault::throwIf($typeId, $statusCode);
+
         if (($statusCode & 0x80000000) !== 0) {
             throw new ServiceException(sprintf('ActivateSession failed with status 0x%08X', $statusCode), $statusCode);
         }
@@ -281,7 +285,7 @@ class SessionService
     private function writeRequestHeader(BinaryEncoder $encoder, int $requestHandle): void
     {
         $encoder->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
-        $encoder->writeInt64(0);
+        $encoder->writeDateTime(new \DateTimeImmutable());
         $encoder->writeUInt32($requestHandle);
         $encoder->writeUInt32(0);
         $encoder->writeString(null);
@@ -551,7 +555,7 @@ class SessionService
             ? $this->secureChannel->getPolicy()->value : null;
 
         $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
-        $innerBody->writeInt64(0);
+        $innerBody->writeDateTime(new \DateTimeImmutable());
         $innerBody->writeUInt32($requestId);
         $innerBody->writeUInt32(0);
         $innerBody->writeString(null);
@@ -614,7 +618,7 @@ class SessionService
         $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::ACTIVATE_SESSION_REQUEST));
 
         $innerBody->writeNodeId($authenticationToken);
-        $innerBody->writeInt64(0);
+        $innerBody->writeDateTime(new \DateTimeImmutable());
         $innerBody->writeUInt32($requestId);
         $innerBody->writeUInt32(0);
         $innerBody->writeString(null);

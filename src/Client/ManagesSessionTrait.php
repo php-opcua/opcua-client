@@ -199,7 +199,7 @@ trait ManagesSessionTrait
         $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::CLOSE_SESSION_REQUEST));
 
         $innerBody->writeNodeId($this->authenticationToken);
-        $innerBody->writeInt64(0);
+        $innerBody->writeDateTime(new \DateTimeImmutable());
         $innerBody->writeUInt32($requestId);
         $innerBody->writeUInt32(0);
         $innerBody->writeString(null);

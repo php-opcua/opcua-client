@@ -306,3 +306,63 @@ it('sets the setpoint', function () {
     expect($mock->callCount('write'))->toBe(1);
 });
 ```
+
+## Integration Tests
+
+The integration suite in `tests/Integration/` runs against real OPC UA servers
+over TCP. Two stacks are involved:
+
+| Server | Scope | Provisioning |
+|---|---|---|
+| **UA-.NETStandard** (OPC Foundation reference impl.) | Everything except NodeManagement — 8 endpoints covering every security policy, user token type, subscription scenario, history read, alarm, event, custom structure, ECC policy variant | [`php-opcua/uanetstandard-test-suite`](https://github.com/php-opcua/uanetstandard-test-suite) — `docker compose up -d` |
+| **open62541** (`ci_server`, built with `UA_ENABLE_NODEMANAGEMENT=ON`) | NodeManagement only (`AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences`) — UA-.NETStandard does not implement this service set | `.github/opcua-nodemanagement/Dockerfile`, started by the `integration` workflow job on port `24840` |
+
+### NodeManagement Integration Tests
+
+Six tests in `tests/Integration/NodeManagementTest.php` exercise the full
+NodeManagement service set against a server that actually implements it. They
+are tagged `->group('integration', 'node-management')` and gated on the
+`OPCUA_NODE_MANAGEMENT_ENDPOINT` environment variable:
+
+```bash
+# Start the server once
+docker build -t open62541-nm:local .github/opcua-nodemanagement
+docker run -d --name opcua-nm -p 24840:4840 open62541-nm:local
+
+# Run the NodeManagement group
+OPCUA_NODE_MANAGEMENT_ENDPOINT=opc.tcp://localhost:24840 \
+  ./vendor/bin/pest --group=node-management
+```
+
+Without the env var, the six tests self-skip — no container means no friction
+for day-to-day runs. In CI, the container is built (with GHA layer cache) and
+started only on the PHP 8.5 matrix leg; on the other three legs these tests
+self-skip and the integration run finishes faster.
+
+### Running Integration Tests Locally
+
+```bash
+# Full integration suite (UA-.NETStandard only, NodeManagement tests skip)
+./vendor/bin/pest --group=integration
+
+# Full integration suite including NodeManagement (needs open62541 up)
+OPCUA_NODE_MANAGEMENT_ENDPOINT=opc.tcp://localhost:24840 \
+  ./vendor/bin/pest --group=integration
+```
+
+### Smoke Probe
+
+When validating a candidate server for future CI wiring, use
+`scripts/prosys-nodemanagement-smoke.php`:
+
+```bash
+PROSYS_ENDPOINT='opc.tcp://<host>:<port>' \
+PROSYS_PARENT='i=85' \
+PROSYS_NAMESPACE=1 \
+  php scripts/prosys-nodemanagement-smoke.php
+```
+
+Exit code `0` means all four NodeManagement services returned `Good`; `1` means
+at least one failed or the server replied with `ServiceFault`; `2` means the
+connection itself failed. Useful to decide whether a server is viable before
+adding it to CI.

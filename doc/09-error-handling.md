@@ -20,6 +20,7 @@ RuntimeException
         │     ├── SignatureVerificationException
         │     └── UnsupportedCurveException
         ├── ServiceException
+        │     └── ServiceUnsupportedException
         ├── UntrustedCertificateException
         ├── WriteTypeDetectionException
         └── WriteTypeMismatchException
@@ -116,6 +117,25 @@ try {
     echo sprintf('0x%08X', $code);          // e.g. "0x80340000"
 }
 ```
+
+`ServiceException` is raised both when the server's `ResponseHeader` carries a bad status and when the server returns a top-level `ServiceFault` (NodeId `i=397`) — the latter typically means the whole service set is not implemented on that server.
+
+### ServiceUnsupportedException
+
+A specialization of `ServiceException` raised specifically when the `ServiceFault` carries `BadServiceUnsupported (0x800B0000)`. Lets you distinguish "this server does not implement this service set" from other service-level faults without inspecting the message:
+
+```php
+use PhpOpcua\Client\Exception\ServiceUnsupportedException;
+
+try {
+    $client->addNodes([...]);
+} catch (ServiceUnsupportedException $e) {
+    // Server (e.g. UA-.NETStandard) does not implement NodeManagement.
+    // Fall back, skip, or switch endpoint. $e->getStatusCode() === 0x800B0000.
+}
+```
+
+Since `ServiceUnsupportedException extends ServiceException`, code that already catches `ServiceException` keeps working — the subclass only matters when you want capability-specific handling.
 
 ### ConnectionException
 

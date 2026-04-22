@@ -4,61 +4,26 @@
 
 ## Next minor releases
 
-### NodeManagement Services — implemented, disabled by default
+### NodeManagement Services — completed (v4.3.0)
 
-`AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences` are fully implemented
-(`Module\NodeManagement\NodeManagementModule` + `NodeManagementService`, 8 node classes
-with class-specific attribute extension objects, unit tests at 100%).
+All four items that historically kept `NodeManagementModule` out of the defaults are
+now resolved. The module is in `ClientBuilder::defaultModules()` again; integration
+coverage runs on every CI run against an `open62541 v1.4.8` server built with
+`UA_ENABLE_NODEMANAGEMENT=ON` (`.github/opcua-nodemanagement/Dockerfile`, wired into
+the `integration` workflow's PHP 8.5 matrix leg via `OPCUA_NODE_MANAGEMENT_ENDPOINT`).
 
-`NodeManagementModule` is **removed from the default module list** in
-`ClientBuilder::defaultModules()` since v4.2.0. Reasons:
-
-1. **No reference server available for integration validation.** The UA .NET Standard
-   stack — which powers the entire `uanetstandard-test-suite` used by this project —
-   does not implement the NodeManagement service set. Any `AddNodes` / `DeleteNodes` /
-   `AddReferences` / `DeleteReferences` request reaches `EndpointBase.ProcessRequestAsync`
-   without a matching `ServiceDefinition` and returns a top-level `ServiceFault`
-   (`StatusCode = 0x800B0000`, `BadServiceUnsupported`). Implementing a server-side
-   handler would require subclassing `StandardServer` and providing full dispatch logic
-   for all 8 node classes, which is out of scope for this test suite.
-
-2. **Client-side ServiceFault decoding is not yet implemented.** When the server replies
-   with a `ServiceFault` (NodeId 397) instead of a normal `AddNodesResponse` /
-   `DeleteNodesResponse` / etc., the decoder currently tries to read a non-existent
-   results array from the fault body and throws `EncodingException: Buffer underflow`.
-   This is a general issue affecting any service the server rejects as unsupported — the
-   NodeManagement integration tests simply surface it first. A proper fix requires
-   recognising NodeId 397 in every `decodeXxxResponse` path and converting it into a
-   `ServiceException` carrying the fault's status code.
-
-3. **Integration tests are skipped.** The six tests in
-   `tests/Integration/NodeManagementTest.php` are marked `->skip(...)` with a pointer to
-   this document. Unit tests (encoding, module wiring, DTOs) continue to run and remain
-   part of the coverage target.
-
-**Re-enablement plan:**
-
-- [ ] Implement client-side `ServiceFault` detection in `AbstractProtocolService` /
-      `readResponseMetadata()` so that every service decoder short-circuits into a
-      `ServiceException` when the response `TypeId` is `ServiceFault_Encoding_DefaultBinary`.
-- [ ] Either stand up a reference server with working NodeManagement (e.g. `open62541`,
-      `python-opcua`, `node-opcua`) alongside the existing test suite on a new port, or
-      drop the server-side TestServerApp override onto the UA .NET Standard stack with a
-      minimal `AddNodesAsync` / `DeleteNodesAsync` / `AddReferencesAsync` /
-      `DeleteReferencesAsync` implementation that mutates the in-memory address space of
-      `TestNodeManager`.
-- [ ] Re-enable `NodeManagementModule::class` in `ClientBuilder::defaultModules()`.
-- [ ] Remove the `->skip()` calls from `tests/Integration/NodeManagementTest.php` and
-      update the BadServiceUnsupported assertions to expect a `ServiceException` rather
-      than a per-item result.
-
-Until then, consumers that need the service set can opt in explicitly:
-
-```php
-$client = (new ClientBuilder())
-    ->addModule(new NodeManagementModule())
-    ->connect($endpointUrl);
-```
+- [x] Stand up a reference server with working NodeManagement (open62541 `ci_server`).
+- [x] Remove the `->skip()` calls from `tests/Integration/NodeManagementTest.php` and
+      gate the tests on `OPCUA_NODE_MANAGEMENT_ENDPOINT` with `beforeEach`.
+- [x] Implement client-side `ServiceFault` detection (`Protocol\ServiceFault::throwIf`
+      invoked from `AbstractProtocolService::readResponseMetadata()` and from both
+      `SessionService` decoders with dedicated read paths).
+- [x] Re-enable `NodeManagementModule::class` in `ClientBuilder::defaultModules()`.
+      The builder does not probe the server at connect time — zero overhead for users
+      who never touch NodeManagement. Users targeting a server that does not implement
+      the service set (e.g. UA-.NETStandard) receive `ServiceUnsupportedException`
+      (subclass of `ServiceException`, `ServiceResult = 0x800B0000`) the first time
+      they call `addNodes()` / `deleteNodes()` / `addReferences()` / `deleteReferences()`.
 
 ### IDE helper stub generator
 

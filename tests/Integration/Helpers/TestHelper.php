@@ -36,6 +36,10 @@ final class TestHelper
 
     public const ENDPOINT_ECC_BRAINPOOL = 'opc.tcp://localhost:4849/UA/TestServer';
 
+
+    // Override via OPCUA_NODE_MANAGEMENT_ENDPOINT (the GH workflow sets this).
+    public const ENDPOINT_NODE_MANAGEMENT_DEFAULT = 'opc.tcp://localhost:24840';
+
     // ── Certificate paths (overridable via OPCUA_CERTS_DIR env var) ────
     public static function getCertsDir(): string
     {
@@ -110,6 +114,22 @@ final class TestHelper
     public static function connectNoSecurity(): Client
     {
         return (new ClientBuilder())->connect(self::ENDPOINT_NO_SECURITY);
+    }
+
+    /**
+     * Reads OPCUA_NODE_MANAGEMENT_ENDPOINT, falls back to the compose default.
+     */
+    public static function nodeManagementEndpoint(): string
+    {
+        return getenv('OPCUA_NODE_MANAGEMENT_ENDPOINT') ?: self::ENDPOINT_NODE_MANAGEMENT_DEFAULT;
+    }
+
+    /**
+     * Create a client connected to the NodeManagement-capable server.
+     */
+    public static function connectForNodeManagement(): Client
+    {
+        return (new ClientBuilder())->connect(self::nodeManagementEndpoint());
     }
 
     /**

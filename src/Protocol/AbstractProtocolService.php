@@ -85,7 +85,7 @@ abstract class AbstractProtocolService
         int $timeoutHint = 10000,
     ): void {
         $body->writeNodeId($authToken);
-        $body->writeInt64(0);
+        $body->writeDateTime(new \DateTimeImmutable());
         $body->writeUInt32($requestId);
         $body->writeUInt32(0);
         $body->writeString(null);
@@ -105,9 +105,13 @@ abstract class AbstractProtocolService
         $decoder->readUInt32();
         $decoder->readUInt32();
         $decoder->readUInt32();
-        $decoder->readNodeId();
+        $typeId = $decoder->readNodeId();
 
-        return $this->session->readResponseHeader($decoder);
+        $status = $this->session->readResponseHeader($decoder);
+
+        ServiceFault::throwIf($typeId, $status);
+
+        return $status;
     }
 
     /**

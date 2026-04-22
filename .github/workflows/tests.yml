@@ -64,7 +64,38 @@ jobs:
 
       - name: Start OPC UA test servers
         id: opcua
-        uses: php-opcua/uanetstandard-test-suite@v1.1.0
+        uses: php-opcua/uanetstandard-test-suite@v1.2.0
+
+      # open62541 on :24840 for NodeManagement tests (UA-.NETStandard does not
+      # implement that service set). Only wired on the 8.5.
+      - name: Set up Docker Buildx
+        if: matrix.php-version == '8.5'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build open62541 NodeManagement image
+        if: matrix.php-version == '8.5'
+        uses: docker/build-push-action@v6
+        with:
+          context: .github/opcua-nodemanagement
+          tags: open62541-nm:local
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start open62541 NodeManagement server
+        if: matrix.php-version == '8.5'
+        run: |
+          docker run -d --name opcua-nm -p 24840:4840 open62541-nm:local
+          for i in $(seq 1 30); do
+            if nc -z localhost 24840; then echo "server up"; break; fi
+            sleep 1
+          done
+          if ! nc -z localhost 24840; then
+            echo "server did not start in 30s" >&2
+            docker logs opcua-nm || true
+            exit 1
+          fi
+          echo "OPCUA_NODE_MANAGEMENT_ENDPOINT=opc.tcp://localhost:24840" >> $GITHUB_ENV
 
       - name: Run tests
         env:
@@ -88,7 +119,15 @@ jobs:
           flags: test-results
           disable_search: true
 
-      - name: Server logs (on failure)
+      - name: UA-.NETStandard server logs (on failure)
         if: failure()
         working-directory: .uanetstandard-test-suite
         run: docker compose logs --tail=100
+
+      - name: open62541 server logs (on failure)
+        if: failure() && matrix.php-version == '8.5'
+        run: docker logs opcua-nm --tail=200 || true
+
+      - name: Stop open62541
+        if: always() && matrix.php-version == '8.5'
+        run: docker rm -f opcua-nm || true

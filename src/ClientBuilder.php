@@ -16,6 +16,7 @@ use PhpOpcua\Client\Event\NullEventDispatcher;
 use PhpOpcua\Client\Module\Browse\BrowseModule;
 use PhpOpcua\Client\Module\History\HistoryModule;
 use PhpOpcua\Client\Module\ModuleRegistry;
+use PhpOpcua\Client\Module\NodeManagement\NodeManagementModule;
 use PhpOpcua\Client\Module\ReadWrite\ReadWriteModule;
 use PhpOpcua\Client\Module\ServerInfo\ServerInfoModule;
 use PhpOpcua\Client\Module\ServiceModule;
@@ -147,9 +148,6 @@ class ClientBuilder implements ClientBuilderInterface
     /**
      * Return the list of default built-in module classes.
      *
-     * `NodeManagementModule` is intentionally disabled — opt in with
-     * `ClientBuilder::addModule(new NodeManagementModule())`. See ROADMAP.md.
-     *
      * @return array<class-string<ServiceModule>>
      */
     private function defaultModules(): array
@@ -159,6 +157,7 @@ class ClientBuilder implements ClientBuilderInterface
             BrowseModule::class,
             SubscriptionModule::class,
             HistoryModule::class,
+            NodeManagementModule::class,
             TranslateBrowsePathModule::class,
             ServerInfoModule::class,
             TypeDiscoveryModule::class,

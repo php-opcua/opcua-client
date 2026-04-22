@@ -69,7 +69,7 @@ trait ManagesHandshakeTrait
      * @throws SecurityException If the server certificate cannot be obtained.
      * @throws ProtocolException If the discovery handshake fails.
      */
-    private function discoverServerCertificate(string $host, int $port, string $endpointUrl): void
+    private function discoverServerCertificate(string $host, int $port, string $endpointUrl, bool $requireCertificate = true): void
     {
         $this->logger->debug('Discovering server certificate from {host}:{port}', $this->logContext(['host' => $host, 'port' => $port]));
         $discoveryTransport = new TcpTransport();
@@ -92,7 +92,7 @@ trait ManagesHandshakeTrait
 
         $discoveryTransport->close();
 
-        if ($this->serverCertDer === null) {
+        if ($requireCertificate && $this->serverCertDer === null) {
             throw new SecurityException('Could not obtain server certificate from GetEndpoints');
         }
     }
@@ -114,6 +114,11 @@ trait ManagesHandshakeTrait
         $helloResponse = $transport->receive();
         $helloDecoder = new BinaryDecoder($helloResponse);
         $helloHeader = MessageHeader::decode($helloDecoder);
+        if ($helloHeader->getMessageType() === 'ERR') {
+            $errorCode = $helloDecoder->readUInt32();
+            $errorMessage = $helloDecoder->readString();
+            throw new HandshakeException($errorCode, $errorMessage ?? '');
+        }
         if ($helloHeader->getMessageType() !== 'ACK') {
             throw new MessageTypeException('ACK', $helloHeader->getMessageType());
         }
@@ -146,9 +151,10 @@ trait ManagesHandshakeTrait
         foreach ($endpoints as $ep) {
             if ($ep->getSecurityPolicyUri() === $this->securityPolicy->value
                 && $ep->getSecurityMode() === $this->securityMode->value
-                && $ep->getServerCertificate() !== null
             ) {
-                $this->serverCertDer = $ep->getServerCertificate();
+                if ($ep->getServerCertificate() !== null) {
+                    $this->serverCertDer = $ep->getServerCertificate();
+                }
                 $this->extractTokenPolicies($ep);
 
                 break;

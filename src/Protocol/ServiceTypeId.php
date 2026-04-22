@@ -41,17 +41,19 @@ final class ServiceTypeId
 
     public const GET_ENDPOINTS_REQUEST = 428;
 
+    public const SERVICE_FAULT = 397; // OPC UA 1.05 Part 4 §7.35.
+
     public const BROWSE_REQUEST = 527;
 
     public const BROWSE_NEXT_REQUEST = 533;
 
-    public const ADD_NODES_REQUEST = 486;
+    public const ADD_NODES_REQUEST = 488;
 
-    public const ADD_REFERENCES_REQUEST = 492;
+    public const ADD_REFERENCES_REQUEST = 494;
 
-    public const DELETE_NODES_REQUEST = 498;
+    public const DELETE_NODES_REQUEST = 500;
 
-    public const DELETE_REFERENCES_REQUEST = 504;
+    public const DELETE_REFERENCES_REQUEST = 506;
 
     public const TRANSLATE_BROWSE_PATHS_REQUEST = 554;
 
