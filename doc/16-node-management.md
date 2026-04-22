@@ -2,7 +2,7 @@
 
 OPC UA servers that support dynamic address space modification allow clients to add and remove nodes and references at runtime. This library provides four methods for these operations.
 
-> **Note:** Not all OPC UA servers support node management. Notably, the **UA-.NETStandard reference implementation does not implement NodeManagement** — the library's integration coverage runs against an `open62541` container to exercise these services (see [doc/13-testing.md](13-testing.md#nodemanagement-integration-tests) and `.github/opcua-nodemanagement/Dockerfile`).
+> **Note:** Not all OPC UA servers support node management. Notably, the **UA-.NETStandard reference implementation does not implement NodeManagement** — the library's integration coverage runs against an `open62541` container provided by [`php-opcua/extra-test-suite`](https://github.com/php-opcua/extra-test-suite) (see [doc/13-testing.md](13-testing.md#nodemanagement-integration-tests)).
 >
 > `NodeManagementModule` ships **in `ClientBuilder::defaultModules()`** — no opt-in required. The client does **not** probe the server at connect time, so there is zero overhead for users who never call these methods. If the server does not implement the service set, the **first** call to `addNodes()` / `deleteNodes()` / `addReferences()` / `deleteReferences()` raises `Exception\ServiceUnsupportedException` — a subclass of `ServiceException` carrying `ServiceResult = 0x800B0000 (BadServiceUnsupported)`. Subsequent calls behave identically (there is no runtime capability cache; if you want to avoid the re-throw, check once and guard at the call site).
 >

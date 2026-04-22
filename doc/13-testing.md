@@ -315,39 +315,30 @@ over TCP. Two stacks are involved:
 | Server | Scope | Provisioning |
 |---|---|---|
 | **UA-.NETStandard** (OPC Foundation reference impl.) | Everything except NodeManagement — 8 endpoints covering every security policy, user token type, subscription scenario, history read, alarm, event, custom structure, ECC policy variant | [`php-opcua/uanetstandard-test-suite`](https://github.com/php-opcua/uanetstandard-test-suite) — `docker compose up -d` |
-| **open62541** (`ci_server`, built with `UA_ENABLE_NODEMANAGEMENT=ON`) | NodeManagement only (`AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences`) — UA-.NETStandard does not implement this service set | `.github/opcua-nodemanagement/Dockerfile`, started by the `integration` workflow job on port `24840` |
+| **open62541** (`ci_server`, built with `UA_ENABLE_NODEMANAGEMENT=ON`) | NodeManagement only (`AddNodes`, `DeleteNodes`, `AddReferences`, `DeleteReferences`) — UA-.NETStandard does not implement this service set | [`php-opcua/extra-test-suite`](https://github.com/php-opcua/extra-test-suite), port `24840` |
+
+Both suites share the same assumption: **start them once, tests take the endpoints as given.** `TestHelper::ENDPOINT_*` constants encode the port map; there is no environment-variable indirection.
 
 ### NodeManagement Integration Tests
 
 Six tests in `tests/Integration/NodeManagementTest.php` exercise the full
-NodeManagement service set against a server that actually implements it. They
-are tagged `->group('integration', 'node-management')` and gated on the
-`OPCUA_NODE_MANAGEMENT_ENDPOINT` environment variable:
+NodeManagement service set against a server that actually implements it.
+They are regular `->group('integration')` tests — no dedicated group, no
+env-var gate. They connect to `opc.tcp://localhost:24840` via
+`TestHelper::ENDPOINT_NODE_MANAGEMENT`; the server is assumed to be up, the
+same way the UA-.NETStandard endpoints are assumed to be up on `4840-4849`.
 
-```bash
-# Start the server once
-docker build -t open62541-nm:local .github/opcua-nodemanagement
-docker run -d --name opcua-nm -p 24840:4840 open62541-nm:local
-
-# Run the NodeManagement group
-OPCUA_NODE_MANAGEMENT_ENDPOINT=opc.tcp://localhost:24840 \
-  ./vendor/bin/pest --group=node-management
-```
-
-Without the env var, the six tests self-skip — no container means no friction
-for day-to-day runs. In CI, the container is built (with GHA layer cache) and
-started only on the PHP 8.5 matrix leg; on the other three legs these tests
-self-skip and the integration run finishes faster.
+In CI, the [`php-opcua/extra-test-suite@v1.0.0`](https://github.com/php-opcua/extra-test-suite) composite action is a **mandatory** step of the `integration` job (every PHP matrix leg) — identical treatment to `php-opcua/uanetstandard-test-suite@v1.2.0`.
 
 ### Running Integration Tests Locally
 
 ```bash
-# Full integration suite (UA-.NETStandard only, NodeManagement tests skip)
-./vendor/bin/pest --group=integration
+# Start both test suites once (they keep running across reboots)
+cd ../uanetstandard-test-suite && docker compose up -d
+cd ../extra-test-suite && docker compose up -d
 
-# Full integration suite including NodeManagement (needs open62541 up)
-OPCUA_NODE_MANAGEMENT_ENDPOINT=opc.tcp://localhost:24840 \
-  ./vendor/bin/pest --group=integration
+# From opcua-client/
+./vendor/bin/pest --group=integration
 ```
 
 ### Smoke Probe

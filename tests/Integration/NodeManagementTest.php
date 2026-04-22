@@ -9,14 +9,6 @@ use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\QualifiedName;
 use PhpOpcua\Client\Types\StatusCode;
 
-beforeEach(function () {
-    if (getenv('OPCUA_NODE_MANAGEMENT_ENDPOINT') === false) {
-        test()->markTestSkipped(
-            'Set OPCUA_NODE_MANAGEMENT_ENDPOINT (e.g. opc.tcp://localhost:24840) ',
-        );
-    }
-});
-
 describe('NodeManagement Services', function () {
 
     it('adds a Variable node, reads it, and deletes it', function () {
@@ -61,7 +53,7 @@ describe('NodeManagement Services', function () {
         } finally {
             TestHelper::safeDisconnect($client);
         }
-    })->group('integration', 'node-management');
+    })->group('integration');
 
     it('adds an Object node under Objects folder', function () {
         $client = null;
@@ -91,7 +83,7 @@ describe('NodeManagement Services', function () {
         } finally {
             TestHelper::safeDisconnect($client);
         }
-    })->group('integration', 'node-management');
+    })->group('integration');
 
     it('adds multiple nodes in a single request', function () {
         $client = null;
@@ -129,7 +121,7 @@ describe('NodeManagement Services', function () {
         } finally {
             TestHelper::safeDisconnect($client);
         }
-    })->group('integration', 'node-management');
+    })->group('integration');
 
     it('deleteNodes returns error for non-existent node', function () {
         $client = null;
@@ -145,7 +137,7 @@ describe('NodeManagement Services', function () {
         } finally {
             TestHelper::safeDisconnect($client);
         }
-    })->group('integration', 'node-management');
+    })->group('integration');
 
     it('adds and deletes a reference between existing nodes', function () {
         $client = null;
@@ -225,7 +217,7 @@ describe('NodeManagement Services', function () {
             }
             TestHelper::safeDisconnect($client);
         }
-    })->group('integration', 'node-management');
+    })->group('integration');
 
     it('uses string NodeIds for convenience', function () {
         $client = null;
@@ -252,6 +244,6 @@ describe('NodeManagement Services', function () {
         } finally {
             TestHelper::safeDisconnect($client);
         }
-    })->group('integration', 'node-management');
+    })->group('integration');
 
 })->group('integration');

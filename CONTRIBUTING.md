@@ -34,24 +34,25 @@ cd uanetstandard-test-suite
 docker compose up -d
 ```
 
-### NodeManagement Test Server (optional)
+### NodeManagement Test Server
 
 The six `tests/Integration/NodeManagementTest.php` tests exercise the `AddNodes` /
 `DeleteNodes` / `AddReferences` / `DeleteReferences` service set. UA-.NETStandard
-(which powers `uanetstandard-test-suite`) does not implement that set, so these
-tests run against a separate `open62541` container. The Dockerfile lives at
-`.github/opcua-nodemanagement/Dockerfile`:
+(which powers `uanetstandard-test-suite`) does not implement that set, so a
+separate `open62541` container is used, distributed via
+[`php-opcua/extra-test-suite`](https://github.com/php-opcua/extra-test-suite):
 
 ```bash
-docker build -t open62541-nm:local .github/opcua-nodemanagement
-docker run -d --name opcua-nm -p 24840:4840 open62541-nm:local
-export OPCUA_NODE_MANAGEMENT_ENDPOINT=opc.tcp://localhost:24840
+git clone https://github.com/php-opcua/extra-test-suite.git
+cd extra-test-suite
+docker compose up -d
 ```
 
-With `OPCUA_NODE_MANAGEMENT_ENDPOINT` set, the NodeManagement tests run; without
-it, they self-skip (so day-to-day test runs don't need the container). The CI
-workflow builds the same image on the PHP 8.5 integration leg with GHA layer
-cache.
+The container has `restart: unless-stopped`, so — exactly like
+`uanetstandard-test-suite` — you start it once and it survives reboots. The
+endpoint `opc.tcp://localhost:24840` is hardcoded in
+`TestHelper::ENDPOINT_NODE_MANAGEMENT`; there is no env-var indirection. The CI
+workflow pulls the pre-built image from GHCR on the PHP 8.5 integration leg.
 
 ## Running Tests
 
@@ -62,12 +63,8 @@ cache.
 # Unit tests only
 ./vendor/bin/pest tests/Unit/
 
-# Integration tests only
+# Integration tests only (requires both uanetstandard-test-suite and extra-test-suite running)
 ./vendor/bin/pest tests/Integration/ --group=integration
-
-# Only the NodeManagement integration tests (requires open62541 container + env var)
-OPCUA_NODE_MANAGEMENT_ENDPOINT=opc.tcp://localhost:24840 \
-  ./vendor/bin/pest --group=node-management
 
 # A specific test file
 ./vendor/bin/pest tests/Unit/ClientBatchingTest.php
