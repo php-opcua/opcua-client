@@ -4,7 +4,7 @@
 
 ## Next minor releases
 
-### NodeManagement Services — completed (v4.3.0)
+### NodeManagement Services
 
 All four items that historically kept `NodeManagementModule` out of the defaults are
 now resolved. The module is in `ClientBuilder::defaultModules()` again; integration

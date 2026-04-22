@@ -254,7 +254,8 @@ $statusCodes = $client->deleteReferences([
 ```
 
 ### Important rules
-- **Not all servers support node management.** Servers that do not will return `BadServiceUnsupported` (0x800B0000). Check your server's capabilities.
+- **`NodeManagementModule` is in `ClientBuilder::defaultModules()`** — no opt-in needed. The builder does not probe the server at connect time.
+- **Not all servers implement node management.** Servers that do not (e.g. UA-.NETStandard) reply with a top-level `ServiceFault` carrying `BadServiceUnsupported (0x800B0000)`. The client surfaces this as `Exception\ServiceUnsupportedException` (subclass of `ServiceException`) on the **first** call to `addNodes()` / `deleteNodes()` / `addReferences()` / `deleteReferences()`. Catch `ServiceUnsupportedException` if you want a capability-specific fallback; existing `ServiceException` handlers still match.
 - All 8 node classes are supported: Object, Variable, Method, ObjectType, VariableType, ReferenceType, DataType, View.
 - Class-specific attributes (e.g., `dataType`, `accessLevel` for Variable; `executable` for Method) are encoded automatically.
 - `addNodes()` returns `AddNodesResult[]` — each result has `statusCode` and `addedNodeId`.

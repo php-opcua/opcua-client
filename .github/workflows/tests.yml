@@ -7,8 +7,29 @@ on:
     branches: [ main, master ]
 
 jobs:
-  unit:
+  format:
     if: ${{ !startsWith(github.event.head_commit.message, '[DOC]') }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    name: Format check
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: openssl, sockets
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Check code style
+        run: composer format:check
+
+  unit:
+    if: ${{ !cancelled() && !startsWith(github.event.head_commit.message, '[DOC]') }}
+    needs: format
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -30,10 +51,6 @@ jobs:
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist
-
-      - name: Check code style
-        if: matrix.os == 'ubuntu-latest' && matrix.php-version == '8.5'
-        run: composer format:check
 
       - name: Run unit tests
         run: vendor/bin/pest --exclude-group=integration

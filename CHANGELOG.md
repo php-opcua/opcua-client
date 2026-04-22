@@ -1,6 +1,5 @@
 # Changelog
 
-
 ## [v4.3.0] - 2026-04-x
 
 This is a **consolidation release**. For end users the only action required is
@@ -66,6 +65,7 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 ### CI
 
 - **open62541 test server wired into the `integration` workflow.** New `.github/opcua-nodemanagement/Dockerfile` builds `open62541 v1.4.8` from source with `UA_ENABLE_NODEMANAGEMENT=ON`, selects `ci_server` at runtime (with a fallback chain in case the binary name drifts across versions), and exposes `24840:4840` on the GitHub runner. The existing `integration` job spins this container up on the PHP 8.5 matrix leg (the leg that already owns coverage), exports `OPCUA_NODE_MANAGEMENT_ENDPOINT` via `$GITHUB_ENV`, and runs the six previously-skipped NodeManagement integration tests in the same `pest` invocation that runs the UA-.NETStandard suite. Docker layer cache via `type=gha` brings warm builds down to under one minute.
+- **`composer format:check` promoted to a dedicated, non-blocking `format` job.**
 
 ### Testing
 
@@ -82,12 +82,12 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 ### Added
 
 - **Wire-serialization infrastructure for cross-process IPC.** New `PhpOpcua\Client\Wire` namespace that lets value-objects travel across a JSON-based RPC boundary (e.g. the `opcua-session-manager` daemon ↔ `ManagedClient`) with an explicit `__t` type allowlist enforced at decode time.
-  - **`WireSerializable` interface** — contract for DTO classes that know how to emit their own payload (`jsonSerialize(): array`) and reconstruct from it (`static fromWireArray(array): static`), plus declare a stable short wire id (`static wireTypeId(): string`).
-  - **`WireTypeRegistry`** — the security gate. Encodes arbitrary PHP values recursively, wrapping each `WireSerializable` / `BackedEnum` / pure `UnitEnum` / `DateTimeImmutable` value with an explicit `__t` discriminator. Decoding rejects any `__t` that is not explicitly registered, so typed payloads cannot instantiate unknown classes. Enum support covers both backed (`::from($scalar)`) and pure (`cases()` name-scan) variants. Reserved ids (empty, `DateTime`) and id/class collisions throw `EncodingException` at registration time.
-  - **`CoreWireTypes::register()`** — idempotent helper that installs the cross-cutting core types on a registry: `NodeId`, `QualifiedName`, `LocalizedText`, `DataValue`, `Variant`, `ExtensionObject`, `BrowseNode`, `ReferenceDescription`, `EndpointDescription`, `UserTokenPolicy` + enums `BuiltinType`, `NodeClass`, `BrowseDirection`, `ConnectionState`.
-  - **All built-in module DTOs implement `WireSerializable`:** `SubscriptionResult`, `TransferResult`, `MonitoredItemResult`, `MonitoredItemModifyResult`, `PublishResult`, `SetTriggeringResult`, `CallResult`, `BrowsePathResult`, `BrowsePathTarget`, `BrowseResultSet`, `AddNodesResult`, `BuildInfo`. Byte strings inside `Variant::ByteString` and `ExtensionObject::body` are base64-wrapped so that JSON can carry arbitrary binary payloads without mutation.
-  - **`ServiceModule::registerWireTypes(WireTypeRegistry): void`** — optional hook (default no-op) that every built-in service module overrides to register the DTOs it emits. Third-party modules override to make their own DTOs transparently reachable through `ManagedClient::__call()`.
-  - **`ModuleRegistry::buildWireTypeRegistry()`** — orchestrator that returns a fresh registry populated with the core types plus every loaded module's declared types. Used on both the daemon (to decide what it accepts / emits) and on `ManagedClient` (to mirror the daemon's allowlist after the `describe` handshake).
+    - **`WireSerializable` interface** — contract for DTO classes that know how to emit their own payload (`jsonSerialize(): array`) and reconstruct from it (`static fromWireArray(array): static`), plus declare a stable short wire id (`static wireTypeId(): string`).
+    - **`WireTypeRegistry`** — the security gate. Encodes arbitrary PHP values recursively, wrapping each `WireSerializable` / `BackedEnum` / pure `UnitEnum` / `DateTimeImmutable` value with an explicit `__t` discriminator. Decoding rejects any `__t` that is not explicitly registered, so typed payloads cannot instantiate unknown classes. Enum support covers both backed (`::from($scalar)`) and pure (`cases()` name-scan) variants. Reserved ids (empty, `DateTime`) and id/class collisions throw `EncodingException` at registration time.
+    - **`CoreWireTypes::register()`** — idempotent helper that installs the cross-cutting core types on a registry: `NodeId`, `QualifiedName`, `LocalizedText`, `DataValue`, `Variant`, `ExtensionObject`, `BrowseNode`, `ReferenceDescription`, `EndpointDescription`, `UserTokenPolicy` + enums `BuiltinType`, `NodeClass`, `BrowseDirection`, `ConnectionState`.
+    - **All built-in module DTOs implement `WireSerializable`:** `SubscriptionResult`, `TransferResult`, `MonitoredItemResult`, `MonitoredItemModifyResult`, `PublishResult`, `SetTriggeringResult`, `CallResult`, `BrowsePathResult`, `BrowsePathTarget`, `BrowseResultSet`, `AddNodesResult`, `BuildInfo`. Byte strings inside `Variant::ByteString` and `ExtensionObject::body` are base64-wrapped so that JSON can carry arbitrary binary payloads without mutation.
+    - **`ServiceModule::registerWireTypes(WireTypeRegistry): void`** — optional hook (default no-op) that every built-in service module overrides to register the DTOs it emits. Third-party modules override to make their own DTOs transparently reachable through `ManagedClient::__call()`.
+    - **`ModuleRegistry::buildWireTypeRegistry()`** — orchestrator that returns a fresh registry populated with the core types plus every loaded module's declared types. Used on both the daemon (to decide what it accepts / emits) and on `ManagedClient` (to mirror the daemon's allowlist after the `describe` handshake).
 - **`OpcUaClientInterface::getRegisteredMethods(): string[]`** and **`::getLoadedModules(): class-string[]`** — two introspection methods that expose the method / module surface of the underlying client. Implemented on `Client` (reads the internal method-handlers map + module registry), `MockClient` (interface-reflection default), and `ManagedClient` (from the cached `describe` response).
 - **Kernel + ServiceModule architecture.** The `Client` now delegates all OPC UA service operations to self-contained `ServiceModule` classes, replacing the trait-based approach. Each module encapsulates its protocol services, DTOs, and methods in a single directory.
 - **`ClientKernel`** (`src/Kernel/ClientKernel.php`) — shared infrastructure API for all modules: `executeWithRetry()`, `ensureConnected()`, `nextRequestId()`, `send()`, `receive()`, `unwrapResponse()`, `createDecoder()`, `resolveNodeId()`, `getAuthToken()`, `dispatch()`, `logContext()`.
@@ -114,20 +114,20 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 ### Also added
 
 - **Server BuildInfo convenience methods.** Six new methods on `OpcUaClientInterface` for quick access to standard OPC UA Server BuildInfo nodes (mandatory on every server):
-  - `getServerProductName()` — reads `ns=0;i=2262`, returns `?string`
-  - `getServerManufacturerName()` — reads `ns=0;i=2263`, returns `?string`
-  - `getServerSoftwareVersion()` — reads `ns=0;i=2264`, returns `?string`
-  - `getServerBuildNumber()` — reads `ns=0;i=2265`, returns `?string`
-  - `getServerBuildDate()` — reads `ns=0;i=2266`, returns `?DateTimeImmutable`
-  - `getServerBuildInfo()` — reads all five nodes in a single `readMulti()` call, returns a `BuildInfo` DTO
+    - `getServerProductName()` — reads `ns=0;i=2262`, returns `?string`
+    - `getServerManufacturerName()` — reads `ns=0;i=2263`, returns `?string`
+    - `getServerSoftwareVersion()` — reads `ns=0;i=2264`, returns `?string`
+    - `getServerBuildNumber()` — reads `ns=0;i=2265`, returns `?string`
+    - `getServerBuildDate()` — reads `ns=0;i=2266`, returns `?DateTimeImmutable`
+    - `getServerBuildInfo()` — reads all five nodes in a single `readMulti()` call, returns a `BuildInfo` DTO
 - **New `BuildInfo` readonly DTO** (`PhpOpcua\Client\Types\BuildInfo`) with five public properties: `productName`, `manufacturerName`, `softwareVersion`, `buildNumber`, `buildDate`.
 - **New `ManagesServerInfoTrait`** (`src/Client/ManagesServerInfoTrait.php`) encapsulating the server info logic.
 - **MockClient** supports all six server info methods with **pre-populated defaults** (`MockServer`, `php-opcua`, `1.0.0`, `1`, `2026-01-01`). Override any field via `onRead('i=2262', ...)` — same pattern as all other mock nodes.
 - **NodeManagement Services.** Four new methods on `OpcUaClientInterface` for dynamic address space modification on servers that support it:
-  - `addNodes(array $nodesToAdd)` — add one or more nodes, returns `AddNodesResult[]` (status code + server-assigned NodeId per node). Supports all 8 node classes (Object, Variable, Method, ObjectType, VariableType, ReferenceType, DataType, View) with class-specific attributes encoded automatically as ExtensionObject.
-  - `deleteNodes(array $nodesToDelete)` — delete nodes, returns `int[]` status codes.
-  - `addReferences(array $referencesToAdd)` — add references between nodes, returns `int[]` status codes.
-  - `deleteReferences(array $referencesToDelete)` — delete references, returns `int[]` status codes.
+    - `addNodes(array $nodesToAdd)` — add one or more nodes, returns `AddNodesResult[]` (status code + server-assigned NodeId per node). Supports all 8 node classes (Object, Variable, Method, ObjectType, VariableType, ReferenceType, DataType, View) with class-specific attributes encoded automatically as ExtensionObject.
+    - `deleteNodes(array $nodesToDelete)` — delete nodes, returns `int[]` status codes.
+    - `addReferences(array $referencesToAdd)` — add references between nodes, returns `int[]` status codes.
+    - `deleteReferences(array $referencesToDelete)` — delete references, returns `int[]` status codes.
 - **New `AddNodesResult` readonly DTO** (`PhpOpcua\Client\Types\AddNodesResult`) with `statusCode` and `addedNodeId` properties.
 - **New `NodeManagementService`** protocol class (`src/Protocol/NodeManagementService.php`) handling binary encoding/decoding for all four services.
 - **New `ManagesNodeManagementTrait`** (`src/Client/ManagesNodeManagementTrait.php`) encapsulating node management operations.
@@ -156,16 +156,16 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 ### Added
 
 - **ECC security policies: `ECC_nistP256`, `ECC_nistP384`, `ECC_brainpoolP256r1`, and `ECC_brainpoolP384r1`.** Full Elliptic Curve Cryptography support for OPC UA secure channels, including (see [ECC disclaimer](doc/10-security.md) and [1.05.4 compliance roadmap](ROADMAP.md#ecc-1054-compliance)):
-  - ECDSA signatures (SHA-256 / SHA-384) for OpenSecureChannel (sign-only, no asymmetric encryption)
-  - ECDH ephemeral key agreement for symmetric key derivation
-  - HKDF-SHA256 / HKDF-SHA384 key derivation with mode-dependent salt (replaces P_SHA for ECC)
-  - HMAC-SHA256 / HMAC-SHA384 symmetric signing for MSG messages
-  - AES-128-CBC (P-256) / AES-256-CBC (P-384) symmetric encryption
-  - Auto-generated ECC certificates when no client certificate is provided (NIST P-256/P-384 or Brainpool P-256/P-384)
-  - Username/password authentication via `EccEncryptedSecret` protocol (ECDH + AES + ECDSA signature)
-  - `ECDHPolicyUri` request in CreateSession `AdditionalHeader` to obtain server ephemeral key
-  - Parsing of `ECDHKey` (EphemeralKeyType) from server's `AdditionalHeader` response
-  - Raw R||S ECDSA signature format conversion (DER to/from raw) for OPN, ActivateSession, and EncryptedSecret
+    - ECDSA signatures (SHA-256 / SHA-384) for OpenSecureChannel (sign-only, no asymmetric encryption)
+    - ECDH ephemeral key agreement for symmetric key derivation
+    - HKDF-SHA256 / HKDF-SHA384 key derivation with mode-dependent salt (replaces P_SHA for ECC)
+    - HMAC-SHA256 / HMAC-SHA384 symmetric signing for MSG messages
+    - AES-128-CBC (P-256) / AES-256-CBC (P-384) symmetric encryption
+    - Auto-generated ECC certificates when no client certificate is provided (NIST P-256/P-384 or Brainpool P-256/P-384)
+    - Username/password authentication via `EccEncryptedSecret` protocol (ECDH + AES + ECDSA signature)
+    - `ECDHPolicyUri` request in CreateSession `AdditionalHeader` to obtain server ephemeral key
+    - Parsing of `ECDHKey` (EphemeralKeyType) from server's `AdditionalHeader` response
+    - Raw R||S ECDSA signature format conversion (DER to/from raw) for OPN, ActivateSession, and EncryptedSecret
 - **New `SecurityPolicy` enum cases:** `EccNistP256`, `EccNistP384`, `EccBrainpoolP256r1`, `EccBrainpoolP384r1` with methods `isEcc()`, `getEcdhCurveName()`, `getEphemeralKeyLength()`.
 - **New `MessageSecurity` methods:** `computeEcdhSharedSecret()`, `deriveKeysHkdf()`, `generateEphemeralKeyPair()`, `loadEcPublicKeyFromBytes()`, `ecdsaDerToRaw()`, `ecdsaRawToDer()`.
 - **New `CertificateManager` methods:** `getKeyType()`, ECC certificate generation via optional `$eccCurveName` parameter on `generateSelfSignedCertificate()`.
@@ -173,11 +173,11 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 - **7 new Brainpool ECC integration tests** against the `uanetstandard-test-suite` Brainpool server (port 4849): brainpoolP256r1 Sign, brainpoolP256r1 SignAndEncrypt (anonymous + admin + read), brainpoolP384r1 SignAndEncrypt (anonymous + admin), brainpoolP384r1 Sign.
 
 - **5 new granular exception classes** for more precise error handling (all backward-compatible — extend existing exceptions):
-  - `OpenSslException` (extends `SecurityException`) — thrown when an OpenSSL function returns false.
-  - `SignatureVerificationException` (extends `SecurityException`) — thrown when OPN or MSG signature verification fails.
-  - `UnsupportedCurveException` (extends `SecurityException`) — thrown for unsupported ECC curves, with `$curveName` property.
-  - `MessageTypeException` (extends `ProtocolException`) — thrown when the server responds with an unexpected message type, with `$expected` and `$actual` properties.
-  - `HandshakeException` (extends `ProtocolException`) — thrown when the HEL/ACK handshake fails with a server error, with `$errorCode` property.
+    - `OpenSslException` (extends `SecurityException`) — thrown when an OpenSSL function returns false.
+    - `SignatureVerificationException` (extends `SecurityException`) — thrown when OPN or MSG signature verification fails.
+    - `UnsupportedCurveException` (extends `SecurityException`) — thrown for unsupported ECC curves, with `$curveName` property.
+    - `MessageTypeException` (extends `ProtocolException`) — thrown when the server responds with an unexpected message type, with `$expected` and `$actual` properties.
+    - `HandshakeException` (extends `ProtocolException`) — thrown when the HEL/ACK handshake fails with a server error, with `$errorCode` property.
 - **`CertificateParseException`** (extends `SecurityException`) — thrown for missing fields in parsed certificates.
 - **ECC disclaimer** in README and Security documentation noting that no commercial OPC UA vendor supports ECC endpoints yet, and the implementation is tested exclusively against UA-.NETStandard.
 - **ECC 1.05.4 compliance section** in ROADMAP with detailed analysis of `LegacySequenceNumbers` and per-message IV requirements.
@@ -213,10 +213,10 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 ### Added
 
 - **Certificate validation integration tests (`CertificateValidationTest.php`).** New tests that verify real certificate validation against the strict server (port 4842, no auto-accept):
-  - Trusted client certificate connects successfully.
-  - Untrusted self-signed certificate is rejected.
-  - Anonymous connection without credentials is rejected.
-  - Self-signed certificate without OPC UA SAN is rejected even on auto-accept server.
+    - Trusted client certificate connects successfully.
+    - Untrusted self-signed certificate is rejected.
+    - Anonymous connection without credentials is rejected.
+    - Self-signed certificate without OPC UA SAN is rejected even on auto-accept server.
 
 ### Fixed
 
@@ -227,14 +227,14 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 ### Added
 
 - **Comprehensive debug logging for all OPC UA service calls.** Every request sent to and response received from the server is now logged at `DEBUG` level via PSR-3, enabling full observability of the client–server communication. Previously, only a few operations (connection lifecycle, type discovery, retry logic) were logged. The following traits now include request/response logging:
-  - **ManagesBrowseTrait** — `GetEndpoints`, `Browse`, `BrowseNext`.
-  - **ManagesHandshakeTrait** — `HEL/ACK` handshake, discovery `GetEndpoints`, discovery `OPN`.
-  - **ManagesHistoryTrait** — `HistoryReadRaw`, `HistoryReadProcessed`, `HistoryReadAtTime`.
-  - **ManagesSecureChannelTrait** — `OpenSecureChannel` (with and without security), `CloseSecureChannel`.
-  - **ManagesSessionTrait** — `CreateSession`, `ActivateSession`, `CloseSession`.
-  - **ManagesSubscriptionsTrait** — `CreateSubscription`, `CreateMonitoredItems`, `CreateEventMonitoredItem`, `DeleteMonitoredItems`, `ModifyMonitoredItems`, `SetTriggering`, `DeleteSubscription`, `Publish`, `TransferSubscriptions`, `Republish`.
-  - **ManagesTranslateBrowsePathTrait** — `TranslateBrowsePaths`.
-  - **ManagesReadWriteTrait** — `Read`, `ReadMulti`, `Write`, `WriteMulti` (including batched), `Call`.
+    - **ManagesBrowseTrait** — `GetEndpoints`, `Browse`, `BrowseNext`.
+    - **ManagesHandshakeTrait** — `HEL/ACK` handshake, discovery `GetEndpoints`, discovery `OPN`.
+    - **ManagesHistoryTrait** — `HistoryReadRaw`, `HistoryReadProcessed`, `HistoryReadAtTime`.
+    - **ManagesSecureChannelTrait** — `OpenSecureChannel` (with and without security), `CloseSecureChannel`.
+    - **ManagesSessionTrait** — `CreateSession`, `ActivateSession`, `CloseSession`.
+    - **ManagesSubscriptionsTrait** — `CreateSubscription`, `CreateMonitoredItems`, `CreateEventMonitoredItem`, `DeleteMonitoredItems`, `ModifyMonitoredItems`, `SetTriggering`, `DeleteSubscription`, `Publish`, `TransferSubscriptions`, `Republish`.
+    - **ManagesTranslateBrowsePathTrait** — `TranslateBrowsePaths`.
+    - **ManagesReadWriteTrait** — `Read`, `ReadMulti`, `Write`, `WriteMulti` (including batched), `Call`.
 - Each log entry includes contextual data (NodeId, subscription ID, item count, status codes, channel ID, etc.) for effective filtering and debugging.
 - **`endpoint` and `session_id` in every log context.** All log messages now include `endpoint` (the connected OPC UA endpoint URL) and `session_id` (the authentication token) in the PSR-3 context array. These fields are not part of the log message text, but are available for structured logging pipelines (e.g. Monolog processors for Graylog/ELK). A new `logContext()` helper method in `Client` centralizes this enrichment.
 
@@ -250,44 +250,44 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 
 - **CLI `dump:nodeset` command.** Export a live server's address space to a NodeSet2.xml file: `opcua-cli dump:nodeset opc.tcp://server:4840 --output=MyPLC.NodeSet2.xml [--namespace=2]`. Browses the entire address space recursively, reads node attributes (DataType, ValueRank, IsAbstract, Symmetric), discovers structured DataType definitions and enumerations, and produces a valid NodeSet2.xml that can be fed directly to `generate:nodeset`. Filters by namespace index (default: all non-zero). Full security support.
 - **NodeSet2.xml Code Generator.** New `generate:nodeset` CLI command reads OPC UA NodeSet2.xml files (companion specifications, PLC information models) and generates five types of PHP classes:
-  - **NodeId constants** — one class per file with all node IDs as string constants, usable with `read()`, `write()`, `browse()`.
-  - **PHP enums** — `BackedEnum` classes for every OPC UA enumeration type in the file.
-  - **Typed DTOs** — `readonly` classes with typed properties for structured DataTypes. Enum fields are typed with the generated enum class. Array fields (`ValueRank >= 0`) use `array`. Optional fields (`IsOptional`) are nullable.
-  - **Binary codecs** — `ExtensionObjectCodec` implementations that decode into DTOs and encode from DTOs. Array fields use `readArray`/`writeArray` helpers. Enum fields cast via `::from()`.
-  - **Registrar** — implements `GeneratedTypeRegistrar` with `registerCodecs()`, `getEnumMappings()`, and `dependencyRegistrars()`. Uses NodeId constants (not raw strings) for codec registration.
-  - Parses `<UAObject>`, `<UAVariable>`, `<UAMethod>`, `<UAObjectType>`, `<UAVariableType>`, `<UAReferenceType>`, `<UADataType>` with struct and enum `<Definition>`. Resolves `<Aliases>` and `HasEncoding` references. Sanitizes field names and class names (handles special characters and numeric prefixes).
-  - Usage: `opcua-cli generate:nodeset path/to/File.NodeSet2.xml --output=src/Generated/ --namespace=App\\OpcUa [--base-namespace=PhpOpcua\\Nodeset]`.
-  - No server connection required — works entirely from the local XML file.
-  - See [Code Generation](https://github.com/php-opcua/opcua-cli/blob/master/doc/03-code-generation.md) for full documentation.
+    - **NodeId constants** — one class per file with all node IDs as string constants, usable with `read()`, `write()`, `browse()`.
+    - **PHP enums** — `BackedEnum` classes for every OPC UA enumeration type in the file.
+    - **Typed DTOs** — `readonly` classes with typed properties for structured DataTypes. Enum fields are typed with the generated enum class. Array fields (`ValueRank >= 0`) use `array`. Optional fields (`IsOptional`) are nullable.
+    - **Binary codecs** — `ExtensionObjectCodec` implementations that decode into DTOs and encode from DTOs. Array fields use `readArray`/`writeArray` helpers. Enum fields cast via `::from()`.
+    - **Registrar** — implements `GeneratedTypeRegistrar` with `registerCodecs()`, `getEnumMappings()`, and `dependencyRegistrars()`. Uses NodeId constants (not raw strings) for codec registration.
+    - Parses `<UAObject>`, `<UAVariable>`, `<UAMethod>`, `<UAObjectType>`, `<UAVariableType>`, `<UAReferenceType>`, `<UADataType>` with struct and enum `<Definition>`. Resolves `<Aliases>` and `HasEncoding` references. Sanitizes field names and class names (handles special characters and numeric prefixes).
+    - Usage: `opcua-cli generate:nodeset path/to/File.NodeSet2.xml --output=src/Generated/ --namespace=App\\OpcUa [--base-namespace=PhpOpcua\\Nodeset]`.
+    - No server connection required — works entirely from the local XML file.
+    - See [Code Generation](https://github.com/php-opcua/opcua-cli/blob/master/doc/03-code-generation.md) for full documentation.
 - **Generated Type Loading and Automatic Dependency Resolution.**
-  - `loadGeneratedTypes(GeneratedTypeRegistrar $registrar)` — registers codecs and enum mappings with the builder (called before `connect()`). After loading, `read()` on enum nodes returns PHP `BackedEnum` instances instead of raw `int`, and structured types return typed DTO objects with property access (`$snapshot->Temperature_C` instead of `$data['Temperature_C']`).
-  - **Automatic dependency resolution**: each Registrar declares its NodeSet dependencies via `dependencyRegistrars()`. When loaded, dependencies are resolved recursively — e.g. loading `MachineToolRegistrar` automatically loads Machinery, DI, and IA.
-  - **`only: true`**: skip dependency loading when you need only the specification itself: `new MachineToolRegistrar(only: true)`.
-  - Stackable — call `loadGeneratedTypes()` multiple times for different NodeSet files. Duplicate registrations are handled gracefully.
-  - Zero impact if not used — full backward compatibility, no changes to existing behavior.
-  - Companion package [`php-opcua/opcua-client-nodeset`](https://github.com/php-opcua/opcua-client-nodeset) provides pre-generated types for all 51 OPC Foundation companion specifications (807 PHP files, 338 enums, 191 DTOs, 191 codecs).
+    - `loadGeneratedTypes(GeneratedTypeRegistrar $registrar)` — registers codecs and enum mappings with the builder (called before `connect()`). After loading, `read()` on enum nodes returns PHP `BackedEnum` instances instead of raw `int`, and structured types return typed DTO objects with property access (`$snapshot->Temperature_C` instead of `$data['Temperature_C']`).
+    - **Automatic dependency resolution**: each Registrar declares its NodeSet dependencies via `dependencyRegistrars()`. When loaded, dependencies are resolved recursively — e.g. loading `MachineToolRegistrar` automatically loads Machinery, DI, and IA.
+    - **`only: true`**: skip dependency loading when you need only the specification itself: `new MachineToolRegistrar(only: true)`.
+    - Stackable — call `loadGeneratedTypes()` multiple times for different NodeSet files. Duplicate registrations are handled gracefully.
+    - Zero impact if not used — full backward compatibility, no changes to existing behavior.
+    - Companion package [`php-opcua/opcua-client-nodeset`](https://github.com/php-opcua/opcua-client-nodeset) provides pre-generated types for all 51 OPC Foundation companion specifications (807 PHP files, 338 enums, 191 DTOs, 191 codecs).
 - **ModifyMonitoredItems.** Change sampling interval, queue size, and other parameters on existing monitored items without recreating them. `$client->modifyMonitoredItems($subId, [...])` returns `MonitoredItemModifyResult[]` with revised parameters. Dispatches `MonitoredItemModified` event per item.
 - **SetTriggering.** Configure a monitored item as a trigger for other items — linked items are only sampled when the trigger changes. `$client->setTriggering($subId, $triggerId, $linksToAdd, $linksToRemove)` returns `SetTriggeringResult` with per-link status codes. Dispatches `TriggeringConfigured` event.
 - **Read Metadata Cache.** Non-Value attributes (DisplayName, BrowseName, DataType, NodeClass, Description, etc.) can now be cached via PSR-16 to avoid redundant server reads. Opt-in via `setReadMetadataCache(true)`. The Value attribute (id 13) is never cached. Use `read($nodeId, $attributeId, refresh: true)` to bypass the cache and re-read from the server. `invalidateCache($nodeId)` clears all cached metadata for a node.
 - **Write Type Auto-Detection.** The `write()` method no longer requires an explicit `BuiltinType`. When omitted, the client reads the node first to determine the correct type, then caches it via PSR-16 for subsequent writes to the same node.
-  - `setAutoDetectWriteType(bool)` — enable/disable the feature (default: enabled).
-  - When auto-detect is on and an explicit type is provided, it is validated against the detected node type.
-  - `WriteTypeDetectionException` — thrown when the type cannot be determined (no value on node, or auto-detect disabled without explicit type).
-  - `WriteTypeMismatchException` — thrown when the explicit type does not match the detected type. Carries `$nodeId`, `$expectedType`, `$givenType`.
-  - Two new events: `WriteTypeDetecting` (before detection), `WriteTypeDetected` (after detection, with `$detectedType` and `$fromCache`).
-  - `WriteMultiBuilder::value(mixed)` — new builder method for writing without specifying a type.
-  - `invalidateCache()` now also clears cached write types.
+    - `setAutoDetectWriteType(bool)` — enable/disable the feature (default: enabled).
+    - When auto-detect is on and an explicit type is provided, it is validated against the detected node type.
+    - `WriteTypeDetectionException` — thrown when the type cannot be determined (no value on node, or auto-detect disabled without explicit type).
+    - `WriteTypeMismatchException` — thrown when the explicit type does not match the detected type. Carries `$nodeId`, `$expectedType`, `$givenType`.
+    - Two new events: `WriteTypeDetecting` (before detection), `WriteTypeDetected` (after detection, with `$detectedType` and `$fromCache`).
+    - `WriteMultiBuilder::value(mixed)` — new builder method for writing without specifying a type.
+    - `invalidateCache()` now also clears cached write types.
 - **PSR-14 Event Dispatcher.** The client now dispatches 38 granular events at every key lifecycle point. Inject any PSR-14 `EventDispatcherInterface` via `$builder->setEventDispatcher($dispatcher)` on the `ClientBuilder`. Events cover:
-  - **Connection** (6): `ClientConnecting`, `ClientConnected`, `ConnectionFailed`, `ClientReconnecting`, `ClientDisconnecting`, `ClientDisconnected`
-  - **Session** (3): `SessionCreated`, `SessionActivated`, `SessionClosed`
-  - **Secure Channel** (2): `SecureChannelOpened`, `SecureChannelClosed`
-  - **Subscription** (9): `SubscriptionCreated`, `SubscriptionDeleted`, `SubscriptionTransferred`, `MonitoredItemCreated`, `MonitoredItemDeleted`, `DataChangeReceived`, `EventNotificationReceived`, `PublishResponseReceived`, `SubscriptionKeepAlive`
-  - **Alarms — generic** (1): `AlarmEventReceived`
-  - **Alarms — specific** (8): `AlarmActivated`, `AlarmDeactivated`, `AlarmAcknowledged`, `AlarmConfirmed`, `AlarmShelved`, `AlarmSeverityChanged`, `LimitAlarmExceeded`, `OffNormalAlarmTriggered`
-  - **Read/Write/Browse** (4): `NodeValueRead`, `NodeValueWritten`, `NodeValueWriteFailed`, `NodeBrowsed`
-  - **Type Discovery** (1): `DataTypesDiscovered`
-  - **Cache** (2): `CacheHit`, `CacheMiss`
-  - **Retry** (2): `RetryAttempt`, `RetryExhausted`
+    - **Connection** (6): `ClientConnecting`, `ClientConnected`, `ConnectionFailed`, `ClientReconnecting`, `ClientDisconnecting`, `ClientDisconnected`
+    - **Session** (3): `SessionCreated`, `SessionActivated`, `SessionClosed`
+    - **Secure Channel** (2): `SecureChannelOpened`, `SecureChannelClosed`
+    - **Subscription** (9): `SubscriptionCreated`, `SubscriptionDeleted`, `SubscriptionTransferred`, `MonitoredItemCreated`, `MonitoredItemDeleted`, `DataChangeReceived`, `EventNotificationReceived`, `PublishResponseReceived`, `SubscriptionKeepAlive`
+    - **Alarms — generic** (1): `AlarmEventReceived`
+    - **Alarms — specific** (8): `AlarmActivated`, `AlarmDeactivated`, `AlarmAcknowledged`, `AlarmConfirmed`, `AlarmShelved`, `AlarmSeverityChanged`, `LimitAlarmExceeded`, `OffNormalAlarmTriggered`
+    - **Read/Write/Browse** (4): `NodeValueRead`, `NodeValueWritten`, `NodeValueWriteFailed`, `NodeBrowsed`
+    - **Type Discovery** (1): `DataTypesDiscovered`
+    - **Cache** (2): `CacheHit`, `CacheMiss`
+    - **Retry** (2): `RetryAttempt`, `RetryExhausted`
 - `NullEventDispatcher` — no-op PSR-14 dispatcher used by default. Zero overhead: event objects are lazily instantiated via closures and never allocated when no real dispatcher is set.
 - `ManagesEventDispatcherTrait` — trait providing `setEventDispatcher()`, `getEventDispatcher()`, and the internal `dispatch()` helper with lazy closure support.
 - `psr/event-dispatcher` ^1.0 added as dependency (interface-only package, zero runtime code).
@@ -301,20 +301,20 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 - **CLI Tool** (`bin/opcua-cli`). Five commands: `browse` (flat + recursive tree), `read` (any attribute), `endpoints` (discover security), `watch` (subscription or polling). Full security, JSON output, debug logging. Zero additional dependencies. Documentation: [CLI Tool](https://github.com/php-opcua/opcua-cli).
 - `MockClient::onGetEndpoints()` handler for mocking endpoint discovery results.
 - **Server Trust Store.** Persistent server certificate validation for industrial-grade deployments.
-  - `FileTrustStore` — file-based trust store (`~/.opcua/trusted/` default, configurable path). Stores trusted and rejected certificates as DER files.
-  - `TrustPolicy` enum — three validation levels: `Fingerprint` (presence in trust store), `FingerprintAndExpiry` (+ certificate expiration check), `Full` (+ CA chain verification).
-  - `setTrustPolicy(null)` — disables trust validation entirely (default — backward compatible, behaves like before).
-  - `autoAccept(true)` — TOFU (Trust On First Use): automatically trusts new certificates and saves them to the store.
-  - `autoAccept(true, force: true)` — also accepts and updates changed certificates (replaces the stored cert).
-  - `autoAccept(true)` without `force` — rejects changed certificates even with auto-accept enabled (security protection against MITM).
-  - `trustCertificate(string $certDer)` — manually trust a certificate programmatically.
-  - `untrustCertificate(string $fingerprint)` — remove a certificate from the trust store programmatically.
-  - `UntrustedCertificateException` — thrown when a server certificate is rejected. Carries `$fingerprint` and `$certDer` for programmatic handling.
-  - Five new events: `ServerCertificateTrusted` (cert passed validation), `ServerCertificateRejected` (cert rejected), `ServerCertificateAutoAccepted` (cert auto-accepted via TOFU), `ServerCertificateManuallyTrusted` (cert added via `trustCertificate()`), `ServerCertificateRemoved` (cert removed via `untrustCertificate()`).
-  - PSR-3 logging: DEBUG for trusted certs, INFO for auto-accepted and manual trust/remove, WARNING for rejected certs.
-  - CLI commands: `trust <endpoint>` (download and trust), `trust:list` (list trusted certs), `trust:remove <fingerprint>` (remove cert).
-  - CLI options: `--trust-store=<path>` (custom store path), `--trust-policy=<policy>` (set validation level), `--no-trust-policy` (disable trust for single command).
-  - CLI shows helpful guidance when `UntrustedCertificateException` is caught — suggests `trust` command and `--no-trust-policy` flag.
+    - `FileTrustStore` — file-based trust store (`~/.opcua/trusted/` default, configurable path). Stores trusted and rejected certificates as DER files.
+    - `TrustPolicy` enum — three validation levels: `Fingerprint` (presence in trust store), `FingerprintAndExpiry` (+ certificate expiration check), `Full` (+ CA chain verification).
+    - `setTrustPolicy(null)` — disables trust validation entirely (default — backward compatible, behaves like before).
+    - `autoAccept(true)` — TOFU (Trust On First Use): automatically trusts new certificates and saves them to the store.
+    - `autoAccept(true, force: true)` — also accepts and updates changed certificates (replaces the stored cert).
+    - `autoAccept(true)` without `force` — rejects changed certificates even with auto-accept enabled (security protection against MITM).
+    - `trustCertificate(string $certDer)` — manually trust a certificate programmatically.
+    - `untrustCertificate(string $fingerprint)` — remove a certificate from the trust store programmatically.
+    - `UntrustedCertificateException` — thrown when a server certificate is rejected. Carries `$fingerprint` and `$certDer` for programmatic handling.
+    - Five new events: `ServerCertificateTrusted` (cert passed validation), `ServerCertificateRejected` (cert rejected), `ServerCertificateAutoAccepted` (cert auto-accepted via TOFU), `ServerCertificateManuallyTrusted` (cert added via `trustCertificate()`), `ServerCertificateRemoved` (cert removed via `untrustCertificate()`).
+    - PSR-3 logging: DEBUG for trusted certs, INFO for auto-accepted and manual trust/remove, WARNING for rejected certs.
+    - CLI commands: `trust <endpoint>` (download and trust), `trust:list` (list trusted certs), `trust:remove <fingerprint>` (remove cert).
+    - CLI options: `--trust-store=<path>` (custom store path), `--trust-policy=<policy>` (set validation level), `--no-trust-policy` (disable trust for single command).
+    - CLI shows helpful guidance when `UntrustedCertificateException` is caught — suggests `trust` command and `--no-trust-policy` flag.
 
 ### Refactored
 
@@ -340,13 +340,13 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 
 - **`ExtensionObjectRepository` is now instance-level instead of static.** Each `Client` has its own isolated codec registry. Pass it via the constructor (`new Client(extensionObjectRepository: $repo)`) or access it with `$client->getExtensionObjectRepository()`. Codecs registered on one client no longer affect other clients in the same process.
 - **Strict return types for all service responses.** The following methods now return typed DTOs with `public readonly` properties instead of associative arrays:
-  - `createSubscription()` → `SubscriptionResult` (`->subscriptionId`, `->revisedPublishingInterval`, `->revisedLifetimeCount`, `->revisedMaxKeepAliveCount`)
-  - `createMonitoredItems()` → `MonitoredItemResult[]` (`->statusCode`, `->monitoredItemId`, `->revisedSamplingInterval`, `->revisedQueueSize`)
-  - `createEventMonitoredItem()` → `MonitoredItemResult`
-  - `call()` → `CallResult` (`->statusCode`, `->inputArgumentResults`, `->outputArguments`)
-  - `browseWithContinuation()` / `browseNext()` → `BrowseResultSet` (`->references`, `->continuationPoint`)
-  - `publish()` → `PublishResult` (`->subscriptionId`, `->sequenceNumber`, `->moreNotifications`, `->notifications`)
-  - `translateBrowsePaths()` → `BrowsePathResult[]` (`->statusCode`, `->targets`) with `BrowsePathTarget` (`->targetId`, `->remainingPathIndex`)
+    - `createSubscription()` → `SubscriptionResult` (`->subscriptionId`, `->revisedPublishingInterval`, `->revisedLifetimeCount`, `->revisedMaxKeepAliveCount`)
+    - `createMonitoredItems()` → `MonitoredItemResult[]` (`->statusCode`, `->monitoredItemId`, `->revisedSamplingInterval`, `->revisedQueueSize`)
+    - `createEventMonitoredItem()` → `MonitoredItemResult`
+    - `call()` → `CallResult` (`->statusCode`, `->inputArgumentResults`, `->outputArguments`)
+    - `browseWithContinuation()` / `browseNext()` → `BrowseResultSet` (`->references`, `->continuationPoint`)
+    - `publish()` → `PublishResult` (`->subscriptionId`, `->sequenceNumber`, `->moreNotifications`, `->notifications`)
+    - `translateBrowsePaths()` → `BrowsePathResult[]` (`->statusCode`, `->targets`) with `BrowsePathTarget` (`->targetId`, `->remainingPathIndex`)
 
 - **All existing Type classes now expose `public readonly` properties.** You can access `$ref->nodeId`, `$ref->displayName`, `$variant->type`, `$dv->statusCode`, etc. directly instead of calling getter methods. Affected classes: `NodeId`, `Variant`, `DataValue`, `QualifiedName`, `LocalizedText`, `ReferenceDescription`, `EndpointDescription`, `UserTokenPolicy`, `BrowseNode`.
 - **`nodeClassMask` parameter replaced with `nodeClasses` array.** Browse methods (`browse()`, `browseWithContinuation()`, `browseAll()`, `browseRecursive()`) now accept `NodeClass[] $nodeClasses = []` instead of `int $nodeClassMask = 0`. Pass an array of `NodeClass` enum values (e.g., `[NodeClass::Object, NodeClass::Variable]`) instead of a raw bitmask integer. Empty array means all classes (same as the old `0`).
@@ -471,7 +471,6 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 ### Fixed
 
 - `Variant` now preserves multi-dimensional array dimensions. Previously, `BinaryDecoder::readVariant()` read the dimensions from the OPC UA binary stream but discarded them. Dimensions are now stored in the `Variant` via the new `getDimensions(): ?int[]` and `isMultiDimensional(): bool` methods. `BinaryEncoder::writeVariant()` now writes the dimensions back (flag `0x40`) when present, enabling correct round-trips of multi-dimensional arrays.
-
 
 ## [1.1.1] - 2026-03-18
 

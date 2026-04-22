@@ -12,7 +12,7 @@ use PhpOpcua\Client\Types\StatusCode;
 beforeEach(function () {
     if (getenv('OPCUA_NODE_MANAGEMENT_ENDPOINT') === false) {
         test()->markTestSkipped(
-            'Set OPCUA_NODE_MANAGEMENT_ENDPOINT (e.g. opc.tcp://localhost:24840) '
+            'Set OPCUA_NODE_MANAGEMENT_ENDPOINT (e.g. opc.tcp://localhost:24840) ',
         );
     }
 });

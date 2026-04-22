@@ -36,7 +36,6 @@ final class TestHelper
 
     public const ENDPOINT_ECC_BRAINPOOL = 'opc.tcp://localhost:4849/UA/TestServer';
 
-
     // Override via OPCUA_NODE_MANAGEMENT_ENDPOINT (the GH workflow sets this).
     public const ENDPOINT_NODE_MANAGEMENT_DEFAULT = 'opc.tcp://localhost:24840';
 
