@@ -1,6 +1,6 @@
 # Changelog
 
-## [v4.3.0] - 2026-04-x
+## [v4.3.0] - 2026-04-23
 
 This is a **consolidation release**. For end users the only action required is
 to flush any persistent cache on upgrade. The public `Client`, `ClientBuilder`,
