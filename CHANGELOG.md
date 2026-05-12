@@ -75,7 +75,6 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 - `tests/Unit/ClientBuilder/ModuleBuilderTest.php` — updated to reflect the 8-module default.
 - `tests/Integration/NodeManagementTest.php` — six tests un-skipped, tagged `->group('integration')` (no dedicated `node-management` group — the `extra-test-suite` dependency is mandatory, just like `uanetstandard-test-suite`). Run whenever the caller starts both suites (locally) or uses both composite actions (CI); there is no env-var gate and no skip. New-node namespace switched from `2` (UA-.NETStandard-specific) to `1` (standard Application namespace).
 - `tests/Integration/Helpers/TestHelper::ENDPOINT_NODE_MANAGEMENT` (constant) and `connectForNodeManagement()` (helper) — both now resolve the endpoint from a hardcoded `opc.tcp://localhost:24840`, matching `ENDPOINT_NO_SECURITY` / `ENDPOINT_USERPASS` / … in shape. The module is in the client defaults, so the helper is a one-liner `ClientBuilder::connect(self::ENDPOINT_NODE_MANAGEMENT)`.
-- `scripts/prosys-nodemanagement-smoke.php` — standalone probe that exercises all four NodeManagement services plus a Write+Read round-trip on the created Variable. Used to validate a candidate server before wiring it into CI; exit-code semantics documented at the top of the file.
 
 ## [v4.2.0] - 2026-04-17
 

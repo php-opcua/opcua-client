@@ -32,3 +32,4 @@ todo/
 
 scripts/*
 !scripts/debug.php
+!scripts/diagnose.php

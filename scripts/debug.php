@@ -76,6 +76,18 @@ $logger = new class (__DIR__ . '/opcua-debug.log') extends AbstractLogger {
 
     private function sanitizeString(string $value): string
     {
+        static $projectRoot = null;
+
+        if ($projectRoot === null) {
+            $projectRoot = dirname(__DIR__);
+        }
+
+        if ($projectRoot !== '' && $projectRoot !== '/') {
+            $value = str_replace($projectRoot, '<project>', $value);
+        }
+
+        $value = (string)preg_replace('~/(home|Users)/[^/\s"\'<>]+~', '/$1/<user>', $value);
+
         $value = (string)preg_replace_callback(
             '~\b([a-z][a-z0-9+\-.]*)://([^/:?#\s"\'<>}\]]+)([^\s"\'<>}\]]*)?~i',
             static fn(array $m): string => $m[1] . '://***' . ($m[3] ?? ''),
