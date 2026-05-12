@@ -177,9 +177,9 @@ trait ManagesConnectionTrait
         $isSecure = $this->securityPolicy !== SecurityPolicy::None
             && $this->securityMode !== SecurityMode::None;
 
-        $needCert                = $isSecure && $this->serverCertDer === null;
-        $needAnonymousPolicyId   = $this->anonymousPolicyId === null;
-        $needUsernamePolicyId    = $this->usernamePolicyId === null;
+        $needCert = $isSecure && $this->serverCertDer === null;
+        $needAnonymousPolicyId = $this->anonymousPolicyId === null;
+        $needUsernamePolicyId = $this->usernamePolicyId === null;
         $needCertificatePolicyId = $this->certificatePolicyId === null;
 
         if ($needCert
