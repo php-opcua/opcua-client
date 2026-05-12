@@ -39,6 +39,8 @@ final class TestHelper
     // via php-opcua/extra-test-suite
     public const ENDPOINT_NODE_MANAGEMENT = 'opc.tcp://localhost:24840';
 
+    public const ENDPOINT_ALL_SECURITY_OPEN62541 = 'opc.tcp://localhost:24841';
+
     // ── Certificate paths (overridable via OPCUA_CERTS_DIR env var) ────
     public static function getCertsDir(): string
     {
