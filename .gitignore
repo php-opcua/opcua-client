@@ -30,4 +30,5 @@ playground.php
 
 todo/
 
-scripts/
+scripts/*
+!scripts/debug.php

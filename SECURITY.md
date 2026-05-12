@@ -13,7 +13,7 @@
 
 If you discover a security vulnerability in this library, please report it responsibly.
 
-**Do not open a public issue.** Instead, send an email to [gianfri.aur@gmail.com](mailto:gianfri.aur@gmail.com) with:
+**Do not open a public issue.** Instead, send an email to [security@php-opcua.com](mailto:security@php-opcua.com) with:
 
 - A description of the vulnerability
 - Steps to reproduce
@@ -38,4 +38,30 @@ OPC UA is used in industrial environments where security matters. This library i
 - Use `SecurityMode::SignAndEncrypt`
 - Provide proper CA-signed certificates (don't rely on auto-generated self-signed certs)
 - Keep PHP and OpenSSL up to date
+
+## Sharing Debug Logs and Reproducers
+
+When asking for help in a **public** channel (GitHub issues, discussions, Stack Overflow, chat rooms) or attaching logs to a bug report, treat the following as sensitive and either redact or omit them:
+
+| Information                                          | Why it matters                                                                                              |
+|------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| Endpoint URLs, hostnames, IP addresses, ports        | Reveal industrial network topology — a reachable OPC UA endpoint is a direct attack surface.                |
+| Session IDs and authentication tokens                | Short-lived but exploitable within their validity window if intercepted.                                    |
+| Server `BuildInfo` (`productName`, `softwareVersion`, `buildNumber`) | Server fingerprint — speeds up CVE lookup against the specific vendor/version running in your plant. |
+| Client and server certificates, certificate thumbprints, application URIs | May embed company, site, or device identifiers; thumbprints identify a specific key pair.       |
+| Usernames and passwords passed to `setUserCredentials()` | Plain credentials — never include them in shared logs.                                                  |
+
+The example script `scripts/debug.php` ships with a PSR-3 logger that already masks URLs (host → `***`, scheme/port/path preserved), `host` context keys, and `session_id` / `token` / `authToken` values (md5, last 5 hex chars). The `getServerBuildInfo()` log block is commented out by default for the same reason — uncomment it only after deciding the resulting log is safe to share given this policy.
+
+That said, **`BuildInfo` shared anonymously** (vendor and software version only, without endpoint URLs, certificates, network details, or anything tying it to your deployment) is welcome in the [Tested Hardware & Software](https://github.com/php-opcua/opcua-client/discussions/categories/tested-hardware-software) discussions category — it helps other users know which servers and devices have been verified to work with the library.
+
+### Recommended workflow
+
+- For **public** bug reports and reproducers: use the masked logger (or hand-redact equivalents) before attaching logs.
+- For **private** support requests where extra context is genuinely required (e.g., a sub-protocol issue tied to a specific host or build): send unmasked logs to the maintainer email above, not to a public thread.
+- Treat any historical paste/gist of OPC UA logs as effectively permanent — search engines and forks may have already indexed it. When in doubt, regenerate credentials and certificates rather than relying on deletion.
+
+### Requests for more detailed logs
+
+If a maintainer explicitly asks for richer diagnostics (e.g., unmasked `BuildInfo`, full endpoint URLs, raw certificate chains, or stack traces containing sensitive identifiers), **do not paste them into the public issue or discussion thread.** Send them by email to [security@php-opcua.com](mailto:security@php-opcua.com), referencing the issue/discussion number in the subject line. The maintainer will summarize publicly only the parts relevant to the fix once the investigation is complete.
 
