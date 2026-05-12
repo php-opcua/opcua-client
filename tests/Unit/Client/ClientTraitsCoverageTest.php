@@ -531,6 +531,8 @@ describe('ManagesConnectionTrait', function () {
         setClientProperty($client, 'transport', $mock);
 
         setClientProperty($client, 'anonymousPolicyId', 'anonymous');
+        setClientProperty($client, 'usernamePolicyId', 'username');
+        setClientProperty($client, 'certificatePolicyId', 'certificate');
 
         callClientMethod($client, 'performConnect', ['opc.tcp://localhost:4840']);
 
@@ -545,6 +547,8 @@ describe('ManagesConnectionTrait', function () {
         $client = createClientWithoutConnect();
         setClientProperty($client, 'transport', $mock);
         setClientProperty($client, 'anonymousPolicyId', 'anonymous');
+        setClientProperty($client, 'usernamePolicyId', 'username');
+        setClientProperty($client, 'certificatePolicyId', 'certificate');
 
         expect(fn () => callClientMethod($client, 'performConnect', ['opc.tcp://localhost:4840']))
             ->toThrow(ConnectionException::class);
