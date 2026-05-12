@@ -1,5 +1,25 @@
 # Changelog
 
+## [v4.3.1] - 2026-05-12
+
+Patch release. Completes the v4.3.0 compliance work on identity-token policyId
+discovery. No public API changes.
+
+### Compliance
+
+- **UserName and Certificate policyId discovery.** Previously the client only
+  triggered `GetEndpoints` discovery when the server certificate or the
+  anonymous policyId were unknown. If `anonymousPolicyId` was already cached,
+  a subsequent connection with UserName or Certificate credentials skipped
+  discovery and fell back to the hardcoded defaults (`"username"`,
+  `"certificate"`) from `SessionService`. Servers that publish non-standard
+  policyIds (open62541, Siemens S7, several COTS PLCs) rejected
+  `ActivateSession` with `BadIdentityTokenInvalid (0x80200000)`. The
+  discovery trigger in `Client\ManagesConnectionTrait::performConnect` now
+  also fires when `usernamePolicyId` or `certificatePolicyId` is null. This
+  completes the v4.3.0 anonymous-policyId compliance fix for the remaining
+  two identity token types. Reported in discussion #5.
+
 ## [v4.3.0] - 2026-04-23
 
 This is a **consolidation release**. For end users the only action required is

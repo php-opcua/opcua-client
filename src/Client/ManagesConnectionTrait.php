@@ -178,8 +178,15 @@ trait ManagesConnectionTrait
             && $this->securityMode !== SecurityMode::None;
 
         $needCert = $isSecure && $this->serverCertDer === null;
-        $needPolicyId = $this->anonymousPolicyId === null;
-        if ($needCert || $needPolicyId) {
+        $needAnonymousPolicyId = $this->anonymousPolicyId === null;
+        $needUsernamePolicyId = $this->usernamePolicyId === null;
+        $needCertificatePolicyId = $this->certificatePolicyId === null;
+
+        if ($needCert
+            || $needAnonymousPolicyId
+            || $needUsernamePolicyId
+            || $needCertificatePolicyId
+        ) {
             $this->discoverServerCertificate($host, $port, $endpointUrl, $isSecure);
         }
 
