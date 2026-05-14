@@ -66,7 +66,7 @@ ClientBuilder (entry point, config traits in ClientBuilder/, addModule/replaceMo
 Client (proxy to modules, implements OpcUaClientInterface, hasMethod, hasModule)
   +-- __call() for custom module methods
 
-Kernel/ClientKernel (shared infrastructure for all modules)
+Kernel/ClientKernelInterface (kernel contract — implemented directly by Client via its ClientBuilder/Manages*Traits; no separate concrete kernel class)
   +-- Transport/TcpTransport        (TCP socket communication)
   +-- Protocol/SessionService        (session management, kernel-level)
   +-- Encoding/BinaryEncoder         (binary serialization)
@@ -359,7 +359,15 @@ $nodeId = $client->resolveNodeId('/Objects/Server', useCache: false);
 // Invalidation
 $client->invalidateCache(NodeId::numeric(0, 85));
 $client->flushCache();
+
+// Cache storage format (since v4.3.0): values are encoded through Cache\CacheCodecInterface
+// before reaching the PSR-16 driver. The default Cache\WireCacheCodec stores JSON gated by
+// Wire\WireTypeRegistry — no unserialize() on the cache path. Corrupted/unknown payloads
+// raise Exception\CacheCorruptedException, treated as a cache miss. Swap the codec with:
+$builder->setCacheCodec(new MyCustomCacheCodec());        // null = keep default
 ```
+
+Pre-v4.3.0 cache entries are unreadable by the new codec and discarded on first access. Flush persistent caches on upgrade.
 
 ---
 
@@ -676,7 +684,7 @@ Note: Module-specific DTOs have moved from Types\ to their module namespace in v
 
 Module\Browse\BrowseResultSet: references (ReferenceDescription[]), continuationPoint (?string)
 Module\TranslateBrowsePath\BrowsePathResult: statusCode (int), targets (BrowsePathTarget[])
-Types\BrowsePathTarget: targetId (NodeId), remainingPathIndex (int)
+Module\TranslateBrowsePath\BrowsePathTarget: targetId (NodeId), remainingPathIndex (int)
 Module\ReadWrite\CallResult: statusCode (int), inputArgumentResults (int[]), outputArguments (Variant[])
 Module\Subscription\SubscriptionResult: subscriptionId (int), revisedPublishingInterval (float), revisedLifetimeCount (int), revisedMaxKeepAliveCount (int)
 Module\Subscription\MonitoredItemResult: statusCode (int), monitoredItemId (int), revisedSamplingInterval (float), revisedQueueSize (int)
@@ -694,10 +702,13 @@ Exception hierarchy:
 ```
 RuntimeException
   └── OpcUaException
+        ├── CacheCorruptedException
         ├── ConfigurationException
         ├── ConnectionException
         ├── EncodingException
         ├── InvalidNodeIdException
+        ├── MissingModuleDependencyException
+        ├── ModuleConflictException
         ├── ProtocolException
         │     ├── HandshakeException ($errorCode)
         │     └── MessageTypeException ($expected, $actual)
@@ -707,6 +718,7 @@ RuntimeException
         │     ├── SignatureVerificationException
         │     └── UnsupportedCurveException ($curveName)
         ├── ServiceException (carries getStatusCode())
+        │     └── ServiceUnsupportedException (BadServiceUnsupported 0x800B0000)
         ├── UntrustedCertificateException ($fingerprint, $certDer)
         ├── WriteTypeDetectionException
         └── WriteTypeMismatchException ($nodeId, $expectedType, $givenType)
@@ -745,8 +757,7 @@ src/
 ├── Client.php                    # Connected client (proxy to modules, hasMethod, hasModule, getRegisteredMethods, getLoadedModules, __call)
 ├── OpcUaClientInterface.php      # Public API contract (all built-in methods + hasMethod + hasModule + getRegisteredMethods + getLoadedModules)
 ├── ClientBuilder/*.php           # Builder traits (configuration: cache, events, timeout, trust, modules, etc.)
-├── Kernel/ClientKernel.php       # Shared infrastructure for modules
-├── Kernel/ClientKernelInterface.php  # Kernel contract for modules
+├── Kernel/ClientKernelInterface.php  # Kernel contract for modules (implemented directly by Client; no separate concrete kernel class)
 ├── Kernel/ModuleRegistry.php     # Module lifecycle, dependency sort, method registry
 ├── Module/ServiceModule.php      # Abstract base class (register, boot, reset, requires)
 ├── Module/ReadWrite/             # ReadWriteModule + ReadService, WriteService, CallService, CallResult
@@ -754,7 +765,7 @@ src/
 ├── Module/Subscription/          # SubscriptionModule + SubscriptionService, MonitoredItemService, PublishService, SubscriptionResult, MonitoredItemResult, PublishResult, TransferResult
 ├── Module/History/               # HistoryModule + HistoryReadService
 ├── Module/NodeManagement/        # NodeManagementModule + NodeManagementService, AddNodesResult
-├── Module/TranslateBrowsePath/   # TranslateBrowsePathModule + TranslateBrowsePathService, BrowsePathResult
+├── Module/TranslateBrowsePath/   # TranslateBrowsePathModule + TranslateBrowsePathService, BrowsePathResult, BrowsePathTarget
 ├── Module/ServerInfo/            # ServerInfoModule + BuildInfo
 ├── Module/TypeDiscovery/         # TypeDiscoveryModule
 ├── Transport/TcpTransport.php    # TCP socket I/O
@@ -768,7 +779,9 @@ src/
 ├── Types/*.php                   # Shared types (NodeId, DataValue, Variant, etc. — module-specific DTOs live in Module/*)
 ├── Builder/*.php                 # Fluent builders for multi-operations
 ├── Event/NullEventDispatcher.php   # No-op PSR-14 dispatcher
-├── Event/*.php                    # 38 event classes
+├── Event/*.php                    # 47 event classes
+├── Cache/CacheCodecInterface.php  # Cache codec contract (encode/decode for PSR-16 values)
+├── Cache/WireCacheCodec.php       # Default codec — JSON gated by Wire\WireTypeRegistry (no unserialize)
 ├── Cache/InMemoryCache.php        # PSR-16 in-memory cache
 ├── Cache/FileCache.php            # PSR-16 file-based cache
 ├── Repository/ExtensionObjectRepository.php  # Per-client codec registry
@@ -981,8 +994,7 @@ Alarm-specific events are deduced from event notification fields:
 - PhpOpcua\Client\ClientBuilderInterface — builder interface (configuration methods + connect + addModule + replaceModule)
 - PhpOpcua\Client\Client — connected client (proxy to modules), implements OpcUaClientInterface, hasMethod(), hasModule(), getRegisteredMethods(), getLoadedModules(), __call() for custom module methods
 - PhpOpcua\Client\OpcUaClientInterface — public API contract (all built-in service methods + hasMethod(string): bool + hasModule(string): bool + getRegisteredMethods(): string[] + getLoadedModules(): class-string[])
-- PhpOpcua\Client\Kernel\ClientKernel — shared infrastructure for modules (executeWithRetry, ensureConnected, send, receive, createDecoder, dispatch, logContext)
-- PhpOpcua\Client\Kernel\ClientKernelInterface — kernel contract that modules depend on
+- PhpOpcua\Client\Kernel\ClientKernelInterface — kernel contract that modules depend on (executeWithRetry, ensureConnected, send, receive, createDecoder, dispatch, logContext, getCacheCodec). Implemented directly by Client via its ClientBuilder/Manages*Traits — there is no separate concrete kernel class.
 - PhpOpcua\Client\Kernel\ModuleRegistry — module lifecycle, topological dependency sort, method conflict detection
 - PhpOpcua\Client\Module\ServiceModule — abstract base class for modules (register, boot, reset, requires)
 - PhpOpcua\Client\Types\NodeId — public readonly: namespaceIndex, identifier, type
@@ -996,22 +1008,26 @@ Alarm-specific events are deduced from event notification fields:
 - PhpOpcua\Client\Module\Subscription\TransferResult — public readonly: statusCode, availableSequenceNumbers
 - PhpOpcua\Client\Module\Browse\BrowseResultSet — public readonly: references, continuationPoint
 - PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePathResult — public readonly: statusCode, targets
-- PhpOpcua\Client\Types\BrowsePathTarget — public readonly: targetId, remainingPathIndex
+- PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePathTarget — public readonly: targetId, remainingPathIndex
 - PhpOpcua\Client\Module\NodeManagement\AddNodesResult — public readonly: statusCode, addedNodeId (NodeId)
 - PhpOpcua\Client\Module\ServerInfo\BuildInfo — public readonly: productName, manufacturerName, softwareVersion, buildNumber, buildDate
 - PhpOpcua\Client\Event\NullEventDispatcher — no-op PSR-14 dispatcher (default, zero overhead)
-- PhpOpcua\Client\Exception\ModuleConflictException — thrown when two modules register the same method name
-- PhpOpcua\Client\Exception\MissingModuleDependencyException — thrown when a module's required dependency is not registered
+- PhpOpcua\Client\Exception\ModuleConflictException — thrown when two modules register the same method name (use ClientBuilder::replaceModule() to swap intentionally)
+- PhpOpcua\Client\Exception\MissingModuleDependencyException — thrown when a module's requires() lists a class that is not registered
+- PhpOpcua\Client\Exception\ServiceUnsupportedException — subclass of ServiceException; raised when the server returns a top-level ServiceFault with BadServiceUnsupported (0x800B0000). First call to addNodes/deleteNodes/addReferences/deleteReferences on a server that does not implement NodeManagement
+- PhpOpcua\Client\Exception\CacheCorruptedException — raised by Cache\CacheCodecInterface implementations when a PSR-16 payload cannot be decoded (poisoned entry, partial write, pre-v4.3.0 serialized payload). The client catches this and treats it as a cache miss
 - PhpOpcua\Client\Exception\WriteTypeDetectionException — thrown when write type cannot be auto-detected
 - PhpOpcua\Client\Exception\WriteTypeMismatchException — thrown when explicit write type mismatches detected type (public readonly: nodeId, expectedType, givenType)
 - PhpOpcua\Client\Event\WriteTypeDetecting — dispatched before write type detection starts (public readonly: client, nodeId)
 - PhpOpcua\Client\Event\WriteTypeDetected — dispatched after write type detection (public readonly: client, nodeId, detectedType, fromCache)
-- PhpOpcua\Client\Event\* — 42 readonly event classes with $client property (ClientConnecting, ClientConnected, ConnectionFailed, SessionCreated, SessionActivated, SubscriptionCreated, DataChangeReceived, EventNotificationReceived, AlarmEventReceived, AlarmActivated, AlarmDeactivated, NodeValueRead, NodeValueWritten, NodeBrowsed, WriteTypeDetecting, WriteTypeDetected, CacheHit, CacheMiss, RetryAttempt, etc.)
+- PhpOpcua\Client\Event\* — 47 readonly event classes with $client property (ClientConnecting, ClientConnected, ConnectionFailed, SessionCreated, SessionActivated, SubscriptionCreated, DataChangeReceived, EventNotificationReceived, AlarmEventReceived, AlarmActivated, AlarmDeactivated, NodeValueRead, NodeValueWritten, NodeBrowsed, WriteTypeDetecting, WriteTypeDetected, CacheHit, CacheMiss, RetryAttempt, etc.)
 - PhpOpcua\Client\Testing\MockClient — in-memory test double (static create(), onRead/onWrite/onBrowse/onCall/onResolveNodeId, getCalls/getCallsFor/callCount/resetCalls, hasMethod, hasModule)
 - PhpOpcua\Client\Repository\ExtensionObjectRepository — per-client codec registry (instance-level)
 - PhpOpcua\Client\Wire\WireSerializable — interface (jsonSerialize, fromWireArray, wireTypeId) implemented by every core / module DTO
 - PhpOpcua\Client\Wire\WireTypeRegistry — security gate + encoder/decoder; rejects unregistered __t discriminators at decode time, uniform for BackedEnum + pure UnitEnum + DateTimeImmutable
-- PhpOpcua\Client\Wire\CoreWireTypes — installs cross-cutting core types (NodeId, QualifiedName, LocalizedText, DataValue, Variant, ExtensionObject, BrowseNode, ReferenceDescription, EndpointDescription, UserTokenPolicy + 4 enums) on a WireTypeRegistry
+- PhpOpcua\Client\Wire\CoreWireTypes — installs cross-cutting core types (NodeId, QualifiedName, LocalizedText, DataValue, Variant, ExtensionObject, BrowseNode, ReferenceDescription, EndpointDescription, UserTokenPolicy + 4 enums) on a WireTypeRegistry. registerForCache() installs only the subset actually cached by the client.
+- PhpOpcua\Client\Cache\CacheCodecInterface — contract for encoding/decoding values stored in the PSR-16 cache backend (encode/decode methods)
+- PhpOpcua\Client\Cache\WireCacheCodec — default codec: JSON serialization gated by a Wire\WireTypeRegistry. No unserialize() anywhere on the cache path. Raises Exception\CacheCorruptedException on unknown/poisoned payloads; the client treats this as a cache miss.
 - PhpOpcua\Client\Encoding\DynamicCodec — auto-generated codec from StructureDefinition
 - PhpOpcua\Client\Encoding\DataTypeMapping — maps DataType NodeIds to BuiltinTypes
 - PhpOpcua\Client\Encoding\StructureDefinitionParser — parses DataTypeDefinition attributes

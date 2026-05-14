@@ -782,6 +782,7 @@ $client->flushCache();                              // clear all
 - Any PSR-16 cache driver works (`InMemoryCache`, `FileCache`, Laravel Cache, Redis)
 - Read values are NEVER cached — only metadata and browse results
 - `setReadMetadataCache(true)` enables caching of node metadata (DataType, DisplayName) — not values
+- Cached values go through `Cache\WireCacheCodec` — JSON-only, gated by `Wire\WireTypeRegistry` (no `unserialize()` anywhere on the cache path). Corrupted or unknown payloads raise `Exception\CacheCorruptedException` and are treated as cache misses. Swap the codec with `ClientBuilder::setCacheCodec(?CacheCodecInterface)` if you need a custom on-disk format. Pre-v4.3.0 cache entries are discarded on first access — flush persistent caches on upgrade.
 
 ---
 
@@ -1119,12 +1120,31 @@ All methods accepting `NodeId` also accept these string formats.
 
 ## Exception Hierarchy
 
-| Exception | When |
-|-----------|------|
-| `ConnectionException` | Cannot connect, timeout, network error |
-| `ServiceException` | Server rejected the request |
-| `UntrustedCertificateException` | Server certificate not in trust store |
-| `WriteTypeDetectionException` | Auto-detect write type failed |
-| `WriteTypeMismatchException` | Detected type doesn't match the value |
-| `InvalidNodeIdException` | Invalid NodeId string format |
-| `DaemonException` | Session manager daemon communication error (opcua-session-manager) |
+All exceptions live in `PhpOpcua\Client\Exception` and extend `OpcUaException` (which extends `\RuntimeException`).
+
+| Exception | Parent | When |
+|-----------|--------|------|
+| `ConfigurationException` | `OpcUaException` | Invalid configuration on `ClientBuilder` |
+| `ConnectionException` | `OpcUaException` | Cannot connect, timeout, network error, disconnect required |
+| `EncodingException` | `OpcUaException` | Binary codec encode/decode failure |
+| `InvalidNodeIdException` | `OpcUaException` | Malformed NodeId string |
+| `CacheCorruptedException` | `OpcUaException` | Cache payload cannot be decoded (treated as cache miss internally; pre-v4.3.0 entries fall here) |
+| `ModuleConflictException` | `OpcUaException` | Two modules register the same method (use `replaceModule()` to swap intentionally) |
+| `MissingModuleDependencyException` | `OpcUaException` | A module's `requires()` lists an unregistered class |
+| `ProtocolException` | `OpcUaException` | Generic OPC UA protocol violation |
+| `HandshakeException` | `ProtocolException` | Server returned `ERR` during HEL/ACK (carries `$errorCode`) |
+| `MessageTypeException` | `ProtocolException` | Unexpected message type (carries `$expected` / `$actual`) |
+| `SecurityException` | `OpcUaException` | Generic crypto failure |
+| `CertificateParseException` | `SecurityException` | Missing fields in parsed certificate |
+| `OpenSslException` | `SecurityException` | An `openssl_*` call returned `false` |
+| `SignatureVerificationException` | `SecurityException` | OPN or MSG signature did not verify |
+| `UnsupportedCurveException` | `SecurityException` | ECC curve not supported (carries `$curveName`) |
+| `UntrustedCertificateException` | `SecurityException` | Server certificate not in trust store (carries `$fingerprint`, `$certDer`) |
+| `ServiceException` | `OpcUaException` | Server rejected the request — carries `getStatusCode()` |
+| `ServiceUnsupportedException` | `ServiceException` | Server returned `BadServiceUnsupported (0x800B0000)` — typical when calling `addNodes/deleteNodes/addReferences/deleteReferences` on a server that does not implement NodeManagement (e.g. UA-.NETStandard) |
+| `WriteTypeDetectionException` | `OpcUaException` | Write type auto-detection failed |
+| `WriteTypeMismatchException` | `OpcUaException` | Detected type does not match a value passed to `write()` (carries `$nodeId`, `$expectedType`, `$givenType`) |
+
+> Catching `OpcUaException` matches every exception above. Catching `ServiceException` matches `ServiceUnsupportedException`. Catching `ProtocolException` matches both `HandshakeException` and `MessageTypeException`. Catching `SecurityException` matches the 5 security subclasses.
+
+> The session-manager daemon's `DaemonException` lives in the `php-opcua/opcua-session-manager` package, not here.

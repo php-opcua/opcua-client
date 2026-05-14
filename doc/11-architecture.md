@@ -47,7 +47,9 @@ src/
 │   │   ├── PublishService.php
 │   │   ├── SubscriptionResult.php
 │   │   ├── MonitoredItemResult.php
+│   │   ├── MonitoredItemModifyResult.php
 │   │   ├── PublishResult.php
+│   │   ├── SetTriggeringResult.php
 │   │   └── TransferResult.php
 │   │
 │   ├── History/                         # History read operations
@@ -62,7 +64,8 @@ src/
 │   ├── TranslateBrowsePath/             # Browse path translation
 │   │   ├── TranslateBrowsePathModule.php
 │   │   ├── TranslateBrowsePathService.php
-│   │   └── BrowsePathResult.php
+│   │   ├── BrowsePathResult.php
+│   │   └── BrowsePathTarget.php
 │   │
 │   ├── ServerInfo/                      # Server BuildInfo methods
 │   │   ├── ServerInfoModule.php
@@ -115,7 +118,6 @@ src/
 │   ├── ConnectionState.php           # Connection state enum
 │   ├── BrowseDirection.php           # Browse direction enum
 │   ├── BrowseNode.php                # Recursive browse tree node DTO
-│   ├── BrowsePathTarget.php          # Single resolved browse path target DTO
 │   ├── ExtensionObject.php           # Typed ExtensionObject DTO (raw or decoded)
 │   ├── StructureField.php            # Field descriptor for structure definitions
 │   └── StructureDefinition.php       # Structure layout for dynamic codecs
@@ -124,26 +126,27 @@ src/
 │   ├── ReadMultiBuilder.php           # Builder for readMulti()
 │   ├── WriteMultiBuilder.php          # Builder for writeMulti()
 │   ├── MonitoredItemsBuilder.php      # Builder for createMonitoredItems()
-│   └── TranslateBrowsePathsBuilder.php # Builder for translateBrowsePaths()
+│   └── BrowsePathsBuilder.php         # Builder for translateBrowsePaths()
 │
-├── Event/
+├── Event/                              # 47 PSR-14 event classes + NullEventDispatcher
 │   ├── NullEventDispatcher.php        # No-op PSR-14 dispatcher (default)
-│   ├── Client*.php                    # Connection lifecycle events (6)
-│   ├── Session*.php                   # Session events (3)
-│   ├── Subscription*.php              # Subscription events (4)
-│   ├── MonitoredItem*.php             # Monitored item events (2)
+│   ├── Client*.php                    # Connection lifecycle events (6: Connecting, Connected, Disconnecting, Disconnected, Reconnecting, ConnectionFailed)
+│   ├── Session*.php                   # Session events (3: Created, Activated, Closed)
+│   ├── Subscription*.php              # Subscription events (4: Created, Deleted, KeepAlive, Transferred)
+│   ├── MonitoredItem*.php             # Monitored item events (3: Created, Modified, Deleted)
 │   ├── DataChangeReceived.php         # Data change notification event
 │   ├── EventNotificationReceived.php  # Event notification event
 │   ├── PublishResponseReceived.php    # Publish response event
-│   ├── SubscriptionKeepAlive.php      # Keep-alive event
-│   ├── Alarm*.php                     # Alarm events (8)
-│   ├── NodeValue*.php                 # Read/Write events (3)
+│   ├── TriggeringConfigured.php       # setTriggering configured
+│   ├── Alarm*.php                     # Alarm events (9: AlarmEventReceived, Activated, Deactivated, Acknowledged, Confirmed, SeverityChanged, Shelved, plus LimitAlarmExceeded and OffNormalAlarmTriggered)
+│   ├── NodeValue*.php                 # Read/Write events (3: Read, Written, WriteFailed)
 │   ├── NodeBrowsed.php                # Browse event
-│   ├── SecureChannel*.php             # Secure channel events (2)
+│   ├── WriteType*.php                 # Write type detection events (2: Detecting, Detected)
+│   ├── SecureChannel*.php             # Secure channel events (2: Opened, Closed)
 │   ├── DataTypesDiscovered.php        # Type discovery event
 │   ├── Cache*.php                     # Cache hit/miss events (2)
-│   ├── Retry*.php                     # Retry events (2)
-│   └── ServerCertificate*.php         # Trust store events (5)
+│   ├── Retry*.php                     # Retry events (2: Attempt, Exhausted)
+│   └── ServerCertificate*.php         # Trust store events (5: AutoAccepted, ManuallyTrusted, Trusted, Rejected, Removed)
 │
 │   # CLI tool moved to separate package: php-opcua/opcua-cli
 │
@@ -154,8 +157,15 @@ src/
 │   └── TrustResult.php               # Validation result DTO
 │
 ├── Cache/
+│   ├── CacheCodecInterface.php       # Encode/decode contract for cache values
+│   ├── WireCacheCodec.php            # Default codec — JSON gated by Wire\WireTypeRegistry (no unserialize)
 │   ├── InMemoryCache.php              # PSR-16 in-memory cache
 │   └── FileCache.php                  # PSR-16 file-based cache
+│
+├── Wire/
+│   ├── WireSerializable.php           # Contract for DTOs that round-trip through JSON IPC
+│   ├── WireTypeRegistry.php           # Security gate: encodes with __t discriminator, rejects unknown ids on decode
+│   └── CoreWireTypes.php             # Installs cross-cutting core types (NodeId, DataValue, …) on a registry
 │
 ├── Repository/
 │   └── ExtensionObjectRepository.php  # Per-client codec registry
@@ -165,16 +175,26 @@ src/
 │
 └── Exception/
     ├── OpcUaException.php             # Base exception
+    ├── CacheCorruptedException.php    # Cache payload cannot be decoded (treated as cache miss)
+    ├── CertificateParseException.php  # Missing fields in parsed certificate (extends SecurityException)
     ├── ConfigurationException.php     # Config errors
     ├── ConnectionException.php        # TCP errors
     ├── EncodingException.php          # Binary codec errors
+    ├── HandshakeException.php         # HEL/ACK ERR response ($errorCode) — extends ProtocolException
     ├── InvalidNodeIdException.php     # Malformed NodeId errors
-    ├── ModuleConflictException.php    # Two modules register the same method
+    ├── MessageTypeException.php       # Unexpected message type ($expected, $actual) — extends ProtocolException
     ├── MissingModuleDependencyException.php # Module dependency not satisfied
+    ├── ModuleConflictException.php    # Two modules register the same method
+    ├── OpenSslException.php           # OpenSSL function returned false (extends SecurityException)
     ├── ProtocolException.php          # Protocol violations
     ├── SecurityException.php          # Crypto errors
+    ├── ServiceException.php           # Server errors (with status code)
+    ├── ServiceUnsupportedException.php # Server returned BadServiceUnsupported (extends ServiceException)
+    ├── SignatureVerificationException.php # OPN/MSG signature failed (extends SecurityException)
+    ├── UnsupportedCurveException.php  # ECC curve not supported ($curveName) — extends SecurityException
     ├── UntrustedCertificateException.php # Untrusted server cert (extends SecurityException)
-    └── ServiceException.php           # Server errors (with status code)
+    ├── WriteTypeDetectionException.php # write() auto-detect failed
+    └── WriteTypeMismatchException.php  # Detected type != given type ($nodeId, $expectedType, $givenType)
 ```
 
 ## Layers

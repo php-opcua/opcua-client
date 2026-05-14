@@ -30,7 +30,7 @@ The Brainpool curves are the European alternative to NIST curves. They provide e
 
 > **Tip:** For new deployments, use `Basic256Sha256`, `Aes256Sha256RsaPss`, or any ECC policy for modern security. Choose NIST curves for maximum interoperability or Brainpool curves for European regulatory compliance. The older policies (`Basic128Rsa15`, `Basic256`) exist for legacy server compatibility.
 
-> **ECC support disclaimer:** The ECC security policies (ECC_nistP256, ECC_nistP384, ECC_brainpoolP256r1, ECC_brainpoolP384r1) are implemented following the OPC UA 1.05.3 specification, but should be considered **experimental**. The implementation is aligned with 1.05.4 regarding `ReceiverCertificateThumbprint` and HKDF salt encoding. Two ECC-specific changes from 1.05.4 (per-message IV derivation and LegacySequenceNumbers) are not yet implemented. See the [ECC 1.05.4 Compliance](../ROADMAP.md#ecc-1054-compliance) section in the roadmap for a detailed technical analysis of each point, its impact, and the planned fix.
+> **ECC support disclaimer:** The ECC security policies (ECC_nistP256, ECC_nistP384, ECC_brainpoolP256r1, ECC_brainpoolP384r1) are implemented following the OPC UA 1.05.3 specification, but should be considered **experimental**. The implementation is aligned with 1.05.4 regarding `ReceiverCertificateThumbprint`, HKDF salt encoding, and `LegacySequenceNumbers = FALSE` for ECC (sequence numbers start at 0 and wrap at `UInt32.MaxValue`; landed in v4.3.0, compatible with both pre- and post-`d188383` UA-.NETStandard servers). One ECC-specific change from 1.05.4 (per-message IV derivation) is not yet implemented — it is coupled to the future AEAD policy variants and tracked together with them. See the [ECC 1.05.4 Compliance](../ROADMAP.md#ecc-1054-compliance) section in the roadmap for a detailed technical analysis of each point, its impact, and the planned fix.
 >
 > As of today, no commercial OPC UA server vendor — not Siemens, not Beckhoff, not Kepware, not any other — has released firmware or hardware with ECC OPC UA endpoints. This is not a limitation of this library: it is the current reality of the OPC UA ecosystem. The specification defines ECC support, but the industrial market has not yet adopted it in production devices.
 >
@@ -245,3 +245,17 @@ Client                          Server
 The `SecureChannel` class manages this entire lifecycle: asymmetric key exchange, symmetric key derivation, message signing/encryption/padding, sequence number tracking, and token/channel ID management.
 
 > **Events:** `SecureChannelOpened` is dispatched after the secure channel is established (with channelId, securityPolicy, and securityMode). `SecureChannelClosed` is dispatched before the channel is closed. See [Events](14-events.md).
+
+## Cache Path Hardening
+
+Since v4.3.0, no cache code path calls `unserialize()`. The client stores PSR-16 cache values through `Cache\CacheCodecInterface`, with `Cache\WireCacheCodec` as the default implementation:
+
+- Values are encoded as **JSON**, with each typed payload tagged via a `__t` discriminator from `Wire\WireTypeRegistry`.
+- Decoding rejects any `__t` id that is not explicitly registered, raising `Exception\CacheCorruptedException`. The client treats this as a cache miss and refetches transparently.
+- The registry used on the cache path is the subset installed by `CoreWireTypes::registerForCache()` plus any DTOs the client itself caches (e.g. `Types\StructureDefinition` for `discoverDataTypes()`).
+
+**Why it matters.** If your PSR-16 backend is writable by a less-trusted party (shared Redis, world-readable file cache directory, multi-tenant Memcached), a payload poisoned with a serialized gadget chain cannot reach `unserialize()` here — there is no `unserialize()` call to reach.
+
+**Upgrading from < v4.3.0.** Pre-existing cache entries written by the old `serialize()`-based code are unreadable by the new codec; they are detected as `CacheCorruptedException` and discarded on first access. To skip the transient cold-cache period, flush persistent caches at deploy time.
+
+**Custom codec.** If you have a hard requirement to use a different on-disk format (e.g. an existing organisational standard), implement `CacheCodecInterface` and install it via `ClientBuilder::setCacheCodec()`. Anything you implement must enforce its own allowlist — do not call `unserialize()` without `allowed_classes`.

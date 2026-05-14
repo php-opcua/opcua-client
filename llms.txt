@@ -56,9 +56,8 @@ All Type classes and result DTOs use public readonly properties. Access is $ref-
 - Client (src/Client.php): connected client (proxy), implements OpcUaClientInterface, delegates all service methods to module handlers, __call() for custom module methods
 - OpcUaClientInterface: public API contract — all built-in service methods + hasMethod(string): bool + hasModule(string): bool + getRegisteredMethods(): string[] + getLoadedModules(): class-string[]
 - Wire/ (src/Wire/): JSON-safe IPC serialization primitives — WireSerializable interface, WireTypeRegistry (security gate / encoder / decoder), CoreWireTypes (registers cross-cutting value-objects and enums)
-- Kernel/ (src/Kernel/): shared infrastructure for modules
-  - ClientKernel: executeWithRetry, ensureConnected, send, receive, createDecoder, dispatch, logContext, etc.
-  - ClientKernelInterface: public contract that modules depend on
+- Kernel/ (src/Kernel/): kernel contract for modules
+  - ClientKernelInterface: public contract that modules depend on (executeWithRetry, ensureConnected, send, receive, createDecoder, dispatch, logContext, getCacheCodec, etc.) — implemented directly by Client via its ClientBuilder/Manages*Traits; there is no separate concrete kernel class
   - ModuleRegistry: module lifecycle, topological dependency sort, method conflict detection
 - Module/ (src/Module/): 8 self-contained service modules, each with its own protocol service(s) and DTOs
   - ServiceModule: abstract base class (register, boot, reset, requires)
@@ -67,7 +66,7 @@ All Type classes and result DTOs use public readonly properties. Access is $ref-
   - Subscription/: SubscriptionModule, SubscriptionService, MonitoredItemService, PublishService, SubscriptionResult, MonitoredItemResult, PublishResult, TransferResult
   - History/: HistoryModule, HistoryReadService
   - NodeManagement/: NodeManagementModule, NodeManagementService, AddNodesResult
-  - TranslateBrowsePath/: TranslateBrowsePathModule, TranslateBrowsePathService, BrowsePathResult
+  - TranslateBrowsePath/: TranslateBrowsePathModule, TranslateBrowsePathService, BrowsePathResult, BrowsePathTarget
   - ServerInfo/: ServerInfoModule, BuildInfo
   - TypeDiscovery/: TypeDiscoveryModule
 - ClientBuilder/ (src/ClientBuilder/): builder traits for configuration (cache, events, timeout, trust store, batching, modules)
@@ -77,8 +76,8 @@ All Type classes and result DTOs use public readonly properties. Access is $ref-
 - Security (src/Security/): secure channel, crypto operations, certificate management
 - Types (src/Types/): shared OPC UA data types and enums (NodeId, DataValue, Variant, StatusCode, etc.). Module-specific DTOs live in their module namespace.
 - Repository (src/Repository/): per-client ExtensionObject codec registry
-- Cache (src/Cache/): PSR-16 cache drivers (InMemoryCache, FileCache)
-- Event (src/Event/): 40 PSR-14 event classes + NullEventDispatcher
+- Cache (src/Cache/): PSR-16 cache drivers (InMemoryCache, FileCache) + cache codec layer (CacheCodecInterface, WireCacheCodec — JSON gated by Wire\WireTypeRegistry, no unserialize() on the cache path). Swap with ClientBuilder::setCacheCodec(?CacheCodecInterface). Corrupted/unknown payloads raise Exception\CacheCorruptedException and are treated as cache misses.
+- Event (src/Event/): 47 PSR-14 event classes + NullEventDispatcher
 - TrustStore (src/TrustStore/): server certificate trust management (FileTrustStore, TrustPolicy, TrustResult)
 - Testing (src/Testing/): MockClient — in-memory test double (implements full OpcUaClientInterface, adds hasMethod/hasModule)
 - Exception (src/Exception/): exception hierarchy (includes ModuleConflictException, MissingModuleDependencyException)
@@ -175,9 +174,8 @@ $client = ClientBuilder::create()
 - PhpOpcua\Client\ClientBuilder — builder / entry point, implements ClientBuilderInterface, static create() factory, addModule(), replaceModule()
 - PhpOpcua\Client\ClientBuilderInterface — builder interface (configuration methods + connect + addModule + replaceModule)
 - PhpOpcua\Client\Client — connected client (proxy to modules), implements OpcUaClientInterface, hasMethod(), hasModule(), __call() for custom module methods
-- PhpOpcua\Client\OpcUaClientInterface — public API contract (all built-in service methods + hasMethod + hasModule)
-- PhpOpcua\Client\Kernel\ClientKernel — shared infrastructure for modules (executeWithRetry, send, receive, etc.)
-- PhpOpcua\Client\Kernel\ClientKernelInterface — kernel contract that modules depend on
+- PhpOpcua\Client\OpcUaClientInterface — public API contract (all built-in service methods + hasMethod + hasModule + getRegisteredMethods + getLoadedModules)
+- PhpOpcua\Client\Kernel\ClientKernelInterface — kernel contract that modules depend on (executeWithRetry, ensureConnected, send, receive, createDecoder, dispatch, logContext, getCacheCodec, etc.). Implemented directly by Client via its ClientBuilder/Manages*Traits — there is no separate concrete kernel class.
 - PhpOpcua\Client\Kernel\ModuleRegistry — module lifecycle, topological dependency sort, method conflict detection
 - PhpOpcua\Client\Module\ServiceModule — abstract base class for modules (register, boot, reset, requires)
 - PhpOpcua\Client\Types\NodeId — node identifier (public readonly: namespaceIndex, identifier, type)
@@ -193,7 +191,7 @@ $client = ClientBuilder::create()
 - PhpOpcua\Client\Module\Subscription\TransferResult — public readonly: statusCode, availableSequenceNumbers
 - PhpOpcua\Client\Module\Browse\BrowseResultSet — public readonly: references, continuationPoint
 - PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePathResult — public readonly: statusCode, targets
-- PhpOpcua\Client\Types\BrowsePathTarget — public readonly: targetId, remainingPathIndex
+- PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePathTarget — public readonly: targetId, remainingPathIndex
 - PhpOpcua\Client\Module\NodeManagement\AddNodesResult — public readonly: statusCode, addedNodeId (NodeId)
 - PhpOpcua\Client\Module\ServerInfo\BuildInfo — public readonly: productName, manufacturerName, softwareVersion, buildNumber, buildDate
 - PhpOpcua\Client\Security\SecurityPolicy — enum of 10 security policies (6 RSA + 4 ECC)
@@ -204,6 +202,8 @@ $client = ClientBuilder::create()
 - PhpOpcua\Client\Types\ExtensionObject — typed DTO for OPC UA ExtensionObject (public readonly: typeId, encoding, body, value; methods: isDecoded(), isRaw())
 - PhpOpcua\Client\Protocol\AbstractProtocolService — shared base class for protocol services (encodeRequestAuto, writeRequestHeader, readResponseMetadata, wrapInMessage)
 - PhpOpcua\Client\Protocol\ServiceTypeId — named constants for OPC UA service NodeIds, well-known nodes, identity tokens
+- PhpOpcua\Client\Cache\CacheCodecInterface — encode/decode contract for values stored in the PSR-16 cache
+- PhpOpcua\Client\Cache\WireCacheCodec — default codec: JSON gated by Wire\WireTypeRegistry; raises CacheCorruptedException on unknown/poisoned payloads
 - PhpOpcua\Client\Cache\InMemoryCache — PSR-16 in-memory cache with configurable TTL
 - PhpOpcua\Client\Cache\FileCache — PSR-16 file-based cache with configurable TTL
 - PhpOpcua\Client\Event\NullEventDispatcher — no-op PSR-14 dispatcher (default, zero overhead)
@@ -213,7 +213,7 @@ $client = ClientBuilder::create()
 - PhpOpcua\Client\Exception\WriteTypeMismatchException — thrown when explicit write type mismatches detected type (public readonly: nodeId, expectedType, givenType)
 - PhpOpcua\Client\Event\WriteTypeDetecting — dispatched before write type detection starts (public readonly: client, nodeId)
 - PhpOpcua\Client\Event\WriteTypeDetected — dispatched after write type detection (public readonly: client, nodeId, detectedType, fromCache)
-- PhpOpcua\Client\Event\* — 42 readonly event classes (connection, session, subscription, alarms, read/write, write type detection, browse, cache, retry)
+- PhpOpcua\Client\Event\* — 47 readonly event classes (connection, session, subscription, monitored item, alarms, read/write, write type detection, browse, cache, retry, secure channel, trust store)
 
 ## Related packages
 

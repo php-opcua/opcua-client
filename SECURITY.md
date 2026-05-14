@@ -32,12 +32,16 @@ This policy covers the `php-opcua/opcua-client` library itself. For vulnerabilit
 
 ## Security Considerations
 
-OPC UA is used in industrial environments where security matters. This library implements the full OPC UA security stack (6 security policies, 3 security modes, X.509 certificate authentication). When deploying in production:
+OPC UA is used in industrial environments where security matters. This library implements the full OPC UA security stack (10 security policies — 6 RSA, including `None`, plus 4 ECC; 3 security modes; X.509 certificate authentication). When deploying in production:
 
 - Use `SecurityPolicy::Basic256Sha256` or stronger
 - Use `SecurityMode::SignAndEncrypt`
 - Provide proper CA-signed certificates (don't rely on auto-generated self-signed certs)
 - Keep PHP and OpenSSL up to date
+
+### Cache Path
+
+Since v4.3.0 the client never calls `unserialize()` on cache values. Cached entries are encoded via `Cache\CacheCodecInterface` (default `Cache\WireCacheCodec` — JSON gated by `Wire\WireTypeRegistry`); poisoned or unknown payloads are detected and discarded as cache misses. If your PSR-16 backend is writable by a less-trusted party (shared Redis, world-readable file cache, multi-tenant Memcached), this removes the object-injection surface that `unserialize()`-based storage would otherwise expose. See [doc/10-security.md](doc/10-security.md#cache-path-hardening) for upgrade notes and codec customisation.
 
 ## Sharing Debug Logs and Reproducers
 

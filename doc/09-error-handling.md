@@ -7,10 +7,13 @@ Every exception extends `RuntimeException` through a single base class:
 ```
 RuntimeException
   └── OpcUaException
+        ├── CacheCorruptedException
         ├── ConfigurationException
         ├── ConnectionException
         ├── EncodingException
         ├── InvalidNodeIdException
+        ├── MissingModuleDependencyException
+        ├── ModuleConflictException
         ├── ProtocolException
         │     ├── HandshakeException
         │     └── MessageTypeException
@@ -233,6 +236,32 @@ try {
     echo "Expected {$e->expected}, got {$e->actual}\n";
 }
 ```
+
+### CacheCorruptedException
+
+Raised by `Cache\WireCacheCodec` (or any other `CacheCodecInterface` implementation) when a value pulled from the PSR-16 backend cannot be decoded — typically a payload poisoned by another writer, a partial write, or an entry written by a pre-v4.3.0 codec. The client catches this internally and treats it as a cache miss, so you normally never see it; it surfaces only if you call `Cache\CacheCodecInterface::decode()` yourself.
+
+```php
+use PhpOpcua\Client\Exception\CacheCorruptedException;
+use PhpOpcua\Client\Cache\CacheCodecInterface;
+
+/** @var CacheCodecInterface $codec */
+try {
+    $value = $codec->decode($rawFromPsr16);
+} catch (CacheCorruptedException $e) {
+    // Treat as cache miss — refetch from source
+}
+```
+
+> **Upgrade note:** Pre-v4.3.0 cache entries were written via `serialize()`; the new codec cannot read them and raises this exception on first access. The client refetches transparently, but flushing persistent caches at deploy time skips the cold-cache window.
+
+### ModuleConflictException
+
+Thrown when two `ServiceModule` instances try to register the same method name on the same client. Use `ClientBuilder::replaceModule()` to intentionally swap a built-in module with a custom one. Re-registering the same method by the same module (e.g. after a `disconnect()` / `reconnect()`) does **not** trigger this.
+
+### MissingModuleDependencyException
+
+Thrown when a module's `requires()` list points at a `ServiceModule` class that is not registered on the client. Either add the missing module via `ClientBuilder::addModule()` or relax the dependency on the module that declares it.
 
 ### WriteTypeDetectionException
 

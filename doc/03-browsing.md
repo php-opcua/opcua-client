@@ -346,6 +346,28 @@ $client->invalidateCache(NodeId::numeric(0, 85));
 $client->flushCache();
 ```
 
+### Cache Storage Format (no `unserialize()`)
+
+Cached values are encoded through a `Cache\CacheCodecInterface` implementation before they reach the PSR-16 driver, and decoded back on read. The default codec is `Cache\WireCacheCodec`, which:
+
+- Serializes DTOs as **JSON** (no `serialize()` / `unserialize()` on the cache path).
+- Gates decoding through a `Wire\WireTypeRegistry` allowlist — only types installed by `CoreWireTypes::registerForCache()` (and any module DTOs cached by the client, e.g. `Types\StructureDefinition`) can be instantiated.
+- On a corrupted or unknown payload, raises `Exception\CacheCorruptedException`; the client treats this as a cache miss and refetches.
+
+This removes the object-injection surface that any `unserialize()`-based PSR-16 backend would expose when the cache store is writable by an untrusted party. Pre-v4.3.0 cache entries are not readable by the new codec and are discarded on first access — flush persistent caches on upgrade to avoid a transient cold-cache period.
+
+You can swap the codec on the builder:
+
+```php
+use PhpOpcua\Client\Cache\CacheCodecInterface;
+
+$client = ClientBuilder::create()
+    ->setCacheCodec(new MyCustomCacheCodec())   // pass null to keep the default
+    ->connect('opc.tcp://localhost:4840');
+```
+
+If you implement your own codec, register the types you intend to round-trip on the registry before encoding and mirror the allowlist on decode.
+
 ### Cached Methods
 
 | Method | Cached |
