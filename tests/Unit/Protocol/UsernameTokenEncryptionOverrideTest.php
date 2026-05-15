@@ -10,7 +10,23 @@ use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
 
-require_once __DIR__ . '/../Security/SecurityCoverageTest.php';
+if (! function_exists('generateCertForUsernameTokenTest')) {
+    function generateCertForUsernameTokenTest(int $bits = 2048): array
+    {
+        $privKey = openssl_pkey_new(['private_key_bits' => $bits, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        $csr = openssl_csr_new(['CN' => 'test'], $privKey);
+        $cert = openssl_csr_sign($csr, null, $privKey, 365);
+        openssl_x509_export($cert, $certPem);
+
+        $cm = new CertificateManager();
+        $tmp = tempnam(sys_get_temp_dir(), 'opcua_');
+        file_put_contents($tmp, $certPem);
+        $der = $cm->loadCertificatePem($tmp);
+        unlink($tmp);
+
+        return [$der, $privKey];
+    }
+}
 
 function callWriteUsernameIdentityToken(SessionService $session, string $username, string $password, ?string $serverNonce): string
 {
@@ -23,7 +39,7 @@ function callWriteUsernameIdentityToken(SessionService $session, string $usernam
 
 describe('UserName password encryption respects UserTokenPolicy.SecurityPolicyUri', function () {
     beforeEach(function () {
-        [$serverDer, $serverKey] = generateCert();
+        [$serverDer, $serverKey] = generateCertForUsernameTokenTest();
         $this->serverDer = $serverDer;
         $this->serverKey = $serverKey;
         $this->serverNonce = random_bytes(32);
