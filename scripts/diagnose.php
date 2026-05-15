@@ -134,14 +134,18 @@ function redactSensitive(string $value): string
 /**
  * Masks the configured username and password verbatim wherever they appear.
  * Used on stack traces and error messages before printing.
+ *
+ * Username uses a word-boundary regex so a short username like "User" does
+ * not corrupt unrelated tokens such as "UserName_Basic256Sha256_Token".
+ * Password uses a literal replacement to tolerate special characters.
  */
 function redactCredentials(string $value, string $username, string $password): string
 {
     if (strlen($password) >= 3) {
-        $value = str_replace($password, '***', $value);
+        $value = str_replace($password, '<password>', $value);
     }
     if (strlen($username) >= 3) {
-        $value = str_replace($username, '***', $value);
+        $value = preg_replace('/\b' . preg_quote($username, '/') . '\b/', '<username>', $value) ?? $value;
     }
 
     return $value;
@@ -155,11 +159,11 @@ function redactForReport(string $value, string $username, string $password): str
     return redactSensitive(redactCredentials($value, $username, $password));
 }
 
-$logger = new class ($logFile) extends AbstractLogger {
+$logger = new class ($logFile, $username, $password) extends AbstractLogger {
     /** @var resource */
     private $file;
 
-    public function __construct(string $logPath)
+    public function __construct(string $logPath, private readonly string $username, private readonly string $password)
     {
         $handle = fopen($logPath, 'ab');
 
@@ -220,7 +224,7 @@ $logger = new class ($logFile) extends AbstractLogger {
 
     private function sanitizeString(string $value): string
     {
-        return redactSensitive($value);
+        return redactSensitive(redactCredentials($value, $this->username, $this->password));
     }
 
     /**

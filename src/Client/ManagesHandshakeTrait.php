@@ -199,6 +199,7 @@ trait ManagesHandshakeTrait
         $picked = $this->pickTokenPolicy($byType[1], $channelPolicyUri);
         if ($picked !== null) {
             $this->usernamePolicyId = $picked->getPolicyId();
+            $this->usernameTokenSecurityPolicyUri = $picked->getSecurityPolicyUri();
         }
 
         $picked = $this->pickTokenPolicy($byType[2], $channelPolicyUri);

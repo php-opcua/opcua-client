@@ -8,6 +8,7 @@ use OpenSSLAsymmetricKey;
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Exception\ServiceException;
+use PhpOpcua\Client\Security\MessageSecurity;
 use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\Client\Types\LocalizedText;
@@ -27,6 +28,12 @@ class SessionService
 
     private string $anonymousPolicyId = 'anonymous';
 
+    private ?string $usernameTokenSecurityPolicyUri = null;
+
+    private ?string $userTokenServerCertDer = null;
+
+    private ?MessageSecurity $userTokenMessageSecurity = null;
+
     /**
      * @param int $secureChannelId
      * @param int $tokenId
@@ -40,14 +47,29 @@ class SessionService
     }
 
     /**
+     * @param string|null $serverCertDer
+     * @param MessageSecurity|null $messageSecurity
+     * @return void
+     */
+    public function setUserTokenEncryptionContext(
+        ?string $serverCertDer,
+        ?MessageSecurity $messageSecurity,
+    ): void {
+        $this->userTokenServerCertDer = $serverCertDer;
+        $this->userTokenMessageSecurity = $messageSecurity;
+    }
+
+    /**
      * @param ?string $usernamePolicyId
      * @param ?string $certificatePolicyId
      * @param ?string $anonymousPolicyId
+     * @param ?string $usernameTokenSecurityPolicyUri
      */
     public function setUserTokenPolicyIds(
         ?string $usernamePolicyId = null,
         ?string $certificatePolicyId = null,
         ?string $anonymousPolicyId = null,
+        ?string $usernameTokenSecurityPolicyUri = null,
     ): void {
         if ($usernamePolicyId !== null) {
             $this->usernamePolicyId = $usernamePolicyId;
@@ -58,6 +80,7 @@ class SessionService
         if ($anonymousPolicyId !== null) {
             $this->anonymousPolicyId = $anonymousPolicyId;
         }
+        $this->usernameTokenSecurityPolicyUri = $usernameTokenSecurityPolicyUri;
     }
 
     public function getSecureChannelId(): int
@@ -751,29 +774,30 @@ class SessionService
         $tokenBody->writeString($this->usernamePolicyId);
         $tokenBody->writeString($username);
 
-        if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive() && $serverNonce !== null) {
+        $effectivePolicy = $this->resolveUserTokenEncryptionPolicy();
+        $serverCertDer = $this->resolveUserTokenServerCertDer();
+        $messageSecurity = $this->resolveUserTokenMessageSecurity();
+
+        if ($effectivePolicy !== SecurityPolicy::None
+            && $serverNonce !== null
+            && $serverCertDer !== null
+            && $messageSecurity !== null
+        ) {
             $passwordBytes = $password;
             $nonceBytes = $serverNonce;
-            $policy = $this->secureChannel->getPolicy();
 
-            $plaintext = pack('V', strlen($passwordBytes) + strlen($nonceBytes))
-                . $passwordBytes
-                . $nonceBytes;
-
-            if ($policy->isEcc()) {
-                $encryptedSecret = $this->buildEccEncryptedSecret($passwordBytes, $nonceBytes, $policy);
+            if ($effectivePolicy->isEcc()) {
+                $encryptedSecret = $this->buildEccEncryptedSecret($passwordBytes, $nonceBytes, $effectivePolicy);
                 $tokenBody->writeByteString($encryptedSecret);
                 $tokenBody->writeString(null);
             } else {
-                $serverCertDer = $this->secureChannel->getServerCertDer();
-                $encrypted = $this->secureChannel->getMessageSecurity()->asymmetricEncrypt(
-                    $plaintext,
-                    $serverCertDer,
-                    $policy,
-                );
+                $plaintext = pack('V', strlen($passwordBytes) + strlen($nonceBytes))
+                    . $passwordBytes
+                    . $nonceBytes;
+                $encrypted = $messageSecurity->asymmetricEncrypt($plaintext, $serverCertDer, $effectivePolicy);
 
                 $tokenBody->writeByteString($encrypted);
-                $tokenBody->writeString($policy->getAsymmetricEncryptionUri());
+                $tokenBody->writeString($effectivePolicy->getAsymmetricEncryptionUri());
             }
         } else {
             $tokenBody->writeByteString($password);
@@ -1003,5 +1027,37 @@ class SessionService
         }
 
         return substr($chainDer, 0, $pos + $length);
+    }
+
+    /**
+     * @return SecurityPolicy
+     */
+    private function resolveUserTokenEncryptionPolicy(): SecurityPolicy
+    {
+        $channelPolicy = $this->secureChannel?->getPolicy() ?? SecurityPolicy::None;
+
+        if ($this->usernameTokenSecurityPolicyUri === null
+            || $this->usernameTokenSecurityPolicyUri === ''
+        ) {
+            return $channelPolicy;
+        }
+
+        return SecurityPolicy::tryFrom($this->usernameTokenSecurityPolicyUri) ?? $channelPolicy;
+    }
+
+    /**
+     * @return string|null
+     */
+    private function resolveUserTokenServerCertDer(): ?string
+    {
+        return $this->secureChannel?->getServerCertDer() ?? $this->userTokenServerCertDer;
+    }
+
+    /**
+     * @return MessageSecurity|null
+     */
+    private function resolveUserTokenMessageSecurity(): ?MessageSecurity
+    {
+        return $this->secureChannel?->getMessageSecurity() ?? $this->userTokenMessageSecurity;
     }
 }

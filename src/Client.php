@@ -118,6 +118,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
 
     private ?string $anonymousPolicyId = null;
 
+    private ?string $usernameTokenSecurityPolicyUri = null;
+
     private ?string $lastEndpointUrl = null;
 
     private ConnectionState $connectionState = ConnectionState::Disconnected;
