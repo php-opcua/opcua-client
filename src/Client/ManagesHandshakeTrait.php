@@ -17,8 +17,10 @@ use PhpOpcua\Client\Protocol\SecureChannelRequest;
 use PhpOpcua\Client\Protocol\SecureChannelResponse;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Protocol\SessionService;
+use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\Client\Transport\TcpTransport;
 use PhpOpcua\Client\Types\NodeId;
+use PhpOpcua\Client\Types\UserTokenPolicy;
 
 /**
  * Provides OPC UA handshake and server certificate discovery for the connected client.
@@ -180,13 +182,73 @@ trait ManagesHandshakeTrait
      */
     private function extractTokenPolicies(\PhpOpcua\Client\Types\EndpointDescription $endpoint): void
     {
-        foreach ($endpoint->getUserIdentityTokens() as $tokenPolicy) {
-            match ($tokenPolicy->getTokenType()) {
-                1 => $this->usernamePolicyId = $tokenPolicy->getPolicyId(),
-                2 => $this->certificatePolicyId = $tokenPolicy->getPolicyId(),
-                0 => $this->anonymousPolicyId = $tokenPolicy->getPolicyId(),
-                default => null,
-            };
+        $byType = [0 => [], 1 => [], 2 => []];
+        foreach ($endpoint->getUserIdentityTokens() as $tp) {
+            $type = $tp->getTokenType();
+            if (isset($byType[$type])) {
+                $byType[$type][] = $tp;
+            }
         }
+
+        if ($byType[0] !== []) {
+            $this->anonymousPolicyId = $byType[0][0]->getPolicyId();
+        }
+
+        $channelPolicyUri = $this->securityPolicy->value;
+
+        $picked = $this->pickTokenPolicy($byType[1], $channelPolicyUri);
+        if ($picked !== null) {
+            $this->usernamePolicyId = $picked->getPolicyId();
+        }
+
+        $picked = $this->pickTokenPolicy($byType[2], $channelPolicyUri);
+        if ($picked !== null) {
+            $this->certificatePolicyId = $picked->getPolicyId();
+        }
+    }
+
+    /**
+     * Choose the best UserTokenPolicy for the current SecureChannel.
+     *
+     * @param UserTokenPolicy[] $candidates
+     * @param string $channelPolicyUri
+     * @return ?UserTokenPolicy
+     */
+    private function pickTokenPolicy(array $candidates, string $channelPolicyUri): ?UserTokenPolicy
+    {
+        if ($candidates === []) {
+            return null;
+        }
+
+        foreach ($candidates as $tp) {
+            if ($tp->getSecurityPolicyUri() === $channelPolicyUri) {
+                return $tp;
+            }
+        }
+
+        foreach ($candidates as $tp) {
+            $uri = $tp->getSecurityPolicyUri();
+            if ($uri === null || $uri === '') {
+                return $tp;
+            }
+        }
+
+        $preferred = [
+            SecurityPolicy::Basic256Sha256->value,
+            SecurityPolicy::Aes128Sha256RsaOaep->value,
+            SecurityPolicy::Aes256Sha256RsaPss->value,
+            SecurityPolicy::Basic256->value,
+            SecurityPolicy::Basic128Rsa15->value,
+        ];
+
+        foreach ($preferred as $uri) {
+            foreach ($candidates as $tp) {
+                if ($tp->getSecurityPolicyUri() === $uri) {
+                    return $tp;
+                }
+            }
+        }
+
+        return $candidates[0];
     }
 }

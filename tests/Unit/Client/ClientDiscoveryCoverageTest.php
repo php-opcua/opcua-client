@@ -123,7 +123,7 @@ function discEndpointsResponse(array $endpoints): string
             $e->writeUInt32($t['type']);
             $e->writeString(null);
             $e->writeString(null);
-            $e->writeString(null);
+            $e->writeString($t['policy'] ?? null);
         }
         $e->writeString(null);
         $e->writeByte(0);
