@@ -1,5 +1,41 @@
 # Changelog
 
+## [v4.3.2] - 2026-05-15
+
+Patch release. Closes the remaining `BadIdentityTokenInvalid (0x80200000)`
+failures on servers that advertise multiple per-policy UserName tokens
+(open62541, Siemens TIA, KEPServerEX, B&R). No public API changes.
+
+### Compliance
+
+- **UserName / Certificate `UserTokenPolicy` selection now matches the
+  SecureChannel.** `extractTokenPolicies` overwrote the policyId on every
+  iteration, so on servers exposing one UserName policy per algorithm the
+  last (`UserName_Aes256Sha256RsaPss_Token`) always won regardless of the
+  channel. Selection now prefers an exact `SecurityPolicyUri` match, then
+  empty (per spec means "use channel policy"), then the strongest
+  client-supported policy. Reported by @H4rw3y5ag3 in discussion #5.
+- **UserName password is now encrypted with `UserTokenPolicy.SecurityPolicyUri`
+  even on SecureChannel = None** (OPC UA Part 4 §7.41).
+  `writeUsernameIdentityToken` previously sent plaintext whenever the channel
+  was None, which servers like Siemens TIA reject. Encryption is performed
+  against the server certificate already obtained via discovery. Reported by @H4rw3y5ag3 in discussion #5.
+
+### Added
+
+- `Protocol\SessionService::setUserTokenEncryptionContext(?string $serverCertDer, ?MessageSecurity $messageSecurity)`
+  — injects the crypto material needed to encrypt the UserName token
+  independently of the SecureChannel state.
+- `Protocol\SessionService::setUserTokenPolicyIds()` gained an optional
+  fourth parameter `?string $usernameTokenSecurityPolicyUri`.
+
+### Diagnostics
+
+- `scripts/diagnose.php` redacts the configured credentials as `<username>` /
+  `<password>` (word-boundary regex on the username) and applies redaction
+  inside the logger as well, so credentials no longer leak through the
+  `trace` field of `getTraceAsString()`.
+
 ## [v4.3.1] - 2026-05-12
 
 Patch release. Completes the v4.3.0 compliance work on identity-token policyId

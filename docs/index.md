@@ -1,0 +1,62 @@
+# Documentation Index
+
+- Getting started
+  - [Overview](./overview.md)
+  - [Installation](./getting-started/installation.md)
+  - [Quick start](./getting-started/quick-start.md)
+  - [Thinking in OPC UA](./getting-started/thinking-in-opc-ua.md)
+- Connection
+  - [Endpoints and discovery](./connection/endpoints-and-discovery.md)
+  - [Opening and closing](./connection/opening-and-closing.md)
+  - [Timeouts and retry](./connection/timeouts-and-retry.md)
+- Operations
+  - [Reading attributes](./operations/reading-attributes.md)
+  - [Writing values](./operations/writing-values.md)
+  - [Browsing](./operations/browsing.md)
+  - [Resolving paths](./operations/resolving-paths.md)
+  - [Calling methods](./operations/calling-methods.md)
+  - [Subscriptions](./operations/subscriptions.md)
+  - [Monitored items](./operations/monitored-items.md)
+  - [History reads](./operations/history-reads.md)
+  - [Managing nodes](./operations/managing-nodes.md)
+- Security
+  - [Overview](./security/overview.md)
+  - [Policies](./security/policies.md)
+  - [Certificates](./security/certificates.md)
+  - [Authentication](./security/authentication.md)
+  - [Trust store](./security/trust-store.md)
+  - [Cache path hardening](./security/cache-path-hardening.md)
+- Types
+  - [Overview](./types/overview.md)
+  - [NodeId](./types/node-id.md)
+  - [DataValue and Variant](./types/data-value-and-variant.md)
+  - [Extension objects](./types/extension-objects.md)
+  - [Built-in types](./types/built-in-types.md)
+- Extensibility
+  - [Modules](./extensibility/modules.md)
+  - [Replacing modules](./extensibility/replacing-modules.md)
+  - [Extension object codecs](./extensibility/extension-object-codecs.md)
+  - [Type discovery](./extensibility/type-discovery.md)
+  - [Wire serialization](./extensibility/wire-serialization.md)
+- Observability
+  - [Logging](./observability/logging.md)
+  - [Events](./observability/events.md)
+  - [Event reference](./observability/event-reference.md)
+  - [Caching](./observability/caching.md)
+- Testing
+  - [MockClient](./testing/mock-client.md)
+  - [Handlers](./testing/handlers.md)
+  - [Integration tests](./testing/integration.md)
+- Reference
+  - [Client API](./reference/client-api.md)
+  - [Builder API](./reference/builder-api.md)
+  - [Exceptions](./reference/exceptions.md)
+  - [Enums](./reference/enums.md)
+- Recipes
+  - [Upgrading to v4.3](./recipes/upgrading-to-v4.3.md)
+  - [Recovering from disconnection](./recipes/disconnection-recovery.md)
+  - [Handling unsupported services](./recipes/service-unsupported.md)
+  - [Browsing recursively](./recipes/browsing-recursively.md)
+  - [Subscribing to data changes](./recipes/subscribing-to-data-changes.md)
+  - [Writing typed arrays](./recipes/writing-typed-arrays.md)
+  - [Detecting server capabilities](./recipes/detecting-server-capabilities.md)

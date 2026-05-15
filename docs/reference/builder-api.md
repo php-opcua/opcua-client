@@ -1,0 +1,191 @@
+---
+eyebrow: 'Docs · Reference'
+lede:    'Every method on ClientBuilder, grouped by what it configures. The builder is the only configuration surface — call it before connect(), never after.'
+
+see_also:
+  - { href: './client-api.md',  meta: '8 min' }
+  - { href: '../security/overview.md',     meta: '5 min' }
+  - { href: '../observability/caching.md', meta: '5 min' }
+
+prev: { label: 'Client API',  href: './client-api.md' }
+next: { label: 'Exceptions',  href: './exceptions.md' }
+---
+
+# Builder API
+
+`PhpOpcua\Client\ClientBuilder` is the entry point for every
+configuration knob. Build it, set what you need, call `connect()`. The
+returned `Client` is frozen — to change parameters, build a new one.
+
+<!-- @code-block language="php" label="canonical shape" -->
+```php
+use PhpOpcua\Client\ClientBuilder;
+
+$client = ClientBuilder::create()
+    ->setSecurityPolicy(SecurityPolicy::Basic256Sha256)
+    ->setSecurityMode(SecurityMode::SignAndEncrypt)
+    ->setClientCertificate('/etc/opcua/client.pem', '/etc/opcua/client.key')
+    ->setUserCredentials('integrations', getenv('OPCUA_PASSWORD'))
+    ->setTrustStore(new FileTrustStore('/var/lib/opcua/trust'))
+    ->setTrustPolicy(TrustPolicy::FingerprintAndExpiry)
+    ->setLogger($logger)
+    ->setEventDispatcher($dispatcher)
+    ->setTimeout(10.0)
+    ->setAutoRetry(3)
+    ->connect('opc.tcp://plc.local:4840');
+```
+<!-- @endcode-block -->
+
+<!-- @divider eyebrow="Construction" -->
+<!-- @enddivider -->
+
+<!-- @method name="ClientBuilder::create(): self" returns="self" visibility="public static" -->
+
+Canonical entry. Equivalent to `new ClientBuilder()` but reads like
+the rest of the fluent chain.
+
+<!-- @divider eyebrow="Transport — security & authentication" -->
+<!-- @enddivider -->
+
+<!-- @method name="setSecurityPolicy(SecurityPolicy \$policy): self" returns="self" visibility="public" -->
+<!-- @method name="setSecurityMode(SecurityMode \$mode): self" returns="self" visibility="public" -->
+<!-- @method name="setClientCertificate(string \$certPath, string \$keyPath, ?string \$caCertPath = null): self" returns="self" visibility="public" -->
+<!-- @method name="setUserCredentials(string \$username, string \$password): self" returns="self" visibility="public" -->
+<!-- @method name="setUserCertificate(string \$certPath, string \$keyPath): self" returns="self" visibility="public" -->
+
+See [Security · Policies](../security/policies.md) and [Security ·
+Authentication](../security/authentication.md).
+
+<!-- @divider eyebrow="Trust store" -->
+<!-- @enddivider -->
+
+<!-- @method name="setTrustStore(?TrustStoreInterface \$trustStore): self" returns="self" visibility="public" -->
+<!-- @method name="setTrustPolicy(?TrustPolicy \$policy): self" returns="self" visibility="public" -->
+<!-- @method name="autoAccept(bool \$enabled = true, bool \$force = false): self" returns="self" visibility="public" -->
+
+Defaults: no trust store, no trust policy (`null` = accept anything),
+auto-accept disabled. See [Security · Trust store](../security/trust-store.md).
+
+<!-- @divider eyebrow="Cache" -->
+<!-- @enddivider -->
+
+<!-- @method name="setCache(?CacheInterface \$cache): self" returns="self" visibility="public" -->
+<!-- @method name="setCacheCodec(?CacheCodecInterface \$codec): self" returns="self" visibility="public" -->
+<!-- @method name="setReadMetadataCache(bool \$enabled): self" returns="self" visibility="public" -->
+
+Defaults: `InMemoryCache(300)`, `WireCacheCodec` (no `unserialize()`),
+metadata cache off. See [Observability · Caching](../observability/caching.md)
+and [Security · Cache path hardening](../security/cache-path-hardening.md).
+
+<!-- @divider eyebrow="Network behaviour" -->
+<!-- @enddivider -->
+
+<!-- @method name="setTimeout(float \$timeout): self" returns="self" visibility="public" -->
+<!-- @method name="setAutoRetry(int \$maxRetries): self" returns="self" visibility="public" -->
+<!-- @method name="setBatchSize(int \$batchSize): self" returns="self" visibility="public" -->
+
+Defaults: timeout `5.0` s, retry `0`, batch size auto-detected from
+the server's `MaxNodesPerRead` / `MaxNodesPerWrite` operational limits.
+See [Connection · Timeouts and retry](../connection/timeouts-and-retry.md).
+
+<!-- @divider eyebrow="Browsing" -->
+<!-- @enddivider -->
+
+<!-- @method name="setDefaultBrowseMaxDepth(int \$maxDepth): self" returns="self" visibility="public" -->
+
+Default: `4`. Bounds `browseRecursive()` when called with
+`$maxDepth = null`. See [Operations · Browsing](../operations/browsing.md).
+
+<!-- @divider eyebrow="Reading & writing" -->
+<!-- @enddivider -->
+
+<!-- @method name="setAutoDetectWriteType(bool \$enabled): self" returns="self" visibility="public" -->
+<!-- @method name="loadGeneratedTypes(GeneratedTypeRegistrar \$registrar): self" returns="self" visibility="public" -->
+
+Defaults: write-type auto-detect on, no generated type registrar.
+`loadGeneratedTypes()` is the hook for code generated by external
+tooling that wants to pre-register codecs and enum mappings at build
+time. See [Operations · Writing values](../operations/writing-values.md)
+and [Extensibility · Type discovery](../extensibility/type-discovery.md).
+
+<!-- @divider eyebrow="Observability" -->
+<!-- @enddivider -->
+
+<!-- @method name="setLogger(LoggerInterface \$logger): self" returns="self" visibility="public" -->
+<!-- @method name="setEventDispatcher(EventDispatcherInterface \$dispatcher): self" returns="self" visibility="public" -->
+
+Defaults: `NullLogger`, `NullEventDispatcher`. Both are real, no-op
+implementations — zero overhead when not wired. See
+[Observability · Logging](../observability/logging.md) and
+[Observability · Events](../observability/events.md).
+
+<!-- @divider eyebrow="Modules" -->
+<!-- @enddivider -->
+
+<!-- @method name="addModule(ServiceModule \$module): static" returns="static" visibility="public" -->
+<!-- @method name="replaceModule(string \$moduleClass, ServiceModule \$replacement): static" returns="static" visibility="public" -->
+
+Defaults: the eight built-in modules (`ReadWriteModule`,
+`BrowseModule`, `SubscriptionModule`, `HistoryModule`,
+`NodeManagementModule`, `TranslateBrowsePathModule`,
+`ServerInfoModule`, `TypeDiscoveryModule`). See [Extensibility ·
+Modules](../extensibility/modules.md) and [Extensibility · Replacing
+modules](../extensibility/replacing-modules.md).
+
+<!-- @divider eyebrow="Extension object repository" -->
+<!-- @enddivider -->
+
+<!-- @method name="getExtensionObjectRepository(): ExtensionObjectRepository" returns="ExtensionObjectRepository" visibility="public" -->
+
+Returns the repository so codecs can be registered on it before
+`connect()`:
+
+<!-- @code-block language="php" label="register codec before connect" -->
+```php
+$builder = ClientBuilder::create();
+$builder->getExtensionObjectRepository()
+    ->register(NodeId::numeric(2, 5001), Vector3DCodec::class);
+$client = $builder->connect('opc.tcp://plc.local:4840');
+```
+<!-- @endcode-block -->
+
+The same repository is exposed on the resulting `Client`, so codecs
+can be added after connect too — but the cleaner pattern is to
+register up front.
+
+<!-- @divider eyebrow="Terminal call" -->
+<!-- @enddivider -->
+
+<!-- @method name="connect(string \$endpointUrl): Client" returns="Client" visibility="public" -->
+
+The only call that **leaves the builder**. Returns a `Client` in
+`ConnectionState::Connected`. After `connect()`, do not call any
+setter on the builder — the builder is no longer the source of truth.
+
+## Reading current configuration
+
+Symmetric `getX()` accessors exist for the configuration the
+`ClientKernelInterface` exposes — useful in module code, testing, and
+diagnostic logs. See [Client API · Configuration
+accessors](./client-api.md#section-configuration-accessors).
+
+## Builder lifecycle
+
+<!-- @code-block language="text" label="state model" -->
+```text
+new ClientBuilder()                ← all defaults applied
+   │
+   ├── setX() … setY() …            ← any order, any number of times
+   │
+   ▼
+connect($url)                     ← single terminal call
+   │
+   ▼
+Client (frozen configuration)
+```
+<!-- @endcode-block -->
+
+The builder is **not** designed to be reused across `connect()` calls.
+After a successful `connect()`, the next builder operation should be a
+new `ClientBuilder::create()` — re-using the same builder for a second
+connect is undefined behaviour.

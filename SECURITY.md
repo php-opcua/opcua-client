@@ -41,7 +41,7 @@ OPC UA is used in industrial environments where security matters. This library i
 
 ### Cache Path
 
-Since v4.3.0 the client never calls `unserialize()` on cache values. Cached entries are encoded via `Cache\CacheCodecInterface` (default `Cache\WireCacheCodec` — JSON gated by `Wire\WireTypeRegistry`); poisoned or unknown payloads are detected and discarded as cache misses. If your PSR-16 backend is writable by a less-trusted party (shared Redis, world-readable file cache, multi-tenant Memcached), this removes the object-injection surface that `unserialize()`-based storage would otherwise expose. See [doc/10-security.md](doc/10-security.md#cache-path-hardening) for upgrade notes and codec customisation.
+Since v4.3.0 the client never calls `unserialize()` on cache values. Cached entries are encoded via `Cache\CacheCodecInterface` (default `Cache\WireCacheCodec` — JSON gated by `Wire\WireTypeRegistry`); poisoned or unknown payloads are detected and discarded as cache misses. If your PSR-16 backend is writable by a less-trusted party (shared Redis, world-readable file cache, multi-tenant Memcached), this removes the object-injection surface that `unserialize()`-based storage would otherwise expose. See [docs/security/cache-path-hardening.md](docs/security/cache-path-hardening.md) for upgrade notes and codec customisation.
 
 ## Sharing Debug Logs and Reproducers
 

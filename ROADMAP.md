@@ -1,30 +1,5 @@
 # Roadmap
 
-> **Note:** The CLI tool has been extracted to a separate package: [`php-opcua/opcua-cli`](https://github.com/php-opcua/opcua-cli). CLI-related roadmap items are tracked there.
-
-## Next minor releases
-
-### NodeManagement Services
-
-All four items that historically kept `NodeManagementModule` out of the defaults are
-now resolved. The module is in `ClientBuilder::defaultModules()` again; integration
-coverage runs on every CI run against an `open62541 v1.4.8` server built with
-`UA_ENABLE_NODEMANAGEMENT=ON` (`.github/opcua-nodemanagement/Dockerfile`, wired into
-the `integration` workflow's PHP 8.5 matrix leg via `OPCUA_NODE_MANAGEMENT_ENDPOINT`).
-
-- [x] Stand up a reference server with working NodeManagement (open62541 `ci_server`).
-- [x] Remove the `->skip()` calls from `tests/Integration/NodeManagementTest.php` and
-      gate the tests on `OPCUA_NODE_MANAGEMENT_ENDPOINT` with `beforeEach`.
-- [x] Implement client-side `ServiceFault` detection (`Protocol\ServiceFault::throwIf`
-      invoked from `AbstractProtocolService::readResponseMetadata()` and from both
-      `SessionService` decoders with dedicated read paths).
-- [x] Re-enable `NodeManagementModule::class` in `ClientBuilder::defaultModules()`.
-      The builder does not probe the server at connect time — zero overhead for users
-      who never touch NodeManagement. Users targeting a server that does not implement
-      the service set (e.g. UA-.NETStandard) receive `ServiceUnsupportedException`
-      (subclass of `ServiceException`, `ServiceResult = 0x800B0000`) the first time
-      they call `addNodes()` / `deleteNodes()` / `addReferences()` / `deleteReferences()`.
-
 ### IDE helper stub generator
 
 - [ ] A `composer generate-ide-helper` command (or `vendor/bin/opcua-ide-helper`) that auto-generates `_ide_helper_opcua.php` from the registered modules via reflection. The stub file contains PHPDoc `@method` annotations for the `Client` class, covering both built-in and custom module methods. The file is not loaded at runtime — it is only consumed by the IDE for autocomplete and static analysis. Custom modules are included when the generator is re-run after adding them to the builder. The generated file should be added to `.gitignore`.
@@ -60,7 +35,7 @@ All readonly DTOs in `src/Types/` currently ship with **38 `@deprecated` getter 
 **Tasks:**
 
 - [ ] Remove all 38 deprecated getter methods from the 9 DTOs listed above.
-- [ ] Update `doc/08-types.md` and any doc block examples that still show the getter syntax.
+- [ ] Update `docs/types/overview.md` and any doc block examples that still show the getter syntax.
 - [ ] Update `llms-full.txt` if it references the getters.
 - [ ] CHANGELOG entry under "Removed" with a migration snippet.
 - [ ] Scan `tests/` for internal usages and convert (should be near-zero — most tests already use properties).
@@ -119,7 +94,7 @@ These policies use AES-128/256-GCM or ChaCha20-Poly1305 instead of AES-CBC + HMA
 ## Won't do (by design)
 
 ### BuiltinTypes as codecs
-The `ExtensionObjectCodec` system is intentionally limited to `ExtensionObject`. OPC UA `BuiltinType` values (Int32, String, Double, etc.) are protocol-level primitives with a fixed binary encoding — making them pluggable would add complexity without benefit. See the [design rationale](doc/12-extension-object-codecs.md#design-note-why-builtintypes-are-not-codecs).
+The `ExtensionObjectCodec` system is intentionally limited to `ExtensionObject`. OPC UA `BuiltinType` values (Int32, String, Double, etc.) are protocol-level primitives with a fixed binary encoding — making them pluggable would add complexity without benefit. See the [design rationale](docs/extensibility/extension-object-codecs.md).
 
 ### Browse ResultMask
 The OPC UA `ResultMask` controls which fields of `ReferenceDescription` are returned in browse results (ReferenceType, IsForward, NodeClass, BrowseName, DisplayName, TypeDefinition). Exposing this would require making most `ReferenceDescription` properties nullable, forcing null-checks on every consumer for a marginal bandwidth saving. The default (all fields) is what 99% of use cases need, and the few bytes saved per reference are irrelevant in typical PHP deployment scenarios (local/LAN connections). No mainstream OPC UA client library (node-opcua, opcua-asyncio) exposes this as a public parameter either.
