@@ -44,7 +44,7 @@ All of this with zero external dependencies beyond `ext-openssl`, and full suppo
 >
 > The session manager is a **separate package by design** — it runs as a daemon process using ReactPHP and Unix sockets, which would break this library's zero-dependency, cross-platform philosophy if bundled here. See the [Ecosystem](#ecosystem) section for details.
 
-<sup>*</sup> **ECC note:** The 4 ECC policies are implemented per OPC UA 1.05 spec but should be considered **experimental**. No commercial OPC UA server vendor has released devices with ECC endpoints yet — this is an ecosystem-wide gap. ECC support has been developed and tested exclusively against [UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) (the OPC Foundation reference implementation). The implementation follows the 1.05.3 specification and is aligned with 1.05.4 regarding `ReceiverCertificateThumbprint`, HKDF salt encoding, and `LegacySequenceNumbers = FALSE` for ECC (sequence numbers start at 0 and wrap at `UInt32.MaxValue`; landed in v4.3.0). One ECC-specific change from 1.05.4 (per-message IV derivation) is not yet implemented — it is coupled to the future AEAD policy variants. See the [ECC 1.05.4 Compliance](ROADMAP.md#ecc-1054-compliance) section in the roadmap for a detailed analysis. For production deployments, use the RSA policies. If you ever manage to connect this library to a real industrial device with ECC OPC UA, let us know — we owe you a coffee :) See the [Security documentation](doc/10-security.md) for details.
+<sup>*</sup> **ECC note:** The 4 ECC policies are implemented per OPC UA 1.05 spec but should be considered **experimental**. No commercial OPC UA server vendor has released devices with ECC endpoints yet — this is an ecosystem-wide gap. ECC support has been developed and tested exclusively against [UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard) (the OPC Foundation reference implementation). The implementation follows the 1.05.3 specification and is aligned with 1.05.4 regarding `ReceiverCertificateThumbprint`, HKDF salt encoding, and `LegacySequenceNumbers = FALSE` for ECC (sequence numbers start at 0 and wrap at `UInt32.MaxValue`; landed in v4.3.0). One ECC-specific change from 1.05.4 (per-message IV derivation) is not yet implemented — it is coupled to the future AEAD policy variants. See the [ECC 1.05.4 Compliance](ROADMAP.md#ecc-1054-compliance) section in the roadmap for a detailed analysis. For production deployments, use the RSA policies. If you ever manage to connect this library to a real industrial device with ECC OPC UA, let us know — we owe you a coffee :) See the [Security documentation](docs/security/overview.md) for details.
 
 <table>
 <tr>
@@ -54,7 +54,7 @@ All of this with zero external dependencies beyond `ext-openssl`, and full suppo
 
 This library is integration-tested against **[UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard)** — the **reference implementation** maintained by the OPC Foundation, the organization that defines the OPC UA specification. This is the same stack used by major industrial vendors to certify their products.
 
-1300+ tests (1040+ unit, 250+ integration) run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec — with 99%+ unit test code coverage. Unit tests run on **Linux, macOS, and Windows** across PHP 8.2–8.5. NodeManagement integration tests run against an additional `open62541` server (UA-.NETStandard does not implement that service set) — see [testing docs](doc/13-testing.md#nodemanagement-integration-tests).
+1300+ tests (1040+ unit, 250+ integration) run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec — with 99%+ unit test code coverage. Unit tests run on **Linux, macOS, and Windows** across PHP 8.2–8.5. NodeManagement integration tests run against an additional `open62541` server (UA-.NETStandard does not implement that service set) — see [testing docs](docs/testing/integration.md).
 
 **This library is already used in production with real industrial equipment** in factory automation and process control environments.
 
@@ -229,7 +229,7 @@ echo $results[0]->addedNodeId;                     // ns=2;s=MyVariable
 $client->deleteNodes([['nodeId' => 'ns=2;s=MyVariable']]);
 ```
 
-Supports all 8 node classes. See [Node Management documentation](doc/16-node-management.md) for adding references, class-specific attributes, and error handling.
+Supports all 8 node classes. See [Node Management documentation](docs/operations/managing-nodes.md) for adding references, class-specific attributes, and error handling.
 
 ### Connect with full security
 
@@ -328,7 +328,7 @@ class HandleDataChange {
 }
 ```
 
-47 granular events covering connection, session, subscription, data change, alarms, read/write, browse, cache, and retry. Zero overhead with the default `NullEventDispatcher`. See [Events documentation](doc/14-events.md) for the full list.
+47 granular events covering connection, session, subscription, data change, alarms, read/write, browse, cache, and retry. Zero overhead with the default `NullEventDispatcher`. See [Events documentation](docs/observability/events.md) for the full list.
 
 ### Monitor alarms in real time
 
@@ -447,7 +447,7 @@ $client->hasMethod('read');                 // true
 $client->hasModule(ReadWriteModule::class); // true
 ```
 
-The client ships with 8 built-in modules (ReadWrite, Browse, Subscription, History, NodeManagement, TranslateBrowsePath, ServerInfo, TypeDiscovery). Add your own or swap built-ins with `addModule()` and `replaceModule()`. See [Architecture](doc/11-architecture.md#module-system) for details.
+The client ships with 8 built-in modules (ReadWrite, Browse, Subscription, History, NodeManagement, TranslateBrowsePath, ServerInfo, TypeDiscovery). Add your own or swap built-ins with `addModule()` and `replaceModule()`. See [Modules](docs/extensibility/modules.md) for details.
 
 ### Use pre-built OPC UA companion types
 
@@ -528,25 +528,20 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 
 ## Documentation
 
-| # | Document | Covers |
-|---|----------|--------|
-| 01 | [Introduction](doc/01-introduction.md) | Overview, requirements, architecture, quick start |
-| 02 | [Connection & Configuration](doc/02-connection.md) | Connecting, security, authentication, timeout, retry |
-| 03 | [Browsing](doc/03-browsing.md) | Address space navigation, recursive browse, path resolution |
-| 04 | [Reading & Writing](doc/04-reading-writing.md) | Read/write, multi ops, batching, data types |
-| 05 | [Method Call](doc/05-method-call.md) | Invoking methods, arguments, results |
-| 06 | [Subscriptions](doc/06-subscriptions.md) | Subscriptions, monitored items, events, publish loop |
-| 07 | [History Read](doc/07-history-read.md) | Raw, processed, and at-time historical queries |
-| 08 | [Types Reference](doc/08-types.md) | All types, enums, DTOs, and constants |
-| 09 | [Error Handling](doc/09-error-handling.md) | Exception hierarchy, error patterns |
-| 10 | [Security](doc/10-security.md) | Security policies, certificates, crypto internals |
-| 11 | [Architecture](doc/11-architecture.md) | Project structure, layers, protocol flow |
-| 12 | [ExtensionObject Codecs](doc/12-extension-object-codecs.md) | Custom type decoding, codec interface, repository API |
-| 13 | [Testing](doc/13-testing.md) | MockClient, DataValue factories, call tracking, test examples |
-| 14 | [Events](doc/14-events.md) | PSR-14 event system, 47 events, alarm deduction, Laravel integration, examples |
-| 15 | [Trust Store](doc/15-trust-store.md) | Server certificate trust management, policies, TOFU |
-| 16 | [Node Management](doc/16-node-management.md) | Add/delete nodes and references at runtime |
-| 17 | [Module System](doc/17-module-system.md) | Kernel architecture, built-in modules, custom modules, extending the client |
+Full documentation is available in [`docs/`](docs/index.md). Highlights:
+
+| Section | Covers |
+|---------|--------|
+| **Getting started** — [Overview](docs/overview.md) · [Installation](docs/getting-started/installation.md) · [Quick start](docs/getting-started/quick-start.md) · [Thinking in OPC UA](docs/getting-started/thinking-in-opc-ua.md) | Concepts, install, first connection |
+| **Connection** — [Endpoints & discovery](docs/connection/endpoints-and-discovery.md) · [Opening & closing](docs/connection/opening-and-closing.md) · [Timeouts & retry](docs/connection/timeouts-and-retry.md) | Connection lifecycle, discovery, retry |
+| **Operations** — [Reading](docs/operations/reading-attributes.md) · [Writing](docs/operations/writing-values.md) · [Browsing](docs/operations/browsing.md) · [Resolving paths](docs/operations/resolving-paths.md) · [Methods](docs/operations/calling-methods.md) · [Subscriptions](docs/operations/subscriptions.md) · [Monitored items](docs/operations/monitored-items.md) · [History](docs/operations/history-reads.md) · [Managing nodes](docs/operations/managing-nodes.md) | Read/write, browse, subscribe, history, node management |
+| **Security** — [Overview](docs/security/overview.md) · [Policies](docs/security/policies.md) · [Certificates](docs/security/certificates.md) · [Authentication](docs/security/authentication.md) · [Trust store](docs/security/trust-store.md) · [Cache hardening](docs/security/cache-path-hardening.md) | Security policies, certs, trust, cache hardening |
+| **Types** — [Overview](docs/types/overview.md) · [NodeId](docs/types/node-id.md) · [DataValue & Variant](docs/types/data-value-and-variant.md) · [Extension objects](docs/types/extension-objects.md) · [Built-in types](docs/types/built-in-types.md) | Type system reference |
+| **Extensibility** — [Modules](docs/extensibility/modules.md) · [Replacing modules](docs/extensibility/replacing-modules.md) · [Extension object codecs](docs/extensibility/extension-object-codecs.md) · [Type discovery](docs/extensibility/type-discovery.md) · [Wire serialization](docs/extensibility/wire-serialization.md) | Modules, codecs, custom types |
+| **Observability** — [Logging](docs/observability/logging.md) · [Events](docs/observability/events.md) · [Event reference](docs/observability/event-reference.md) · [Caching](docs/observability/caching.md) | Logging, PSR-14 events, caching |
+| **Testing** — [MockClient](docs/testing/mock-client.md) · [Handlers](docs/testing/handlers.md) · [Integration](docs/testing/integration.md) | Test fixtures and integration suites |
+| **Reference** — [Client API](docs/reference/client-api.md) · [Builder API](docs/reference/builder-api.md) · [Exceptions](docs/reference/exceptions.md) · [Enums](docs/reference/enums.md) | Public API surface |
+| **Recipes** — [Upgrading to v4.3](docs/recipes/upgrading-to-v4.3.md) · [Disconnection recovery](docs/recipes/disconnection-recovery.md) · [Unsupported services](docs/recipes/service-unsupported.md) · [Recursive browse](docs/recipes/browsing-recursively.md) · [Subscribing to data changes](docs/recipes/subscribing-to-data-changes.md) · [Typed arrays](docs/recipes/writing-typed-arrays.md) · [Server capabilities](docs/recipes/detecting-server-capabilities.md) | Task-oriented walkthroughs |
 
 ## Testing
 

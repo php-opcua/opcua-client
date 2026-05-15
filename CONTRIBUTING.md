@@ -175,7 +175,7 @@ composer format:check
 - Every public method must have a PHPDoc block with `@param`, `@return`, `@throws`, and `@see` where applicable
 - `@return` and `@param` must be on their own line, not inline with the description
 - **Do not add comments inside function bodies.** No `//`, no `/* */`, no section headers. If the code needs a comment to be understood, the method is too complex — split it into smaller, well-named methods instead. The method name and its PHPDoc should be enough to understand what it does.
-- Update relevant files in `doc/` for new features
+- Update relevant files in `docs/` for new features
 - Update `CHANGELOG.md` with your changes
 - Update `README.md` features list if adding a major feature
 - Update `llms.txt` and `llms-full.txt` if the change affects the public API or architecture
