@@ -1,5 +1,22 @@
 # Changelog
 
+## [v4.4.0] - TBD
+
+Minor release. New `AggregateModule` for client-side aggregate computation.
+
+### Added
+
+- **`AggregateModule`** — built-in module (registered by default) that computes
+  OPC UA aggregate functions client-side from a raw DataValue buffer. Exposed
+  via `Client::__call()` (not in `OpcUaClientInterface`).
+- Supported functions: `Interpolate`, `Minimum`, `Maximum`, `Average`, `Count`.
+- Two methods:
+  - `aggregate(DataValue[], start, end, intervalMs, AggregateFunction, ?AggregateOptions)`
+  - `historyAggregate(NodeId|string, start, end, intervalMs, AggregateFunction, ?AggregateOptions)` — fetch raw history + aggregate.
+- `AggregateOptions` DTO: `stepped`, `treatUncertainAsBad`, `useSlopedExtrapolation`, `percentDataBad/Good`.
+- `StatusCode` extended with `UncertainDataSubNormal`, `BadAggregateInvalidInputs/NotSupported/ConfigurationRejected`, Historian InfoBits (`Calculated`, `Interpolated`, `Partial`, `ExtraData`, `MultiValue`) and `withDataValueInfoBits()` helper.
+- 32 unit tests + 6 integration tests against UA-.NETStandard.
+
 ## [v4.3.2] - 2026-05-15
 
 Patch release. Closes the remaining `BadIdentityTokenInvalid (0x80200000)`

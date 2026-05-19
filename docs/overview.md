@@ -47,10 +47,10 @@ daemon.
 ```text
 ClientBuilder       fluent configuration entry point
    │
-   └── Client       proxy to 8 self-contained service modules:
+   └── Client       proxy to 9 self-contained service modules:
           ReadWrite · Browse · Subscription · History ·
           NodeManagement · TranslateBrowsePath ·
-          ServerInfo · TypeDiscovery
+          ServerInfo · TypeDiscovery · Aggregate
 
 SecureChannel       message-level cryptography
 Transport           TCP socket I/O

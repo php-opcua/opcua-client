@@ -13,6 +13,7 @@ use PhpOpcua\Client\ClientBuilder\ManagesReadWriteConfigTrait;
 use PhpOpcua\Client\ClientBuilder\ManagesTimeoutTrait;
 use PhpOpcua\Client\ClientBuilder\ManagesTrustStoreTrait;
 use PhpOpcua\Client\Event\NullEventDispatcher;
+use PhpOpcua\Client\Module\Aggregate\AggregateModule;
 use PhpOpcua\Client\Module\Browse\BrowseModule;
 use PhpOpcua\Client\Module\History\HistoryModule;
 use PhpOpcua\Client\Module\ModuleRegistry;
@@ -161,6 +162,7 @@ class ClientBuilder implements ClientBuilderInterface
             TranslateBrowsePathModule::class,
             ServerInfoModule::class,
             TypeDiscoveryModule::class,
+            AggregateModule::class,
         ];
     }
 

@@ -8,6 +8,27 @@
 
 - [ ] Static analysis with `phpstan/phpstan` as dev dependency, CI integration, and `composer analyse` script. Target level 5 first; raise in subsequent releases.
 
+### Additional aggregate functions
+
+`AggregateModule` currently implements `Interpolate`, `Minimum`, `Maximum`, `Average`, `Count`. Remaining Part 13 aggregates, ordered by perceived usefulness. Each link points to the canonical OPC UA 1.05 definition.
+
+- [ ] [`TimeAverage`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.6) / [`TimeAverage2`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.7) — time-weighted average (most users actually expect this from `Average`)
+- [ ] [`Range`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.14) / [`Range2`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.19) — `max − min`
+- [ ] [`Delta`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.27) / [`DeltaBounds`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.30) — difference between first and last (or bounds)
+- [ ] [`DurationGood`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.31) / [`DurationBad`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.32) / [`PercentGood`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.33) / [`PercentBad`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.34) — coherent group on quality coverage
+- [ ] [`MinimumActualTime`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.12) / [`MaximumActualTime`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.13) / [`Minimum2`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.15) / [`Maximum2`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.16) / [`MinimumActualTime2`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.17) / [`MaximumActualTime2`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.18) — Min/Max variants that report the raw sample's timestamp or include bounding values
+- [ ] [`Total`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.8) / [`Total2`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.9) — integral (area sum) — useful for energy/flow
+- [ ] [`StandardDeviationSample`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.37) / [`StandardDeviationPopulation`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.39) / [`VarianceSample`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.38) / [`VariancePopulation`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.40)
+- [ ] [`Start`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.25) / [`End`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.26) / [`StartBound`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.28) / [`EndBound`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.29) — first/last (or interpolated bounds) of the interval
+- [ ] [`NumberOfTransitions`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.24) — value changes (discrete signals)
+- [ ] [`DurationInStateZero`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.22) / [`DurationInStateNonZero`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.23) — time spent at 0 / ≠0 (boolean signals)
+- [ ] [`AnnotationCount`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.20) — number of annotations in the interval (requires annotation history)
+- [ ] [`WorstQuality`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.35) / [`WorstQuality2`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.36) — worst StatusCode observed
+
+See the [aggregate overview (Part 13 §5.4.3)](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3) for general semantics (StatusCode calculation, Bounding Values, Stepped vs Sloped, percent-data thresholds). The "2" suffix denotes the v1.03+ variants that include StartBound/EndBound in the candidate set and propagate quality more rigorously than the legacy v1 forms.
+
+Each addition is mechanical: new `Calculator/` class + new enum case in `AggregateFunction` + entry in `AggregateModule::$calculators`. No impact on the rest of the codebase.
+
 ---
 
 ## v5.0.0 (breaking)

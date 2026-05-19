@@ -7,8 +7,8 @@ see_also:
   - { href: '../recipes/service-unsupported.md', meta: '4 min' }
   - { href: 'https://opcfoundation.org/specs/part11', meta: 'external', label: 'OPC UA Part 11 — Historical Access' }
 
-prev: { label: 'Monitored items', href: './monitored-items.md' }
-next: { label: 'Managing nodes',  href: './managing-nodes.md' }
+prev: { label: 'Monitored items',         href: './monitored-items.md' }
+next: { label: 'Client-side aggregates',  href: './client-side-aggregates.md' }
 ---
 
 # History reads
@@ -86,6 +86,15 @@ done — the returned array is the full set.
 Aggregated reads bucket history into fixed-width intervals and apply a
 **standard OPC UA aggregate** to each bucket — average, min, max,
 total, count, time-weighted variants, and so on.
+
+<!-- @callout variant="info" -->
+When the server doesn't implement `HistoryRead Processed`
+(`Bad_HistoryOperationUnsupported`) or you already have raw samples
+in memory, use the **client-side** `AggregateModule` instead —
+`$client->historyAggregate(...)` fetches raw history + aggregates in
+one call, `$client->aggregate(...)` runs against an in-memory buffer.
+See [Client-side aggregates](./client-side-aggregates.md).
+<!-- @endcallout -->
 
 <!-- @code-block language="php" label="hourly averages" -->
 ```php

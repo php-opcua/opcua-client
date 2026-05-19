@@ -21,11 +21,14 @@ Each module bundles three things:
   binary encoding
 - Module-local DTOs for the results
 
-The library ships **eight** modules in
+The library ships **nine** modules in
 `ClientBuilder::defaultModules()`: ReadWrite, Browse, Subscription,
 History, NodeManagement, TranslateBrowsePath, ServerInfo,
-TypeDiscovery. Together they cover the standard OPC UA service sets
-exposed on `OpcUaClientInterface`.
+TypeDiscovery, Aggregate (added in v4.4.0). The first eight cover
+the standard OPC UA service sets exposed on `OpcUaClientInterface`;
+`AggregateModule` adds client-side Part 13 aggregate computation via
+`Client::__call()` — see
+[Operations · Client-side aggregates](../operations/client-side-aggregates.md).
 
 Adding a custom module is how you extend that surface — for an OPC UA
 service set the library does not ship (Query, ProgramStateMachine,
@@ -231,6 +234,7 @@ that work:
 | `TranslateBrowsePathModule`   | `src/Module/TranslateBrowsePath/TranslateBrowsePathModule.php` |
 | `ServerInfoModule`            | `src/Module/ServerInfo/ServerInfoModule.php`      |
 | `TypeDiscoveryModule`         | `src/Module/TypeDiscovery/TypeDiscoveryModule.php` |
+| `AggregateModule`             | `src/Module/Aggregate/AggregateModule.php`        |
 
 The Browse module is a particularly readable starting point —
 non-trivial protocol encoding, sensible result paging, caching tied to

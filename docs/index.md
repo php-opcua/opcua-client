@@ -18,6 +18,7 @@
   - [Subscriptions](./operations/subscriptions.md)
   - [Monitored items](./operations/monitored-items.md)
   - [History reads](./operations/history-reads.md)
+  - [Client-side aggregates](./operations/client-side-aggregates.md)
   - [Managing nodes](./operations/managing-nodes.md)
 - Security
   - [Overview](./security/overview.md)

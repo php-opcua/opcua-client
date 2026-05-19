@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use PhpOpcua\Client\ClientBuilder;
+use PhpOpcua\Client\Module\Aggregate\AggregateModule;
 use PhpOpcua\Client\Module\Browse\BrowseModule;
 use PhpOpcua\Client\Module\History\HistoryModule;
 use PhpOpcua\Client\Module\ModuleRegistry;
@@ -40,7 +41,7 @@ class BuilderTestReplacementModule extends ServiceModule
 
 describe('ClientBuilder module configuration', function () {
 
-    it('registers all 8 default built-in modules', function () {
+    it('registers all 9 default built-in modules', function () {
         $builder = ClientBuilder::create();
 
         $ref = new ReflectionProperty(ClientBuilder::class, 'moduleRegistry');
@@ -56,13 +57,14 @@ describe('ClientBuilder module configuration', function () {
             TranslateBrowsePathModule::class,
             ServerInfoModule::class,
             TypeDiscoveryModule::class,
+            AggregateModule::class,
         ];
 
         foreach ($expectedModules as $moduleClass) {
             expect($registry->has($moduleClass))->toBeTrue("Expected module {$moduleClass} to be registered");
         }
 
-        expect($registry->getModuleClasses())->toHaveCount(8);
+        expect($registry->getModuleClasses())->toHaveCount(9);
     });
 
     it('addModule adds a custom module to the registry', function () {
@@ -78,7 +80,7 @@ describe('ClientBuilder module configuration', function () {
         $registry = $ref->getValue($builder);
 
         expect($registry->has(BuilderTestCustomModule::class))->toBeTrue();
-        expect($registry->getModuleClasses())->toHaveCount(9);
+        expect($registry->getModuleClasses())->toHaveCount(10);
     });
 
     it('replaceModule swaps a built-in module', function () {
@@ -95,7 +97,7 @@ describe('ClientBuilder module configuration', function () {
 
         expect($registry->has(ReadWriteModule::class))->toBeTrue();
         expect($registry->get(ReadWriteModule::class))->toBe($replacement);
-        expect($registry->getModuleClasses())->toHaveCount(8);
+        expect($registry->getModuleClasses())->toHaveCount(9);
     });
 
     it('addModule returns builder for fluent chaining', function () {

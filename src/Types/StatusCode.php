@@ -55,6 +55,26 @@ class StatusCode
 
     public const UncertainNoCommunicationLastUsableValue = 0x408F0000;
 
+    public const UncertainDataSubNormal = 0x40A30000;
+
+    public const BadAggregateInvalidInputs = 0x80D60000;
+
+    public const BadAggregateNotSupported = 0x80D80000;
+
+    public const BadAggregateConfigurationRejected = 0x80DA0000;
+
+    public const InfoTypeDataValue = 0x00000400;
+
+    public const HistorianCalculated = 0x00000001;
+
+    public const HistorianInterpolated = 0x00000002;
+
+    public const HistorianPartial = 0x00000004;
+
+    public const HistorianExtraData = 0x00000008;
+
+    public const HistorianMultiValue = 0x00000010;
+
     private const NAMES = [
         self::Good => 'Good',
         self::BadUnexpectedError => 'BadUnexpectedError',
@@ -79,6 +99,10 @@ class StatusCode
         self::BadMethodInvalid => 'BadMethodInvalid',
         self::BadArgumentsMissing => 'BadArgumentsMissing',
         self::UncertainNoCommunicationLastUsableValue => 'UncertainNoCommunicationLastUsableValue',
+        self::UncertainDataSubNormal => 'UncertainDataSubNormal',
+        self::BadAggregateInvalidInputs => 'BadAggregateInvalidInputs',
+        self::BadAggregateNotSupported => 'BadAggregateNotSupported',
+        self::BadAggregateConfigurationRejected => 'BadAggregateConfigurationRejected',
     ];
 
     /**
@@ -123,5 +147,21 @@ class StatusCode
     public static function getName(int $code): string
     {
         return self::NAMES[$code] ?? sprintf('0x%08X', $code);
+    }
+
+    /**
+     * Combine a severity status code with DataValue InfoBits (Part 4 §7.34.2).
+     *
+     * @param int $severityCode
+     * @param int $infoBits OR of HistorianCalculated, HistorianPartial, etc.
+     * @return int
+     */
+    public static function withDataValueInfoBits(int $severityCode, int $infoBits): int
+    {
+        if ($infoBits === 0) {
+            return $severityCode;
+        }
+
+        return ($severityCode | self::InfoTypeDataValue | ($infoBits & 0x3FF)) & 0xFFFFFFFF;
     }
 }
