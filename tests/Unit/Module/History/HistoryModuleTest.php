@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Module\History\HistoryModule;
 use PhpOpcua\Client\Module\History\HistoryReadService;
+use PhpOpcua\Client\Module\History\HistoryUpdateService;
 use PhpOpcua\Client\Protocol\SessionService;
 
 describe('HistoryModule', function () {
 
-    it('registers 3 methods', function () {
+    it('registers 12 methods', function () {
         $module = new HistoryModule();
 
         $registeredMethods = [];
@@ -32,10 +33,19 @@ describe('HistoryModule', function () {
             'historyReadRaw',
             'historyReadProcessed',
             'historyReadAtTime',
+            'historyInsertData',
+            'historyReplaceData',
+            'historyUpdateData',
+            'historyDeleteRawModified',
+            'historyDeleteAtTime',
+            'historyInsertEvent',
+            'historyReplaceEvent',
+            'historyUpdateEvent',
+            'historyDeleteEvent',
         ]);
     });
 
-    it('boots 1 protocol service', function () {
+    it('boots 2 protocol services', function () {
         $module = new HistoryModule();
         $session = new SessionService(1, 1);
 
@@ -43,8 +53,10 @@ describe('HistoryModule', function () {
 
         $ref = new ReflectionClass($module);
 
-        $prop = $ref->getProperty('historyReadService');
-        expect($prop->getValue($module))->toBeInstanceOf(HistoryReadService::class);
+        expect($ref->getProperty('historyReadService')->getValue($module))
+            ->toBeInstanceOf(HistoryReadService::class);
+        expect($ref->getProperty('historyUpdateService')->getValue($module))
+            ->toBeInstanceOf(HistoryUpdateService::class);
     });
 
     it('resets protocol services to null', function () {
@@ -56,8 +68,8 @@ describe('HistoryModule', function () {
 
         $ref = new ReflectionClass($module);
 
-        $prop = $ref->getProperty('historyReadService');
-        expect($prop->getValue($module))->toBeNull();
+        expect($ref->getProperty('historyReadService')->getValue($module))->toBeNull();
+        expect($ref->getProperty('historyUpdateService')->getValue($module))->toBeNull();
     });
 
     it('has no dependencies', function () {

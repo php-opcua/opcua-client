@@ -2,9 +2,9 @@
 
 ## [v4.4.0] - TBD
 
-Minor release. New `AggregateModule` for client-side aggregate computation.
+Minor release. New `AggregateModule` for client-side aggregate computation, and `HistoryModule` gains write access via the OPC UA HistoryUpdate service.
 
-### Added
+### Added — AggregateModule
 
 - **`AggregateModule`** — built-in module (registered by default) that computes
   OPC UA aggregate functions client-side from a raw DataValue buffer. Exposed
@@ -16,6 +16,31 @@ Minor release. New `AggregateModule` for client-side aggregate computation.
 - `AggregateOptions` DTO: `stepped`, `treatUncertainAsBad`, `useSlopedExtrapolation`, `percentDataBad/Good`.
 - `StatusCode` extended with `UncertainDataSubNormal`, `BadAggregateInvalidInputs/NotSupported/ConfigurationRejected`, Historian InfoBits (`Calculated`, `Interpolated`, `Partial`, `ExtraData`, `MultiValue`) and `withDataValueInfoBits()` helper.
 - 32 unit tests + 6 integration tests against UA-.NETStandard.
+
+### Added — HistoryUpdate
+
+- 9 new methods on `OpcUaClientInterface` / `Client` / `MockClient`, all delegating to `HistoryModule`:
+  - `historyInsertData()`, `historyReplaceData()`, `historyUpdateData()` (DataValue[] → int[] per-entry status)
+  - `historyDeleteRawModified()` (range → int overall status)
+  - `historyDeleteAtTime()` (timestamps → int[])
+  - `historyInsertEvent()`, `historyReplaceEvent()`, `historyUpdateEvent()` (selectFields + Variant[][] → int[])
+  - `historyDeleteEvent()` (eventIds → int[])
+- `PerformUpdateType` enum (Insert/Replace/Update/Remove, OPC UA Part 11 §6.9.2).
+- `HistoryUpdateResult` DTO (statusCode + per-operation status codes), WireSerializable.
+- `HistoryUpdateService` protocol service.
+- `ServiceTypeId::HISTORY_UPDATE_REQUEST = 700`.
+- 14 unit tests + 7 integration tests (5 Data ops with strict round-trip assertions against the new `open62541-historizing` server in `php-opcua/extra-test-suite` v1.2.0 — port 24842 — plus 2 protocol-level Event round trips).
+- `TestHelper::ENDPOINT_HISTORIZING` + `connectForHistorizing()` factory.
+
+### Added — Events (PSR-14)
+
+5 new event classes dispatched after the corresponding operations:
+
+- `HistoryDataUpdated(client, nodeId, PerformUpdateType, valueCount, operationResults)` — emitted by `historyInsertData/ReplaceData/UpdateData`.
+- `HistoryDataDeleted(client, nodeId, kind, statusCode, operationResults)` — emitted by `historyDeleteRawModified` (`kind='rawModified'`) and `historyDeleteAtTime` (`kind='atTime'`).
+- `HistoryEventUpdated(client, nodeId, PerformUpdateType, eventCount, operationResults)` — emitted by `historyInsertEvent/ReplaceEvent/UpdateEvent`.
+- `HistoryEventDeleted(client, nodeId, eventCount, operationResults)` — emitted by `historyDeleteEvent`.
+- `AggregateComputed(client, AggregateFunction, rawInputCount, intervalCount, ?nodeId)` — emitted by `aggregate()` and `historyAggregate()`.
 
 ## [v4.3.2] - 2026-05-15
 

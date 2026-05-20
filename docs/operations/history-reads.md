@@ -7,8 +7,8 @@ see_also:
   - { href: '../recipes/service-unsupported.md', meta: '4 min' }
   - { href: 'https://opcfoundation.org/specs/part11', meta: 'external', label: 'OPC UA Part 11 — Historical Access' }
 
-prev: { label: 'Monitored items',         href: './monitored-items.md' }
-next: { label: 'Client-side aggregates',  href: './client-side-aggregates.md' }
+prev: { label: 'Monitored items',  href: './monitored-items.md' }
+next: { label: 'History writes',   href: './history-writes.md' }
 ---
 
 # History reads

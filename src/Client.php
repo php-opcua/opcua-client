@@ -992,6 +992,104 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
     }
 
     /**
+     * @param NodeId|string $nodeId
+     * @param DataValue[] $values
+     * @return int[]
+     */
+    public function historyInsertData(NodeId|string $nodeId, array $values): array
+    {
+        return ($this->methodHandlers['historyInsertData'])($nodeId, $values);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param DataValue[] $values
+     * @return int[]
+     */
+    public function historyReplaceData(NodeId|string $nodeId, array $values): array
+    {
+        return ($this->methodHandlers['historyReplaceData'])($nodeId, $values);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param DataValue[] $values
+     * @return int[]
+     */
+    public function historyUpdateData(NodeId|string $nodeId, array $values): array
+    {
+        return ($this->methodHandlers['historyUpdateData'])($nodeId, $values);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param DateTimeImmutable $startTime
+     * @param DateTimeImmutable $endTime
+     * @param bool $isDeleteModified
+     */
+    public function historyDeleteRawModified(
+        NodeId|string $nodeId,
+        DateTimeImmutable $startTime,
+        DateTimeImmutable $endTime,
+        bool $isDeleteModified = false,
+    ): int {
+        return ($this->methodHandlers['historyDeleteRawModified'])($nodeId, $startTime, $endTime, $isDeleteModified);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param DateTimeImmutable[] $timestamps
+     * @return int[]
+     */
+    public function historyDeleteAtTime(NodeId|string $nodeId, array $timestamps): array
+    {
+        return ($this->methodHandlers['historyDeleteAtTime'])($nodeId, $timestamps);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param string[] $selectFields
+     * @param array<int, Variant[]> $eventData
+     * @return int[]
+     */
+    public function historyInsertEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array
+    {
+        return ($this->methodHandlers['historyInsertEvent'])($nodeId, $selectFields, $eventData);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param string[] $selectFields
+     * @param array<int, Variant[]> $eventData
+     * @return int[]
+     */
+    public function historyReplaceEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array
+    {
+        return ($this->methodHandlers['historyReplaceEvent'])($nodeId, $selectFields, $eventData);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param string[] $selectFields
+     * @param array<int, Variant[]> $eventData
+     * @return int[]
+     */
+    public function historyUpdateEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array
+    {
+        return ($this->methodHandlers['historyUpdateEvent'])($nodeId, $selectFields, $eventData);
+    }
+
+    /**
+     * @param NodeId|string $nodeId
+     * @param string[] $eventIds
+     * @return int[]
+     */
+    public function historyDeleteEvent(NodeId|string $nodeId, array $eventIds): array
+    {
+        return ($this->methodHandlers['historyDeleteEvent'])($nodeId, $eventIds);
+    }
+
+    /**
      * @param array<array{parentNodeId: NodeId|string, referenceTypeId: NodeId|string, requestedNewNodeId: NodeId|string, browseName: QualifiedName, nodeClass: NodeClass, typeDefinition: NodeId|string, displayName?: ?string, description?: ?string, writeMask?: int, userWriteMask?: int}> $nodesToAdd
      * @return AddNodesResult[]
      */

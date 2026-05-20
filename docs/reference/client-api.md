@@ -112,7 +112,7 @@ Per-attribute and per-event observation.
 
 See [Operations · Monitored items](../operations/monitored-items.md).
 
-<!-- @divider eyebrow="History" -->
+<!-- @divider eyebrow="History — read" -->
 Read stored historical data. Optional service set.
 <!-- @enddivider -->
 
@@ -121,6 +121,24 @@ Read stored historical data. Optional service set.
 <!-- @method name="historyReadAtTime(NodeId|string \$nodeId, array \$timestamps): DataValue[]" returns="DataValue[]" visibility="public" -->
 
 See [Operations · History reads](../operations/history-reads.md).
+
+<!-- @divider eyebrow="History — write" -->
+Insert, replace, update, and delete on raw values and on historical
+events. Optional service set; many servers do not implement it.
+Added in v4.4.0.
+<!-- @enddivider -->
+
+<!-- @method name="historyInsertData(NodeId|string \$nodeId, DataValue[] \$values): int[]" returns="int[] (per-entry StatusCode)" visibility="public" -->
+<!-- @method name="historyReplaceData(NodeId|string \$nodeId, DataValue[] \$values): int[]" returns="int[] (per-entry StatusCode)" visibility="public" -->
+<!-- @method name="historyUpdateData(NodeId|string \$nodeId, DataValue[] \$values): int[]" returns="int[] (per-entry StatusCode)" visibility="public" -->
+<!-- @method name="historyDeleteRawModified(NodeId|string \$nodeId, DateTimeImmutable \$startTime, DateTimeImmutable \$endTime, bool \$isDeleteModified = false): int" returns="int (overall StatusCode)" visibility="public" -->
+<!-- @method name="historyDeleteAtTime(NodeId|string \$nodeId, DateTimeImmutable[] \$timestamps): int[]" returns="int[] (per-timestamp StatusCode)" visibility="public" -->
+<!-- @method name="historyInsertEvent(NodeId|string \$nodeId, string[] \$selectFields, array \$eventData): int[]" returns="int[] (per-event StatusCode)" visibility="public" -->
+<!-- @method name="historyReplaceEvent(NodeId|string \$nodeId, string[] \$selectFields, array \$eventData): int[]" returns="int[] (per-event StatusCode)" visibility="public" -->
+<!-- @method name="historyUpdateEvent(NodeId|string \$nodeId, string[] \$selectFields, array \$eventData): int[]" returns="int[] (per-event StatusCode)" visibility="public" -->
+<!-- @method name="historyDeleteEvent(NodeId|string \$nodeId, string[] \$eventIds): int[]" returns="int[] (per-EventId StatusCode)" visibility="public" -->
+
+See [Operations · History writes](../operations/history-writes.md).
 
 <!-- @divider eyebrow="Node management" -->
 Mutate the address space. Optional service set.

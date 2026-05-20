@@ -25,13 +25,19 @@
 - [ ] [`AnnotationCount`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.20) — number of annotations in the interval (requires annotation history)
 - [ ] [`WorstQuality`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.35) / [`WorstQuality2`](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3.36) — worst StatusCode observed
 
-See the [aggregate overview (Part 13 §5.4.3)](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3) for general semantics (StatusCode calculation, Bounding Values, Stepped vs Sloped, percent-data thresholds). The "2" suffix denotes the v1.03+ variants that include StartBound/EndBound in the candidate set and propagate quality more rigorously than the legacy v1 forms.
+See the [aggregate overview (Part 13 5.4.3)](https://reference.opcfoundation.org/Core/Part13/v105/docs/5.4.3) for general semantics (StatusCode calculation, Bounding Values, Stepped vs Sloped, percent-data thresholds). The "2" suffix denotes the v1.03+ variants that include StartBound/EndBound in the candidate set and propagate quality more rigorously than the legacy v1 forms.
 
 Each addition is mechanical: new `Calculator/` class + new enum case in `AggregateFunction` + entry in `AggregateModule::$calculators`. No impact on the rest of the codebase.
 
+### HistoryUpdate: Annotation operations
+
+`HistoryModule` currently implements the Data and Event subtypes of [HistoryUpdate (Part 11 §6.9)](https://reference.opcfoundation.org/Core/Part11/v105/docs/6.9). The remaining subtype is:
+
+- [ ] [`UpdateStructureDataDetails`](https://reference.opcfoundation.org/Core/Part11/v105/docs/6.9.4) — Insert / Replace / Update / Remove for structured history entries (Annotations are the canonical use case). Servers that expose `HasAnnotations` references can persist text annotations attached to a specific timestamp on a Variable's history.
+
 ---
 
-## v5.0.0 (breaking)
+## v5.0.0 (breaking) Estimate 1Q January 2027
 
 ### Remove deprecated accessor methods on Types DTOs
 

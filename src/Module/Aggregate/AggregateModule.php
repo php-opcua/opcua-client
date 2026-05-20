@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpOpcua\Client\Module\Aggregate;
 
 use DateTimeImmutable;
+use PhpOpcua\Client\Event\AggregateComputed;
 use PhpOpcua\Client\Module\Aggregate\Calculator\AverageCalculator;
 use PhpOpcua\Client\Module\Aggregate\Calculator\CountCalculator;
 use PhpOpcua\Client\Module\Aggregate\Calculator\InterpolateCalculator;
@@ -76,17 +77,7 @@ class AggregateModule extends ServiceModule
         AggregateFunction $function,
         ?AggregateOptions $options = null,
     ): array {
-        $options ??= AggregateOptions::default();
-        $calculator = $this->calculators[$function->value];
-
-        $intervals = Interval::sliceSequence($startTime, $endTime, $processingIntervalMs, $rawValues);
-
-        $out = [];
-        foreach ($intervals as $interval) {
-            $out[] = $calculator->compute($interval, $options, $rawValues);
-        }
-
-        return $out;
+        return $this->doAggregate(null, $rawValues, $startTime, $endTime, $processingIntervalMs, $function, $options);
     }
 
     /**
@@ -111,8 +102,50 @@ class AggregateModule extends ServiceModule
         AggregateFunction $function,
         ?AggregateOptions $options = null,
     ): array {
+        $resolved = $nodeId instanceof NodeId
+            ? $nodeId
+            : (isset($this->kernel) ? $this->kernel->resolveNodeId($nodeId) : null);
         $raw = $this->client->historyReadRaw($nodeId, $startTime, $endTime, 0, true);
 
-        return $this->aggregate($raw, $startTime, $endTime, $processingIntervalMs, $function, $options);
+        return $this->doAggregate($resolved, $raw, $startTime, $endTime, $processingIntervalMs, $function, $options);
+    }
+
+    /**
+     * @param DataValue[] $rawValues
+     * @return DataValue[]
+     */
+    private function doAggregate(
+        ?NodeId $nodeId,
+        array $rawValues,
+        DateTimeImmutable $startTime,
+        DateTimeImmutable $endTime,
+        float $processingIntervalMs,
+        AggregateFunction $function,
+        ?AggregateOptions $options,
+    ): array {
+        $options ??= AggregateOptions::default();
+        $calculator = $this->calculators[$function->value];
+
+        $intervals = Interval::sliceSequence($startTime, $endTime, $processingIntervalMs, $rawValues);
+
+        $out = [];
+        foreach ($intervals as $interval) {
+            $out[] = $calculator->compute($interval, $options, $rawValues);
+        }
+
+        if (isset($this->kernel)) {
+            $client = $this->client;
+            $rawCount = count($rawValues);
+            $intervalCount = count($intervals);
+            $this->kernel->dispatch(fn () => new AggregateComputed(
+                $client,
+                $function,
+                $rawCount,
+                $intervalCount,
+                $nodeId,
+            ));
+        }
+
+        return $out;
     }
 }

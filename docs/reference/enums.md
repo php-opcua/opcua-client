@@ -136,6 +136,46 @@ store](../security/trust-store.md).
 | `FingerprintAndExpiry` | `fingerprint+expiry` | Fingerprint must be in the store **and** the cert must be within `notBefore`/`notAfter`. |
 | `Full`                 | `full`               | X.509 chain validation against a CA bundle in the store, including expiry. |
 
+<!-- @divider eyebrow="PerformUpdateType" -->
+Server-side semantics for a HistoryUpdate Data operation (Part 11
+§6.9.2). Surfaces on `HistoryDataUpdated` / `HistoryEventUpdated`
+events so a listener can tell which method produced the change.
+Lives at `PhpOpcua\Client\Module\History\PerformUpdateType`. Added
+in v4.4.0.
+<!-- @enddivider -->
+
+| Case      | Value | Behaviour                                                |
+| --------- | ----- | -------------------------------------------------------- |
+| `Insert`  | `1`   | Fail per-entry if a value already exists at the timestamp |
+| `Replace` | `2`   | Fail per-entry if no value exists at the timestamp        |
+| `Update`  | `3`   | Insert if missing, replace if present (upsert)            |
+| `Remove`  | `4`   | Reserved for the delete operations                        |
+
+The int values match the OPC UA Part 11 `PerformUpdateType` wire
+encoding. You normally don't construct the enum yourself — each
+typed `history*Data()` / `history*Event()` method picks the right
+case internally.
+
+<!-- @divider eyebrow="AggregateFunction" -->
+The five client-side aggregate functions shipped by `AggregateModule`.
+Lives at `PhpOpcua\Client\Module\Aggregate\AggregateFunction`. Added
+in v4.4.0. See
+[Operations · Client-side aggregates](../operations/client-side-aggregates.md).
+<!-- @enddivider -->
+
+| Case          | Backing value | Part 13 NodeId | Semantics                                       |
+| ------------- | ------------- | -------------- | ----------------------------------------------- |
+| `Interpolate` | `interpolate` | `i=2341`       | Interpolated value at the start of each bucket  |
+| `Minimum`     | `minimum`     | `i=2346`       | Minimum raw value within the bucket             |
+| `Maximum`     | `maximum`     | `i=2345`       | Maximum raw value within the bucket             |
+| `Average`     | `average`     | `i=2342`       | Arithmetic mean of raw values within the bucket |
+| `Count`       | `count`       | `i=2352`       | Number of raw values within the bucket          |
+
+The Part 13 NodeIds are reference-only — the calculators run pure
+PHP, no server round-trip. Additional Part 13 aggregates are tracked
+in the roadmap — see
+[Getting started · Start contributing](../getting-started/contributing.md#best-first-pr--a-new-part-13-aggregate).
+
 ## StatusCode
 
 `StatusCode` is a class, not an enum — OPC UA status codes are too

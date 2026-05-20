@@ -5,6 +5,7 @@
   - [Installation](./getting-started/installation.md)
   - [Quick start](./getting-started/quick-start.md)
   - [Thinking in OPC UA](./getting-started/thinking-in-opc-ua.md)
+  - [Start contributing](./getting-started/contributing.md)
 - Connection
   - [Endpoints and discovery](./connection/endpoints-and-discovery.md)
   - [Opening and closing](./connection/opening-and-closing.md)
@@ -18,6 +19,7 @@
   - [Subscriptions](./operations/subscriptions.md)
   - [Monitored items](./operations/monitored-items.md)
   - [History reads](./operations/history-reads.md)
+  - [History writes](./operations/history-writes.md)
   - [Client-side aggregates](./operations/client-side-aggregates.md)
   - [Managing nodes](./operations/managing-nodes.md)
 - Security

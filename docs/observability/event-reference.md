@@ -1,6 +1,6 @@
 ---
 eyebrow: 'Docs · Observability'
-lede:    'The full event catalogue — 47 classes grouped by lifecycle. Each event carries a $client reference plus a handful of typed fields.'
+lede:    'The full event catalogue — 52 classes grouped by lifecycle. Each event carries a $client reference plus a handful of typed fields.'
 
 see_also:
   - { href: './events.md',          meta: '6 min' }
@@ -13,7 +13,7 @@ next: { label: 'Caching',  href: './caching.md' }
 
 # Event reference
 
-The library dispatches **47** event classes. Every event extends a
+The library dispatches **52** event classes. Every event extends a
 common shape with a `$client` property; the per-event fields below are
 the additions on top of that.
 
@@ -120,6 +120,32 @@ library dispatches one of the specific events below in addition.
 | Event                  | Fires when                                  | Key fields                |
 | ---------------------- | ------------------------------------------- | ------------------------- |
 | `DataTypesDiscovered`  | `discoverDataTypes()` completed             | `namespaceIndex`, `count` |
+
+## History updates (4)
+
+Dispatched after each HistoryUpdate call returns. Added in v4.4.0.
+
+| Event                  | Fires when                                                          | Key fields                                                                                       |
+| ---------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `HistoryDataUpdated`   | `historyInsertData()` / `historyReplaceData()` / `historyUpdateData()` returned | `nodeId`, `operation` (`PerformUpdateType`), `valueCount`, `operationResults` (`int[]`)         |
+| `HistoryDataDeleted`   | `historyDeleteRawModified()` (`kind: 'rawModified'`) or `historyDeleteAtTime()` (`kind: 'atTime'`) returned | `nodeId`, `kind` (`string`), `statusCode` (`int`), `operationResults` (`int[]`, populated only for `atTime`) |
+| `HistoryEventUpdated`  | `historyInsertEvent()` / `historyReplaceEvent()` / `historyUpdateEvent()` returned | `nodeId`, `operation` (`PerformUpdateType`), `eventCount`, `operationResults` (`int[]`)         |
+| `HistoryEventDeleted`  | `historyDeleteEvent()` returned                                     | `nodeId`, `eventCount`, `operationResults` (`int[]`)                                             |
+
+`PerformUpdateType` is an int-backed enum
+(`Insert=1, Replace=2, Update=3, Remove=4`) — see
+[Operations · History writes](../operations/history-writes.md#performupdatetype-enum).
+
+## Aggregates (1)
+
+Dispatched after the client-side aggregator finishes a windowed
+computation. Added in v4.4.0.
+
+| Event              | Fires when                                          | Key fields                                                                                            |
+| ------------------ | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `AggregateComputed`| `aggregate()` or `historyAggregate()` returned      | `function` (`AggregateFunction`), `rawInputCount`, `intervalCount`, `nodeId` (`?NodeId`, null for in-memory) |
+
+See [Operations · Client-side aggregates](../operations/client-side-aggregates.md).
 
 ## Cache (2)
 

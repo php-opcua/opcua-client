@@ -739,6 +739,133 @@ interface OpcUaClientInterface
     ): array;
 
     /**
+     * Insert raw historical DataValues. Fails per-entry if a value already exists at the same timestamp.
+     *
+     * @param NodeId|string $nodeId
+     * @param DataValue[] $values
+     * @return int[] Per-entry status codes.
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     */
+    public function historyInsertData(NodeId|string $nodeId, array $values): array;
+
+    /**
+     * Replace existing raw historical DataValues. Fails per-entry if no value exists at the timestamp.
+     *
+     * @param NodeId|string $nodeId
+     * @param DataValue[] $values
+     * @return int[] Per-entry status codes.
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     */
+    public function historyReplaceData(NodeId|string $nodeId, array $values): array;
+
+    /**
+     * Upsert raw historical DataValues (insert if missing, replace if present).
+     *
+     * @param NodeId|string $nodeId
+     * @param DataValue[] $values
+     * @return int[] Per-entry status codes.
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     */
+    public function historyUpdateData(NodeId|string $nodeId, array $values): array;
+
+    /**
+     * Delete raw or modified historical data within a time range.
+     *
+     * @param NodeId|string $nodeId
+     * @param DateTimeImmutable $startTime
+     * @param DateTimeImmutable $endTime
+     * @param bool $isDeleteModified True to delete modified history; false (default) deletes raw history.
+     * @return int Overall status code for the operation.
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     */
+    public function historyDeleteRawModified(
+        NodeId|string $nodeId,
+        DateTimeImmutable $startTime,
+        DateTimeImmutable $endTime,
+        bool $isDeleteModified = false,
+    ): int;
+
+    /**
+     * Delete historical entries at specific timestamps.
+     *
+     * @param NodeId|string $nodeId
+     * @param DateTimeImmutable[] $timestamps
+     * @return int[] Per-timestamp status codes.
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     */
+    public function historyDeleteAtTime(NodeId|string $nodeId, array $timestamps): array;
+
+    /**
+     * Insert historical events.
+     *
+     * @param NodeId|string $nodeId The Event-source node (or Server object).
+     * @param string[] $selectFields BrowseName-path of each event field (e.g. ['EventId','Severity','Message']).
+     * @param array<int, Variant[]> $eventData One Variant array per event, matching $selectFields.
+     * @return int[] Per-event status codes.
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     */
+    public function historyInsertEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array;
+
+    /**
+     * Replace historical events.
+     *
+     * @param NodeId|string $nodeId
+     * @param string[] $selectFields
+     * @param array<int, Variant[]> $eventData
+     * @return int[]
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     */
+    public function historyReplaceEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array;
+
+    /**
+     * Upsert historical events.
+     *
+     * @param NodeId|string $nodeId
+     * @param string[] $selectFields
+     * @param array<int, Variant[]> $eventData
+     * @return int[]
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     */
+    public function historyUpdateEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array;
+
+    /**
+     * Delete historical events by EventId.
+     *
+     * @param NodeId|string $nodeId
+     * @param string[] $eventIds Raw EventId byte strings from prior event notifications.
+     * @return int[] Per-event status codes.
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     */
+    public function historyDeleteEvent(NodeId|string $nodeId, array $eventIds): array;
+
+    /**
      * Add one or more nodes to the server's address space.
      *
      * @param array<array{

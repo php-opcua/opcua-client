@@ -63,6 +63,8 @@ final class ServiceTypeId
 
     public const HISTORY_READ_REQUEST = 664;
 
+    public const HISTORY_UPDATE_REQUEST = 700;
+
     public const CALL_REQUEST = 712;
 
     public const CREATE_MONITORED_ITEMS_REQUEST = 751;

@@ -455,6 +455,15 @@ describe('Built-in modules register expected methods', function () {
             'historyReadRaw',
             'historyReadProcessed',
             'historyReadAtTime',
+            'historyInsertData',
+            'historyReplaceData',
+            'historyUpdateData',
+            'historyDeleteRawModified',
+            'historyDeleteAtTime',
+            'historyInsertEvent',
+            'historyReplaceEvent',
+            'historyUpdateEvent',
+            'historyDeleteEvent',
         ]);
     });
 

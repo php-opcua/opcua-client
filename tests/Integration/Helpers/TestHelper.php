@@ -41,6 +41,8 @@ final class TestHelper
 
     public const ENDPOINT_ALL_SECURITY_OPEN62541 = 'opc.tcp://localhost:24841';
 
+    public const ENDPOINT_HISTORIZING = 'opc.tcp://localhost:24842';
+
     // ── Certificate paths (overridable via OPCUA_CERTS_DIR env var) ────
     public static function getCertsDir(): string
     {
@@ -124,6 +126,15 @@ final class TestHelper
     public static function connectForNodeManagement(): Client
     {
         return (new ClientBuilder())->connect(self::ENDPOINT_NODE_MANAGEMENT);
+    }
+
+    /**
+     * Create a client connected to the historizing server
+     * (open62541 on :24842, provided by php-opcua/extra-test-suite).
+     */
+    public static function connectForHistorizing(): Client
+    {
+        return (new ClientBuilder())->connect(self::ENDPOINT_HISTORIZING);
     }
 
     /**

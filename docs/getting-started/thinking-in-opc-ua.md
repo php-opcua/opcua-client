@@ -7,8 +7,8 @@ see_also:
   - { href: '../types/node-id.md',                      meta: '5 min' }
   - { href: 'https://opcfoundation.org/specs/part3',    meta: 'external', label: 'OPC UA Part 3 — Address Space Model' }
 
-prev: { label: 'Quick start',                href: './quick-start.md' }
-next: { label: 'Endpoints and discovery',    href: '../connection/endpoints-and-discovery.md' }
+prev: { label: 'Quick start',           href: './quick-start.md' }
+next: { label: 'Start contributing',    href: './contributing.md' }
 ---
 
 # Thinking in OPC UA

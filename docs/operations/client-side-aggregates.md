@@ -7,8 +7,8 @@ see_also:
   - { href: '../extensibility/modules.md', meta: '6 min' }
   - { href: 'https://opcfoundation.org/specs/part13', meta: 'external', label: 'OPC UA Part 13 — Aggregates' }
 
-prev: { label: 'History reads',  href: './history-reads.md' }
-next: { label: 'Managing nodes', href: './managing-nodes.md' }
+prev: { label: 'History writes',  href: './history-writes.md' }
+next: { label: 'Managing nodes',  href: './managing-nodes.md' }
 ---
 
 # Client-side aggregates
@@ -175,6 +175,22 @@ Three Part 13 status codes also appear when input validation fails:
 These travel inside the result's `statusCode` (the call itself
 returns successfully). Inspect each output `DataValue::$statusCode`
 before consuming the value.
+
+## Events emitted by the aggregator
+
+Both `aggregate()` and `historyAggregate()` dispatch a single
+PSR-14 event after computing their result. Wire a listener to
+instrument bucket counts, measure raw-buffer sizes, or push
+metrics:
+
+| Event              | Fires when                                       | Key fields                                                                                            |
+| ------------------ | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `AggregateComputed`| `aggregate()` or `historyAggregate()` returned   | `function` (`AggregateFunction`), `rawInputCount`, `intervalCount`, `nodeId` (`?NodeId`, null for in-memory) |
+
+`$nodeId` is set only when the event came from `historyAggregate()`
+(the wrapper that first calls `historyReadRaw`) — for direct
+in-memory aggregation via `aggregate()`, it stays `null`. See
+[Observability · Event reference](../observability/event-reference.md#aggregates-1).
 
 ## Extending the module — custom calculators
 

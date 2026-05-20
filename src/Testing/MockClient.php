@@ -851,6 +851,100 @@ class MockClient implements OpcUaClientInterface
     /**
      * {@inheritDoc}
      */
+    public function historyInsertData(NodeId|string $nodeId, array $values): array
+    {
+        $this->record('historyInsertData', [$nodeId]);
+
+        return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function historyReplaceData(NodeId|string $nodeId, array $values): array
+    {
+        $this->record('historyReplaceData', [$nodeId]);
+
+        return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function historyUpdateData(NodeId|string $nodeId, array $values): array
+    {
+        $this->record('historyUpdateData', [$nodeId]);
+
+        return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function historyDeleteRawModified(
+        NodeId|string $nodeId,
+        DateTimeImmutable $startTime,
+        DateTimeImmutable $endTime,
+        bool $isDeleteModified = false,
+    ): int {
+        $this->record('historyDeleteRawModified', [$nodeId]);
+
+        return 0;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function historyDeleteAtTime(NodeId|string $nodeId, array $timestamps): array
+    {
+        $this->record('historyDeleteAtTime', [$nodeId]);
+
+        return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function historyInsertEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array
+    {
+        $this->record('historyInsertEvent', [$nodeId]);
+
+        return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function historyReplaceEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array
+    {
+        $this->record('historyReplaceEvent', [$nodeId]);
+
+        return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function historyUpdateEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array
+    {
+        $this->record('historyUpdateEvent', [$nodeId]);
+
+        return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function historyDeleteEvent(NodeId|string $nodeId, array $eventIds): array
+    {
+        $this->record('historyDeleteEvent', [$nodeId]);
+
+        return [];
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function addNodes(array $nodesToAdd): array
     {
         $this->record('addNodes', [$nodesToAdd]);
