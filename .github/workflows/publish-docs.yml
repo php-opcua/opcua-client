@@ -8,6 +8,7 @@ on:
       - 'docs/**'
       - 'CHANGELOG.md'
       - '.github/workflows/publish-docs.yml'
+
   workflow_dispatch:
     inputs:
       version:
@@ -85,7 +86,11 @@ jobs:
           URL="${DOCS_HUB_URL%/}/api/v1/packages/${PACKAGE_CODE}/docs"
           echo "POST ${URL} (version=${VERSION})"
 
-          HTTP_STATUS=$(curl --silent --show-error --fail-with-body \
+          # `--fail-with-body` is intentionally NOT used: it makes curl exit
+          # non-zero on 4xx/5xx, which `set -e` would catch BEFORE we get to
+          # print the response body. We capture the HTTP status via
+          # `--write-out` and inspect it ourselves.
+          HTTP_STATUS=$(curl --silent --show-error \
             --output response.json \
             --write-out '%{http_code}' \
             -H "Authorization: Bearer ${DOCS_INGEST_TOKEN}" \
@@ -95,11 +100,13 @@ jobs:
             "${URL}")
 
           echo "HTTP ${HTTP_STATUS}"
-          cat response.json
+          echo "::group::Response body"
+          cat response.json || true
           echo
+          echo "::endgroup::"
 
           if [ "${HTTP_STATUS}" != "201" ]; then
-            echo "::error::Upload failed with HTTP ${HTTP_STATUS}"
+            echo "::error::Upload failed with HTTP ${HTTP_STATUS}. See the 'Response body' group above."
             exit 1
           fi
 
