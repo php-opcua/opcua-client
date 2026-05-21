@@ -34,13 +34,25 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            VERSION="${{ inputs.version }}"
+            RAW="${{ inputs.version }}"
           elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/}"
+            RAW="${GITHUB_REF#refs/tags/}"
           else
-            VERSION="master"
+            RAW="master"
           fi
+
+          # Fold semver-shaped inputs (`v4.3.2`, `v4.3.0-rc1`, `v10.20.30`) to
+          # their minor branch (`v4.3.x`, `v4.3.x`, `v10.20.x`). `master` and
+          # anything that doesn't start with `vMAJOR.MINOR.PATCH` is forwarded
+          # untouched — including already-normalised `v4.3.x`.
+          if [[ "${RAW}" =~ ^v([0-9]+)\.([0-9]+)\.[0-9] ]]; then
+            VERSION="v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.x"
+          else
+            VERSION="${RAW}"
+          fi
+
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Raw input: ${RAW}"
           echo "Resolved version: ${VERSION}"
 
       - name: Validate repo layout
