@@ -2,6 +2,8 @@
 
 ## [v4.4.0] - TBD
 
+- Bump extra-test-suite to v1.2.0
+
 Minor release. New `AggregateModule` for client-side aggregate computation, and `HistoryModule` gains write access via the OPC UA HistoryUpdate service.
 
 ### Added — AggregateModule
@@ -11,8 +13,8 @@ Minor release. New `AggregateModule` for client-side aggregate computation, and 
   via `Client::__call()` (not in `OpcUaClientInterface`).
 - Supported functions: `Interpolate`, `Minimum`, `Maximum`, `Average`, `Count`.
 - Two methods:
-  - `aggregate(DataValue[], start, end, intervalMs, AggregateFunction, ?AggregateOptions)`
-  - `historyAggregate(NodeId|string, start, end, intervalMs, AggregateFunction, ?AggregateOptions)` — fetch raw history + aggregate.
+    - `aggregate(DataValue[], start, end, intervalMs, AggregateFunction, ?AggregateOptions)`
+    - `historyAggregate(NodeId|string, start, end, intervalMs, AggregateFunction, ?AggregateOptions)` — fetch raw history + aggregate.
 - `AggregateOptions` DTO: `stepped`, `treatUncertainAsBad`, `useSlopedExtrapolation`, `percentDataBad/Good`.
 - `StatusCode` extended with `UncertainDataSubNormal`, `BadAggregateInvalidInputs/NotSupported/ConfigurationRejected`, Historian InfoBits (`Calculated`, `Interpolated`, `Partial`, `ExtraData`, `MultiValue`) and `withDataValueInfoBits()` helper.
 - 32 unit tests + 6 integration tests against UA-.NETStandard.
@@ -20,11 +22,11 @@ Minor release. New `AggregateModule` for client-side aggregate computation, and 
 ### Added — HistoryUpdate
 
 - 9 new methods on `OpcUaClientInterface` / `Client` / `MockClient`, all delegating to `HistoryModule`:
-  - `historyInsertData()`, `historyReplaceData()`, `historyUpdateData()` (DataValue[] → int[] per-entry status)
-  - `historyDeleteRawModified()` (range → int overall status)
-  - `historyDeleteAtTime()` (timestamps → int[])
-  - `historyInsertEvent()`, `historyReplaceEvent()`, `historyUpdateEvent()` (selectFields + Variant[][] → int[])
-  - `historyDeleteEvent()` (eventIds → int[])
+    - `historyInsertData()`, `historyReplaceData()`, `historyUpdateData()` (DataValue[] → int[] per-entry status)
+    - `historyDeleteRawModified()` (range → int overall status)
+    - `historyDeleteAtTime()` (timestamps → int[])
+    - `historyInsertEvent()`, `historyReplaceEvent()`, `historyUpdateEvent()` (selectFields + Variant[][] → int[])
+    - `historyDeleteEvent()` (eventIds → int[])
 - `PerformUpdateType` enum (Insert/Replace/Update/Remove, OPC UA Part 11 §6.9.2).
 - `HistoryUpdateResult` DTO (statusCode + per-operation status codes), WireSerializable.
 - `HistoryUpdateService` protocol service.
@@ -162,7 +164,8 @@ The three `RequestHeader` / discovery / type-id items above were latent wire-for
 
 ### CI
 
-- **open62541 test server consumed via [`php-opcua/extra-test-suite@v1.0.0`](https://github.com/php-opcua/extra-test-suite).** New sibling repo that ships a docker-compose stack of OPC UA servers not covered by `uanetstandard-test-suite` (`open62541` with `NodeManagement` on `:24840`, room for Prosys / Milo / node-opcua in future minor releases). Pre-built images are published to GHCR on tag push; every matrix leg of the `integration` job consumes them via the composite action — `docker compose pull` + `up -d` with a CI-specific override that sets `restart: "no"` (the base compose uses `restart: unless-stopped` for dev machines). Mandatory on every leg, not an opt-in per PHP version — same treatment as `uanetstandard-test-suite`. Warm step time ≈ 10–15 s vs the 3–5 min that an in-repo build from source would have required. No endpoint env var is threaded through the workflow: port `24840` is part of the suite's versioned contract and `TestHelper::ENDPOINT_NODE_MANAGEMENT` hardcodes it, mirroring the `ENDPOINT_NO_SECURITY` / `ENDPOINT_USERPASS` / … constants used for `uanetstandard-test-suite`.
+- **open62541 test server consumed via [`php-opcua/extra-test-suite@v1.0.0`](https://github.com/php-opcua/extra-test-suite).** New sibling repo that ships a docker-compose stack of OPC UA servers not covered by `uanetstandard-test-suite` (`open62541` with `NodeManagement` on `:24840`, room for Prosys / Milo / node-opcua in future minor releases). Pre-built images are published to GHCR on tag push; every matrix leg of the `integration` job consumes them via the composite action — `docker compose pull` + `up -d` with a CI-specific override that sets `restart: "no"` (the base compose uses `restart: unless-stopped` for dev machines). Mandatory on every leg, not an opt-in per PHP version — same treatment as `uanetstandard-test-suite`. Warm step time ≈ 10–15 s vs the 3–5 min that an in-repo build from source would have required. No endpoint env var is threaded through the workflow: port `24840` is part of the suite's versioned contract and `TestHelper::ENDPOINT_NODE_MANAGEMENT` hardcodes
+  it, mirroring the `ENDPOINT_NO_SECURITY` / `ENDPOINT_USERPASS` / … constants used for `uanetstandard-test-suite`.
 - **`composer format:check` promoted to a dedicated, non-blocking `format` job.**
 
 ### Testing
