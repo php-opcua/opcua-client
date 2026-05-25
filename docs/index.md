@@ -41,6 +41,7 @@
   - [Extension object codecs](./extensibility/extension-object-codecs.md)
   - [Type discovery](./extensibility/type-discovery.md)
   - [Wire serialization](./extensibility/wire-serialization.md)
+  - [Transport](./extensibility/transport.md)
 - Observability
   - [Logging](./observability/logging.md)
   - [Events](./observability/events.md)

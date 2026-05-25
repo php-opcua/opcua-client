@@ -9,6 +9,7 @@ use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\Repository\GeneratedTypeRegistrar;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
+use PhpOpcua\Client\Transport\ClientTransportInterface;
 use PhpOpcua\Client\TrustStore\TrustPolicy;
 use PhpOpcua\Client\TrustStore\TrustStoreInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -273,6 +274,27 @@ interface ClientBuilderInterface
      * @return static
      */
     public function replaceModule(string $moduleClass, ServiceModule $replacement): static;
+
+    /**
+     * Set a custom wire transport for the resulting {@see Client}.
+     *
+     * When unset (the default), the client uses
+     * {@see \PhpOpcua\Client\Transport\TcpTransport}. Pass an alternative
+     * implementation of {@see ClientTransportInterface} to target a different
+     * wire encapsulation or to inject a mock transport in tests. Added in v4.4.0.
+     *
+     * @param ClientTransportInterface $transport
+     * @return self
+     */
+    public function setTransport(ClientTransportInterface $transport): self;
+
+    /**
+     * Get the configured transport, or `null` when the builder will fall back
+     * to the default {@see \PhpOpcua\Client\Transport\TcpTransport}. Added in v4.4.0.
+     *
+     * @return ?ClientTransportInterface
+     */
+    public function getTransport(): ?ClientTransportInterface;
 
     /**
      * Connect to an OPC UA server endpoint.

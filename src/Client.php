@@ -33,6 +33,7 @@ use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
+use PhpOpcua\Client\Transport\ClientTransportInterface;
 use PhpOpcua\Client\Transport\TcpTransport;
 use PhpOpcua\Client\TrustStore\TrustPolicy;
 use PhpOpcua\Client\TrustStore\TrustStoreInterface;
@@ -76,7 +77,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
     use ManagesSecureChannelTrait;
     use ManagesSessionTrait;
 
-    private TcpTransport $transport;
+    private ClientTransportInterface $transport;
 
     private ?SessionService $session = null;
 
@@ -203,7 +204,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
      * @param bool $readMetadataCache Enable metadata read caching.
      * @param ExtensionObjectRepository $extensionObjectRepository Codec registry.
      * @param array<string, class-string<\BackedEnum>> $enumMappings Enum mappings.
-     * @param ModuleRegistry $moduleRegistry Module registry.
+     * @param ?ModuleRegistry $moduleRegistry Module registry.
+     * @param ?ClientTransportInterface $transport Custom wire transport. Defaults to {@see TcpTransport} when null.
      *
      * @throws Exception\ConfigurationException If the endpoint URL is invalid.
      * @throws Exception\ConnectionException If the TCP connection or handshake fails.
@@ -238,6 +240,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
         ExtensionObjectRepository $extensionObjectRepository,
         array $enumMappings,
         ?ModuleRegistry $moduleRegistry = null,
+        ?ClientTransportInterface $transport = null,
     ) {
         $this->securityPolicy = $securityPolicy;
         $this->securityMode = $securityMode;
@@ -266,7 +269,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
         $this->extensionObjectRepository = $extensionObjectRepository;
         $this->enumMappings = $enumMappings;
         $this->moduleRegistry = $moduleRegistry ?? new ModuleRegistry();
-        $this->transport = new TcpTransport();
+        $this->transport = $transport ?? new TcpTransport();
 
         $this->performConnect($endpointUrl);
     }

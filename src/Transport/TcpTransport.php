@@ -9,8 +9,12 @@ use PhpOpcua\Client\Exception\ProtocolException;
 
 /**
  * TCP socket transport for OPC UA binary protocol communication.
+ *
+ * Default implementation of {@see ClientTransportInterface} — opens an
+ * `opc.tcp://` connection via {@see stream_socket_client()} and exchanges
+ * framed OPC UA messages with the server.
  */
-class TcpTransport
+class TcpTransport implements ClientTransportInterface
 {
     /** @var resource|null */
     private $socket = null;

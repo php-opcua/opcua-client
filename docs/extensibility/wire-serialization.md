@@ -8,7 +8,7 @@ see_also:
   - { href: 'https://github.com/php-opcua/opcua-session-manager', meta: 'external', label: 'opcua-session-manager' }
 
 prev: { label: 'Type discovery', href: './type-discovery.md' }
-next: { label: 'Logging',        href: '../observability/logging.md' }
+next: { label: 'Transport',      href: './transport.md' }
 ---
 
 # Wire serialization

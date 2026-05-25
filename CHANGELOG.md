@@ -4,7 +4,7 @@
 
 - Bump extra-test-suite to v1.2.0
 
-Minor release. New `AggregateModule` for client-side aggregate computation, and `HistoryModule` gains write access via the OPC UA HistoryUpdate service.
+Minor release. New `AggregateModule` for client-side aggregate computation, `HistoryModule` gains write access via the OPC UA HistoryUpdate service, and the wire transport is now pluggable via `ClientTransportInterface`.
 
 ### Added — AggregateModule
 
@@ -43,6 +43,18 @@ Minor release. New `AggregateModule` for client-side aggregate computation, and 
 - `HistoryEventUpdated(client, nodeId, PerformUpdateType, eventCount, operationResults)` — emitted by `historyInsertEvent/ReplaceEvent/UpdateEvent`.
 - `HistoryEventDeleted(client, nodeId, eventCount, operationResults)` — emitted by `historyDeleteEvent`.
 - `AggregateComputed(client, AggregateFunction, rawInputCount, intervalCount, ?nodeId)` — emitted by `aggregate()` and `historyAggregate()`.
+
+### Added — Pluggable transport
+
+- **`ClientTransportInterface`** — wire-transport contract with 6 methods (`connect`, `send`, `receive`, `setReceiveBufferSize`, `close`, `isConnected`). Lives at `PhpOpcua\Client\Transport\ClientTransportInterface`.
+- `TcpTransport` now implements `ClientTransportInterface` — pure additive, no behaviour change.
+- `Client::__construct` gains a new optional 28th parameter `?ClientTransportInterface $transport = null` that defaults to `new TcpTransport()` (BC-safe — all existing callers using named args keep compiling).
+- `Client::$transport` property is now typed against the interface.
+- `ClientBuilder::setTransport(ClientTransportInterface)` + `getTransport(): ?ClientTransportInterface`, plumbed through to the `Client` ctor. Both also declared on `ClientBuilderInterface`.
+- `ManagesHandshakeTrait::performDiscoveryHandshake()` parameter now typed against the interface (the discovery probe itself still instantiates `new TcpTransport()` internally).
+- `InMemoryTransport` test helper at `tests/Unit/Helpers/InMemoryTransport.php` — records sent messages, replays queued responses, satisfies the contract end-to-end. Doubles as the canonical "how to write a custom transport" example referenced from `docs/extensibility/transport.md`.
+- 16 new unit tests (`tests/Unit/Transport/ClientTransportInterfaceTest.php` + `tests/Unit/ClientBuilderTransportTest.php`); full suite stays at 1399 passing.
+- New doc page `docs/extensibility/transport.md` covering the contract, when to write a custom transport (and when not — PubSub stays in its own package), wiring via the builder, the `InMemoryTransport` worked example, and the invariant rules each implementation must respect.
 
 ## [v4.3.2] - 2026-05-15
 

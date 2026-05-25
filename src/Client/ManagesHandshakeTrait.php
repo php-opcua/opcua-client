@@ -18,6 +18,7 @@ use PhpOpcua\Client\Protocol\SecureChannelResponse;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Security\SecurityPolicy;
+use PhpOpcua\Client\Transport\ClientTransportInterface;
 use PhpOpcua\Client\Transport\TcpTransport;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\UserTokenPolicy;
@@ -102,13 +103,13 @@ trait ManagesHandshakeTrait
     /**
      * Perform a discovery handshake on a temporary transport to obtain a SessionService.
      *
-     * @param TcpTransport $transport The temporary transport.
+     * @param ClientTransportInterface $transport The temporary transport.
      * @param string $endpointUrl The OPC UA endpoint URL.
      * @return SessionService
      *
      * @throws ProtocolException If the handshake fails.
      */
-    private function performDiscoveryHandshake(TcpTransport $transport, string $endpointUrl): SessionService
+    private function performDiscoveryHandshake(ClientTransportInterface $transport, string $endpointUrl): SessionService
     {
         $this->logger->debug('Discovery HEL for {url}', $this->logContext(['url' => $endpointUrl]));
         $helloMessage = new HelloMessage(endpointUrl: $endpointUrl);

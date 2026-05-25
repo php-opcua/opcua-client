@@ -27,6 +27,7 @@ use PhpOpcua\Client\Module\TypeDiscovery\TypeDiscoveryModule;
 use PhpOpcua\Client\Repository\ExtensionObjectRepository;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
+use PhpOpcua\Client\Transport\ClientTransportInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -78,6 +79,8 @@ class ClientBuilder implements ClientBuilderInterface
     private LoggerInterface $logger;
 
     private ModuleRegistry $moduleRegistry;
+
+    private ?ClientTransportInterface $transport = null;
 
     /**
      * Create a new client builder instance.
@@ -187,6 +190,36 @@ class ClientBuilder implements ClientBuilderInterface
     public function getLogger(): LoggerInterface
     {
         return $this->logger;
+    }
+
+    /**
+     * Set a custom wire transport for the resulting {@see Client}.
+     *
+     * When unset (the default), the client uses {@see \PhpOpcua\Client\Transport\TcpTransport}.
+     * Pass an alternative implementation of
+     * {@see \PhpOpcua\Client\Transport\ClientTransportInterface} to target a
+     * different wire encapsulation (`opc.tls://`, `opc.https://`, in-process
+     * loopback, …) or to inject a mock transport in tests.
+     *
+     * @param ClientTransportInterface $transport
+     * @return self
+     */
+    public function setTransport(ClientTransportInterface $transport): self
+    {
+        $this->transport = $transport;
+
+        return $this;
+    }
+
+    /**
+     * Get the configured transport, or `null` when the builder will fall back
+     * to the default {@see \PhpOpcua\Client\Transport\TcpTransport}.
+     *
+     * @return ?ClientTransportInterface
+     */
+    public function getTransport(): ?ClientTransportInterface
+    {
+        return $this->transport;
     }
 
     /**
@@ -324,6 +357,7 @@ class ClientBuilder implements ClientBuilderInterface
             extensionObjectRepository: $this->extensionObjectRepository,
             enumMappings: $this->enumMappings,
             moduleRegistry: $this->moduleRegistry,
+            transport: $this->transport,
         );
     }
 }
