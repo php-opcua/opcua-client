@@ -24,6 +24,36 @@ class TcpTransport implements ClientTransportInterface
     public const  DEFAULT_TIMEOUT = 5.0;
 
     /**
+     * Wrap an already-connected stream socket, bypassing {@see connect()}.
+     * Used by the Reverse Connect flow (OPC UA Part 6 §7.1.2.3). The factory
+     * takes ownership of the socket: {@see close()} will `fclose()` it.
+     *
+     * @see https://reference.opcfoundation.org/Core/Part6/v105/docs/7.1.2.3
+     *
+     * @param resource $socket Stream socket already in CONNECTED state.
+     * @param null|float $readTimeout `null` → {@see DEFAULT_TIMEOUT}.
+     *
+     * @throws ConnectionException If `$socket` is not a stream resource.
+     */
+    public static function fromConnectedSocket(mixed $socket, null|float $readTimeout = null): self
+    {
+        if (!is_resource($socket)) {
+            throw new ConnectionException('fromConnectedSocket requires a valid stream resource');
+        }
+
+        if ($readTimeout === null) {
+            $readTimeout = self::DEFAULT_TIMEOUT;
+        }
+
+        stream_set_timeout($socket, (int) $readTimeout);
+
+        $transport = new self();
+        $transport->socket = $socket;
+
+        return $transport;
+    }
+
+    /**
      * @param string $host
      * @param int $port
      * @param null|float $timeout

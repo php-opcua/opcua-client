@@ -57,6 +57,15 @@ Minor release. New `AggregateModule` for client-side aggregate computation, `His
 - 16 new unit tests (`tests/Unit/Transport/ClientTransportInterfaceTest.php` + `tests/Unit/ClientBuilderTransportTest.php`); full suite stays at 1399 passing.
 - New doc page `docs/extensibility/transport.md` covering the contract, when to write a custom transport (and when not — PubSub stays in its own package), wiring via the builder, the `InMemoryTransport` worked example, and the invariant rules each implementation must respect.
 
+### Added — Reverse Connect transport seam
+
+- **`TcpTransport::fromConnectedSocket(mixed $socket, ?float $readTimeout = null): self`** — new public factory that builds a transport around a stream socket that is already in CONNECTED state, bypassing `stream_socket_client()`. Used by the Reverse Connect pattern (OPC UA Part 6 §7.1.2.3): a listener-side component accepts the inbound TCP connection from a server, consumes the ReverseHello (`RHE`) frame, and hands the remaining socket to `fromConnectedSocket()` so the UA-TCP pipeline (HEL/ACK, OPN, CreateSession, …) continues identically to the standard connector flow.
+- The factory takes ownership of the socket: `close()` will `fclose()` it. Non-resource inputs raise `ConnectionException` with message `"fromConnectedSocket requires a valid stream resource"`.
+- 10 new unit tests (`tests/Unit/Transport/TcpTransportFromConnectedSocketTest.php`) using `stream_socket_server()` + `stream_socket_accept()` over loopback TCP (kept Windows-portable on purpose — Unix domain sockets via `stream_socket_pair(STREAM_PF_UNIX, …)` are not available there) to exercise send/receive end-to-end on an injected socket: non-resource rejection, isConnected, send-without-connect, receive parsing a frame from the peer, close releasing the resource, default-timeout path, `ProtocolException` propagation, and `ConnectionException` on peer close mid-read. Full suite stays at **1426 passing**.
+- `ManagesConnectionTrait::performConnect()` now skips `transport->connect($host, $port)` when the transport already reports `isConnected() === true`. This is the seam that lets a reverse-connect listener pass a `TcpTransport::fromConnectedSocket(...)` straight to the standard `Client::connect()` pipeline without re-opening the socket. Behaviour for the standard connector flow is unchanged.
+- No change to `ClientTransportInterface` — the factory is on the concrete `TcpTransport`.
+- The reverse-connect listener, RHE parser, whitelist validator, and end-to-end orchestration live in the companion package `php-opcua/opcua-client-ext-reverse-connect`. The core only exposes the seam.
+
 ### Added — File Transfer (Part 5)
 
 - **`FileTransferModule`** — 10th default module (registered automatically by `ClientBuilder`). Wraps the six methods of the OPC UA File Transfer service set (Part 5 §C.2) into typed PHP calls. Lives at `PhpOpcua\Client\Module\FileTransfer\FileTransferModule`.

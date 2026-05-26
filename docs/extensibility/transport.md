@@ -224,6 +224,45 @@ Higher-level OPC UA semantics (`Bad_ServiceUnsupported`,
 `Bad_NodeIdUnknown`) belong upstream of the transport — the transport
 just returns the bytes.
 
+## Reverse Connect — feeding a pre-connected socket
+
+`TcpTransport::fromConnectedSocket(mixed $socket, ?float $readTimeout = null): self`
+is a public factory that constructs a transport around a stream socket
+that is already in CONNECTED state, bypassing `stream_socket_client()`.
+
+It is the seam used by the Reverse Connect pattern (OPC UA Part 6 §7.1.2.3):
+a listener-side component accepts the inbound TCP connection from a server,
+consumes the ReverseHello (`RHE`) frame, and hands the remaining socket to
+this factory. The UA-TCP pipeline (HEL/ACK, OPN, CreateSession, …) then
+runs identically to the standard connector flow — `Client::connect()`
+detects the already-connected transport via
+`ManagesConnectionTrait::performConnect()` and skips the redundant
+`transport->connect($host, $port)` step.
+
+Direct usage:
+
+```php
+use PhpOpcua\Client\ClientBuilder;
+use PhpOpcua\Client\Transport\TcpTransport;
+
+$socket = /* a stream resource already TCP-connected to the server */;
+$transport = TcpTransport::fromConnectedSocket($socket);
+
+$client = (new ClientBuilder())
+    ->setTransport($transport)
+    ->connect('opc.tcp://server.example:4840');
+```
+
+In practice the listener, parser, whitelist validator, and bridge to
+`ClientBuilder` live in the companion package
+[`php-opcua/opcua-client-ext-reverse-connect`](https://github.com/php-opcua/opcua-client-ext-reverse-connect).
+The core only exposes this factory; applications that do not need
+Reverse Connect take no extra dependency.
+
+Non-resource input raises `ConnectionException` with message
+`fromConnectedSocket requires a valid stream resource`. The factory takes
+ownership of the socket: `close()` will `fclose()` it.
+
 ## What to read next
 
 - [Modules](./modules.md) — the other extension point. Custom modules

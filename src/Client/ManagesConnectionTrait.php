@@ -198,8 +198,12 @@ trait ManagesConnectionTrait
         $this->logger->info('Connecting to {endpoint}', $this->logContext(['endpoint' => $endpointUrl]));
 
         try {
-            $this->transport->connect($host, $port, $this->timeout);
-            $this->logger->debug('TCP connection established to {host}:{port}', $this->logContext(['host' => $host, 'port' => $port]));
+            if (!$this->transport->isConnected()) {
+                $this->transport->connect($host, $port, $this->timeout);
+                $this->logger->debug('TCP connection established to {host}:{port}', $this->logContext(['host' => $host, 'port' => $port]));
+            } else {
+                $this->logger->debug('Transport already connected (reverse-connect flow), skipping connect step', $this->logContext(['host' => $host, 'port' => $port]));
+            }
 
             $this->doHandshake($endpointUrl);
             $this->logger->debug('HEL/ACK handshake complete', $this->logContext());
