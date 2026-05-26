@@ -5,7 +5,7 @@
   "support": {
     "issues": "https://github.com/php-opcua/opcua-client/issues",
     "source": "https://github.com/php-opcua/opcua-client",
-    "docs": "https://github.com/php-opcua/opcua-client/tree/master/doc"
+    "docs": "https://www.php-opcua.com/documentation/laravel-opcua"
   },
   "type": "library",
   "license": "MIT",
