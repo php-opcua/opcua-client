@@ -30,7 +30,7 @@ The short version:
 
 ## Best first PR — a new Part 13 aggregate
 
-`AggregateModule` (added in v4.4.0, see
+`AggregateModule` (see
 [Client-side aggregates](../operations/client-side-aggregates.md))
 currently implements **five** aggregate functions: `Interpolate`,
 `Minimum`, `Maximum`, `Average`, `Count`. OPC UA Part 13 defines

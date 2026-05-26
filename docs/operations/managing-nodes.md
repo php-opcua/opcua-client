@@ -7,8 +7,8 @@ see_also:
   - { href: '../types/node-id.md',                meta: '5 min' }
   - { href: '../reference/exceptions.md',         meta: '7 min' }
 
-prev: { label: 'Client-side aggregates', href: './client-side-aggregates.md' }
-next: { label: 'Security overview',      href: '../security/overview.md' }
+prev: { label: 'File Transfer',     href: './file-transfer.md' }
+next: { label: 'Security overview', href: '../security/overview.md' }
 ---
 
 # Managing nodes

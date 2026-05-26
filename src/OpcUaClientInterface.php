@@ -866,6 +866,143 @@ interface OpcUaClientInterface
     public function historyDeleteEvent(NodeId|string $nodeId, array $eventIds): array;
 
     /**
+     * @param NodeId|string $fileNodeId
+     * @param Module\FileTransfer\OpenFileMode|int $mode
+     * @return int
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     *
+     * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/C.2.1 OPC UA Part 5 §C.2.1
+     */
+    public function openFile(NodeId|string $fileNodeId, Module\FileTransfer\OpenFileMode|int $mode): int;
+
+    /**
+     * @param NodeId|string $fileNodeId
+     * @param int $fileHandle
+     * @return void
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     *
+     * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/C.2.2 OPC UA Part 5 §C.2.2
+     */
+    public function closeFile(NodeId|string $fileNodeId, int $fileHandle): void;
+
+    /**
+     * @param NodeId|string $fileNodeId
+     * @param int $fileHandle
+     * @param int $length
+     * @return string
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     *
+     * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/C.2.3 OPC UA Part 5 §C.2.3
+     */
+    public function readFile(NodeId|string $fileNodeId, int $fileHandle, int $length): string;
+
+    /**
+     * @param NodeId|string $fileNodeId
+     * @param int $fileHandle
+     * @param string $data
+     * @return void
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     *
+     * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/C.2.4 OPC UA Part 5 §C.2.4
+     */
+    public function writeFile(NodeId|string $fileNodeId, int $fileHandle, string $data): void;
+
+    /**
+     * @param NodeId|string $fileNodeId
+     * @param int $fileHandle
+     * @return int
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     *
+     * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/C.2.5 OPC UA Part 5 §C.2.5
+     */
+    public function getFilePosition(NodeId|string $fileNodeId, int $fileHandle): int;
+
+    /**
+     * @param NodeId|string $fileNodeId
+     * @param int $fileHandle
+     * @param int $position
+     * @return void
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     *
+     * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/C.2.6 OPC UA Part 5 §C.2.6
+     */
+    public function setFilePosition(NodeId|string $fileNodeId, int $fileHandle, int $position): void;
+
+    /**
+     * @param NodeId|string $directoryNodeId
+     * @param string $directoryName
+     * @return NodeId
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     *
+     * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/C.3.1 OPC UA Part 5 §C.3.1
+     */
+    public function createDirectory(NodeId|string $directoryNodeId, string $directoryName): NodeId;
+
+    /**
+     * @param NodeId|string $directoryNodeId
+     * @param string $fileName
+     * @param bool $requestFileOpen
+     * @return Module\FileTransfer\CreateFileResult
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     *
+     * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/C.3.2 OPC UA Part 5 §C.3.2
+     */
+    public function createFileInDirectory(NodeId|string $directoryNodeId, string $fileName, bool $requestFileOpen = false): Module\FileTransfer\CreateFileResult;
+
+    /**
+     * @param NodeId|string $directoryNodeId
+     * @param NodeId|string $targetNodeId
+     * @return void
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     *
+     * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/C.3.3 OPC UA Part 5 §C.3.3
+     */
+    public function deleteFileSystemObject(NodeId|string $directoryNodeId, NodeId|string $targetNodeId): void;
+
+    /**
+     * @param NodeId|string $directoryNodeId
+     * @param NodeId|string $sourceNodeId
+     * @param NodeId|string $targetDirectoryNodeId
+     * @param bool $createCopy
+     * @param string $newName
+     * @return NodeId
+     *
+     * @throws InvalidNodeIdException
+     * @throws ConnectionException
+     * @throws ServiceException
+     *
+     * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/C.3.4 OPC UA Part 5 §C.3.4
+     */
+    public function moveOrCopyFileSystemObject(NodeId|string $directoryNodeId, NodeId|string $sourceNodeId, NodeId|string $targetDirectoryNodeId, bool $createCopy, string $newName = ''): NodeId;
+
+    /**
      * Add one or more nodes to the server's address space.
      *
      * @param array<array{

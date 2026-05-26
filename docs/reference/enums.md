@@ -176,6 +176,25 @@ PHP, no server round-trip. Additional Part 13 aggregates are tracked
 in the roadmap — see
 [Getting started · Start contributing](../getting-started/contributing.md#best-first-pr--a-new-part-13-aggregate).
 
+<!-- @divider eyebrow="OpenFileMode" -->
+Bit-field for the File Transfer Open method (Part 5 §C.2.1). Combine
+cases via `OpenFileMode::toByte(...)` when the operation needs multiple
+bits set (e.g. `Write | EraseExisting`). Lives at
+`PhpOpcua\Client\Module\FileTransfer\OpenFileMode`.
+See [Operations · File Transfer](../operations/file-transfer.md).
+<!-- @enddivider -->
+
+| Case             | Value | Meaning                                              |
+| ---------------- | ----- | ---------------------------------------------------- |
+| `Read`           | `1`   | Handle can be passed to `readFile()`                  |
+| `Write`          | `2`   | Handle can be passed to `writeFile()`                 |
+| `EraseExisting`  | `4`   | Truncate the file at open time (requires `Write`)    |
+| `Append`         | `8`   | Initial position = end-of-file                       |
+
+`openFile()` accepts both an `OpenFileMode` case (single-bit) and a
+pre-combined `int` (multi-bit) for ergonomics. The wire format is a
+single Byte either way.
+
 ## StatusCode
 
 `StatusCode` is a class, not an enum — OPC UA status codes are too

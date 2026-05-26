@@ -15,6 +15,7 @@ use PhpOpcua\Client\ClientBuilder\ManagesTrustStoreTrait;
 use PhpOpcua\Client\Event\NullEventDispatcher;
 use PhpOpcua\Client\Module\Aggregate\AggregateModule;
 use PhpOpcua\Client\Module\Browse\BrowseModule;
+use PhpOpcua\Client\Module\FileTransfer\FileTransferModule;
 use PhpOpcua\Client\Module\History\HistoryModule;
 use PhpOpcua\Client\Module\ModuleRegistry;
 use PhpOpcua\Client\Module\NodeManagement\NodeManagementModule;
@@ -166,6 +167,7 @@ class ClientBuilder implements ClientBuilderInterface
             ServerInfoModule::class,
             TypeDiscoveryModule::class,
             AggregateModule::class,
+            FileTransferModule::class,
         ];
     }
 
@@ -195,9 +197,9 @@ class ClientBuilder implements ClientBuilderInterface
     /**
      * Set a custom wire transport for the resulting {@see Client}.
      *
-     * When unset (the default), the client uses {@see \PhpOpcua\Client\Transport\TcpTransport}.
+     * When unset (the default), the client uses {@see Transport\TcpTransport}.
      * Pass an alternative implementation of
-     * {@see \PhpOpcua\Client\Transport\ClientTransportInterface} to target a
+     * {@see ClientTransportInterface} to target a
      * different wire encapsulation (`opc.tls://`, `opc.https://`, in-process
      * loopback, …) or to inject a mock transport in tests.
      *
@@ -213,7 +215,7 @@ class ClientBuilder implements ClientBuilderInterface
 
     /**
      * Get the configured transport, or `null` when the builder will fall back
-     * to the default {@see \PhpOpcua\Client\Transport\TcpTransport}.
+     * to the default {@see Transport\TcpTransport}.
      *
      * @return ?ClientTransportInterface
      */

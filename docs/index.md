@@ -21,6 +21,7 @@
   - [History reads](./operations/history-reads.md)
   - [History writes](./operations/history-writes.md)
   - [Client-side aggregates](./operations/client-side-aggregates.md)
+  - [File Transfer](./operations/file-transfer.md)
   - [Managing nodes](./operations/managing-nodes.md)
 - Security
   - [Overview](./security/overview.md)

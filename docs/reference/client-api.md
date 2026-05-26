@@ -125,7 +125,6 @@ See [Operations · History reads](../operations/history-reads.md).
 <!-- @divider eyebrow="History — write" -->
 Insert, replace, update, and delete on raw values and on historical
 events. Optional service set; many servers do not implement it.
-Added in v4.4.0.
 <!-- @enddivider -->
 
 <!-- @method name="historyInsertData(NodeId|string \$nodeId, DataValue[] \$values): int[]" returns="int[] (per-entry StatusCode)" visibility="public" -->
@@ -139,6 +138,24 @@ Added in v4.4.0.
 <!-- @method name="historyDeleteEvent(NodeId|string \$nodeId, string[] \$eventIds): int[]" returns="int[] (per-EventId StatusCode)" visibility="public" -->
 
 See [Operations · History writes](../operations/history-writes.md).
+
+<!-- @divider eyebrow="File Transfer" -->
+Open / read / write / close on `FileType` instances (Part 5 §C).
+Method NodeIds are resolved and cached per-file.
+<!-- @enddivider -->
+
+<!-- @method name="openFile(NodeId|string \$fileNodeId, OpenFileMode|int \$mode): int" returns="int (fileHandle)" visibility="public" -->
+<!-- @method name="closeFile(NodeId|string \$fileNodeId, int \$fileHandle): void" returns="void" visibility="public" -->
+<!-- @method name="readFile(NodeId|string \$fileNodeId, int \$fileHandle, int \$length): string" returns="string (bytes)" visibility="public" -->
+<!-- @method name="writeFile(NodeId|string \$fileNodeId, int \$fileHandle, string \$data): void" returns="void" visibility="public" -->
+<!-- @method name="getFilePosition(NodeId|string \$fileNodeId, int \$fileHandle): int" returns="int (UInt64 position)" visibility="public" -->
+<!-- @method name="setFilePosition(NodeId|string \$fileNodeId, int \$fileHandle, int \$position): void" returns="void" visibility="public" -->
+<!-- @method name="createDirectory(NodeId|string \$directoryNodeId, string \$directoryName): NodeId" returns="NodeId" visibility="public" -->
+<!-- @method name="createFileInDirectory(NodeId|string \$directoryNodeId, string \$fileName, bool \$requestFileOpen = false): CreateFileResult" returns="CreateFileResult (fileNodeId + fileHandle)" visibility="public" -->
+<!-- @method name="deleteFileSystemObject(NodeId|string \$directoryNodeId, NodeId|string \$targetNodeId): void" returns="void" visibility="public" -->
+<!-- @method name="moveOrCopyFileSystemObject(NodeId|string \$directoryNodeId, NodeId|string \$sourceNodeId, NodeId|string \$targetDirectoryNodeId, bool \$createCopy, string \$newName = ''): NodeId" returns="NodeId" visibility="public" -->
+
+See [Operations · File Transfer](../operations/file-transfer.md).
 
 <!-- @divider eyebrow="Node management" -->
 Mutate the address space. Optional service set.

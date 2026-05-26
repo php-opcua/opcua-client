@@ -63,6 +63,12 @@ class StatusCode
 
     public const BadAggregateConfigurationRejected = 0x80DA0000;
 
+    public const BadInvalidState = 0x80AF0000;
+
+    public const BadFileHandleInvalid = 0x80E70000;
+
+    public const BadFileNotOpened = 0x80E80000;
+
     public const InfoTypeDataValue = 0x00000400;
 
     public const HistorianCalculated = 0x00000001;
@@ -103,6 +109,9 @@ class StatusCode
         self::BadAggregateInvalidInputs => 'BadAggregateInvalidInputs',
         self::BadAggregateNotSupported => 'BadAggregateNotSupported',
         self::BadAggregateConfigurationRejected => 'BadAggregateConfigurationRejected',
+        self::BadInvalidState => 'BadInvalidState',
+        self::BadFileHandleInvalid => 'BadFileHandleInvalid',
+        self::BadFileNotOpened => 'BadFileNotOpened',
     ];
 
     /**

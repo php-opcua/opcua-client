@@ -59,9 +59,8 @@ describe('HistoryUpdate Data ops (integration vs open62541-historizing)', functi
         try {
             $client = TestHelper::connectForHistorizing();
 
-            // Use unique offsets so re-runs do not collide with previous Insert.
             $ts1 = new DateTimeImmutable('-15 minutes ' . random_int(1, 600) . ' seconds');
-            $ts2 = new DateTimeImmutable('-14 minutes ' . random_int(1, 600) . ' seconds');
+            $ts2 = $ts1->modify('+1 minute');
             $dv1 = new DataValue(new Variant(BuiltinType::Double, 11.0), StatusCode::Good, $ts1);
             $dv2 = new DataValue(new Variant(BuiltinType::Double, 22.0), StatusCode::Good, $ts2);
 

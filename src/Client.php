@@ -1093,6 +1093,113 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
     }
 
     /**
+     * @param NodeId|string $fileNodeId
+     * @param Module\FileTransfer\OpenFileMode|int $mode
+     * @return int
+     */
+    public function openFile(NodeId|string $fileNodeId, Module\FileTransfer\OpenFileMode|int $mode): int
+    {
+        return ($this->methodHandlers['openFile'])($fileNodeId, $mode);
+    }
+
+    /**
+     * @param NodeId|string $fileNodeId
+     * @param int $fileHandle
+     * @return void
+     */
+    public function closeFile(NodeId|string $fileNodeId, int $fileHandle): void
+    {
+        ($this->methodHandlers['closeFile'])($fileNodeId, $fileHandle);
+    }
+
+    /**
+     * @param NodeId|string $fileNodeId
+     * @param int $fileHandle
+     * @param int $length
+     * @return string
+     */
+    public function readFile(NodeId|string $fileNodeId, int $fileHandle, int $length): string
+    {
+        return ($this->methodHandlers['readFile'])($fileNodeId, $fileHandle, $length);
+    }
+
+    /**
+     * @param NodeId|string $fileNodeId
+     * @param int $fileHandle
+     * @param string $data
+     * @return void
+     */
+    public function writeFile(NodeId|string $fileNodeId, int $fileHandle, string $data): void
+    {
+        ($this->methodHandlers['writeFile'])($fileNodeId, $fileHandle, $data);
+    }
+
+    /**
+     * @param NodeId|string $fileNodeId
+     * @param int $fileHandle
+     * @return int
+     */
+    public function getFilePosition(NodeId|string $fileNodeId, int $fileHandle): int
+    {
+        return ($this->methodHandlers['getFilePosition'])($fileNodeId, $fileHandle);
+    }
+
+    /**
+     * @param NodeId|string $fileNodeId
+     * @param int $fileHandle
+     * @param int $position
+     * @return void
+     */
+    public function setFilePosition(NodeId|string $fileNodeId, int $fileHandle, int $position): void
+    {
+        ($this->methodHandlers['setFilePosition'])($fileNodeId, $fileHandle, $position);
+    }
+
+    /**
+     * @param NodeId|string $directoryNodeId
+     * @param string $directoryName
+     * @return NodeId
+     */
+    public function createDirectory(NodeId|string $directoryNodeId, string $directoryName): NodeId
+    {
+        return ($this->methodHandlers['createDirectory'])($directoryNodeId, $directoryName);
+    }
+
+    /**
+     * @param NodeId|string $directoryNodeId
+     * @param string $fileName
+     * @param bool $requestFileOpen
+     * @return Module\FileTransfer\CreateFileResult
+     */
+    public function createFileInDirectory(NodeId|string $directoryNodeId, string $fileName, bool $requestFileOpen = false): Module\FileTransfer\CreateFileResult
+    {
+        return ($this->methodHandlers['createFileInDirectory'])($directoryNodeId, $fileName, $requestFileOpen);
+    }
+
+    /**
+     * @param NodeId|string $directoryNodeId
+     * @param NodeId|string $targetNodeId
+     * @return void
+     */
+    public function deleteFileSystemObject(NodeId|string $directoryNodeId, NodeId|string $targetNodeId): void
+    {
+        ($this->methodHandlers['deleteFileSystemObject'])($directoryNodeId, $targetNodeId);
+    }
+
+    /**
+     * @param NodeId|string $directoryNodeId
+     * @param NodeId|string $sourceNodeId
+     * @param NodeId|string $targetDirectoryNodeId
+     * @param bool $createCopy
+     * @param string $newName
+     * @return NodeId
+     */
+    public function moveOrCopyFileSystemObject(NodeId|string $directoryNodeId, NodeId|string $sourceNodeId, NodeId|string $targetDirectoryNodeId, bool $createCopy, string $newName = ''): NodeId
+    {
+        return ($this->methodHandlers['moveOrCopyFileSystemObject'])($directoryNodeId, $sourceNodeId, $targetDirectoryNodeId, $createCopy, $newName);
+    }
+
+    /**
      * @param array<array{parentNodeId: NodeId|string, referenceTypeId: NodeId|string, requestedNewNodeId: NodeId|string, browseName: QualifiedName, nodeClass: NodeClass, typeDefinition: NodeId|string, displayName?: ?string, description?: ?string, writeMask?: int, userWriteMask?: int}> $nodesToAdd
      * @return AddNodesResult[]
      */

@@ -13,7 +13,7 @@ next: { label: 'Logging',            href: '../observability/logging.md' }
 
 # Custom transports
 
-Added in v4.4.0. The client moves OPC UA framed messages between PHP
+The client moves OPC UA framed messages between PHP
 and the server through a single abstraction — `ClientTransportInterface`.
 The default implementation is `TcpTransport`, which speaks `opc.tcp://`
 over a regular TCP socket. Implementing the interface lets you target

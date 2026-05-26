@@ -945,6 +945,101 @@ class MockClient implements OpcUaClientInterface
     /**
      * {@inheritDoc}
      */
+    public function openFile(NodeId|string $fileNodeId, \PhpOpcua\Client\Module\FileTransfer\OpenFileMode|int $mode): int
+    {
+        $this->record('openFile', [$fileNodeId, $mode]);
+
+        return 1;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function closeFile(NodeId|string $fileNodeId, int $fileHandle): void
+    {
+        $this->record('closeFile', [$fileNodeId, $fileHandle]);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function readFile(NodeId|string $fileNodeId, int $fileHandle, int $length): string
+    {
+        $this->record('readFile', [$fileNodeId, $fileHandle, $length]);
+
+        return '';
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function writeFile(NodeId|string $fileNodeId, int $fileHandle, string $data): void
+    {
+        $this->record('writeFile', [$fileNodeId, $fileHandle, strlen($data)]);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getFilePosition(NodeId|string $fileNodeId, int $fileHandle): int
+    {
+        $this->record('getFilePosition', [$fileNodeId, $fileHandle]);
+
+        return 0;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function setFilePosition(NodeId|string $fileNodeId, int $fileHandle, int $position): void
+    {
+        $this->record('setFilePosition', [$fileNodeId, $fileHandle, $position]);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function createDirectory(NodeId|string $directoryNodeId, string $directoryName): NodeId
+    {
+        $this->record('createDirectory', [$directoryNodeId, $directoryName]);
+
+        return NodeId::string(0, "mock-dir/{$directoryName}");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function createFileInDirectory(NodeId|string $directoryNodeId, string $fileName, bool $requestFileOpen = false): \PhpOpcua\Client\Module\FileTransfer\CreateFileResult
+    {
+        $this->record('createFileInDirectory', [$directoryNodeId, $fileName, $requestFileOpen]);
+
+        return new \PhpOpcua\Client\Module\FileTransfer\CreateFileResult(
+            NodeId::string(0, "mock-dir/{$fileName}"),
+            $requestFileOpen ? 1 : 0,
+        );
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function deleteFileSystemObject(NodeId|string $directoryNodeId, NodeId|string $targetNodeId): void
+    {
+        $this->record('deleteFileSystemObject', [$directoryNodeId, $targetNodeId]);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function moveOrCopyFileSystemObject(NodeId|string $directoryNodeId, NodeId|string $sourceNodeId, NodeId|string $targetDirectoryNodeId, bool $createCopy, string $newName = ''): NodeId
+    {
+        $this->record('moveOrCopyFileSystemObject', [$directoryNodeId, $sourceNodeId, $targetDirectoryNodeId, $createCopy, $newName]);
+
+        return NodeId::string(0, 'mock-dir/' . ($newName !== '' ? $newName : 'moved'));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function addNodes(array $nodesToAdd): array
     {
         $this->record('addNodes', [$nodesToAdd]);

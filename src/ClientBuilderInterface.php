@@ -279,7 +279,7 @@ interface ClientBuilderInterface
      * Set a custom wire transport for the resulting {@see Client}.
      *
      * When unset (the default), the client uses
-     * {@see \PhpOpcua\Client\Transport\TcpTransport}. Pass an alternative
+     * {@see Transport\TcpTransport}. Pass an alternative
      * implementation of {@see ClientTransportInterface} to target a different
      * wire encapsulation or to inject a mock transport in tests. Added in v4.4.0.
      *
@@ -290,7 +290,7 @@ interface ClientBuilderInterface
 
     /**
      * Get the configured transport, or `null` when the builder will fall back
-     * to the default {@see \PhpOpcua\Client\Transport\TcpTransport}. Added in v4.4.0.
+     * to the default {@see Transport\TcpTransport}. Added in v4.4.0.
      *
      * @return ?ClientTransportInterface
      */

@@ -35,6 +35,25 @@ Each addition is mechanical: new `Calculator/` class + new enum case in `Aggrega
 
 - [ ] [`UpdateStructureDataDetails`](https://reference.opcfoundation.org/Core/Part11/v105/docs/6.9.4) — Insert / Replace / Update / Remove for structured history entries (Annotations are the canonical use case). Servers that expose `HasAnnotations` references can persist text annotations attached to a specific timestamp on a Variable's history.
 
+### File Transfer · convenience helpers and missing test coverage
+
+`FileTransferModule` (v4.4.0) ships the six `FileType` methods plus the four `FileDirectoryType` methods. Follow-ups intentionally deferred:
+
+- [ ] `readFileContents(NodeId|string $fileNodeId, ?int $chunkSize = null): string` — wraps `Open(Read)` + N×`Read` + `Close`. Deferred until the chunk-size discovery policy stabilises across server families.
+- [ ] `writeFileContents(NodeId|string $fileNodeId, string $data, bool $eraseExisting = true): void` — wraps `Open(Write [| EraseExisting])` + `Write` + `Close` with size-aware chunking. Same chunk-size question.
+- [ ] Unit tests for the four `FileDirectoryType` wrappers. The six `FileType` methods already have 17 unit tests in `tests/Unit/Module/FileTransfer/FileTransferModuleTest.php`.
+- [ ] Integration tests for the four `FileDirectoryType` wrappers and for `ProtectedWritableFile` against `uanetstandard-test-suite` v1.3.0+.
+
+## Blocked
+
+### File Transfer · typed `FileChangeReceived` / `FileAccessReceived` events
+
+**Status:** Blocked by upstream test-server limitation.
+
+**What:** Two PSR-14 event classes dispatched by `FileTransferModule` after the corresponding server-emitted Part 5 §8.2 events arrive over a subscription — `FileChangeReceived` for `FileChangeEventType`, `FileAccessReceived` for `FileAccessEventType`. The decoder would piggy-back on the existing `EventNotificationReceived` flow.
+
+**Why it's blocked:** no test server in the ecosystem currently emits these events. The reference suite `php-opcua/uanetstandard-test-suite` (v1.3.0) attempted to ship them and found that upstream UA-.NETStandard 1.5.378.134 does not include the generated state classes — only the generic `AuditUpdate*EventType` family. See `uanetstandard-test-suite` ROADMAP under **Blocked**. Shipping the client-side typed events without a fixture that emits them would mean no integration coverage and a documented surface no real server feeds.
+
 ---
 
 ## v5.0.0 (breaking) Estimate 1Q January 2027

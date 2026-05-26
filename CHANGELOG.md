@@ -3,8 +3,9 @@
 ## [v4.4.0] - TBD
 
 - Bump extra-test-suite to v1.2.0
+- Bump uanetstandard-test-suite to v1.3.0
 
-Minor release. New `AggregateModule` for client-side aggregate computation, `HistoryModule` gains write access via the OPC UA HistoryUpdate service, and the wire transport is now pluggable via `ClientTransportInterface`.
+Minor release. New `AggregateModule` for client-side aggregate computation, `HistoryModule` gains write access via the OPC UA HistoryUpdate service, the wire transport is now pluggable via `ClientTransportInterface`, and a new `FileTransferModule` wraps the OPC UA Part 5 File Transfer service set.
 
 ### Added — AggregateModule
 
@@ -55,6 +56,39 @@ Minor release. New `AggregateModule` for client-side aggregate computation, `His
 - `InMemoryTransport` test helper at `tests/Unit/Helpers/InMemoryTransport.php` — records sent messages, replays queued responses, satisfies the contract end-to-end. Doubles as the canonical "how to write a custom transport" example referenced from `docs/extensibility/transport.md`.
 - 16 new unit tests (`tests/Unit/Transport/ClientTransportInterfaceTest.php` + `tests/Unit/ClientBuilderTransportTest.php`); full suite stays at 1399 passing.
 - New doc page `docs/extensibility/transport.md` covering the contract, when to write a custom transport (and when not — PubSub stays in its own package), wiring via the builder, the `InMemoryTransport` worked example, and the invariant rules each implementation must respect.
+
+### Added — File Transfer (Part 5)
+
+- **`FileTransferModule`** — 10th default module (registered automatically by `ClientBuilder`). Wraps the six methods of the OPC UA File Transfer service set (Part 5 §C.2) into typed PHP calls. Lives at `PhpOpcua\Client\Module\FileTransfer\FileTransferModule`.
+- 6 new methods on `OpcUaClientInterface` / `Client` / `MockClient`:
+    - `openFile(NodeId|string $fileNodeId, OpenFileMode|int $mode): int` — returns the server-assigned fileHandle.
+    - `closeFile(NodeId|string $fileNodeId, int $fileHandle): void`.
+    - `readFile(NodeId|string $fileNodeId, int $fileHandle, int $length): string` — short-reads allowed at EOF (Part 5 §C.2.3).
+    - `writeFile(NodeId|string $fileNodeId, int $fileHandle, string $data): void`.
+    - `getFilePosition(NodeId|string $fileNodeId, int $fileHandle): int`.
+    - `setFilePosition(NodeId|string $fileNodeId, int $fileHandle, int $position): void`.
+- **`OpenFileMode` enum** (int-backed bit field: `Read=1, Write=2, EraseExisting=4, Append=8`) + `OpenFileMode::toByte(...)` helper for OR-combining cases. `openFile()` accepts either the enum or a pre-combined Byte.
+- **Per-file Method NodeId cache** — each FileType instance carries its own Open/Close/Read/Write/GetPosition/SetPosition Method children. The module resolves them once via `translateBrowsePaths` on first use, then reuses the cached result. Cache is cleared by `Client::disconnect()` (module's `reset()`).
+- **Edge-case handling** — non-Good `CallResult` is wrapped in `ServiceException` with the StatusCode mnemonic in the message. New `StatusCode` constants: `BadInvalidState`, `BadFileHandleInvalid`, `BadFileNotOpened`. `BadNotWritable` was already present.
+- 4 new event classes dispatched lazily after the corresponding operations:
+    - `FileOpened(client, fileNodeId, fileHandle, mode)`
+    - `FileClosed(client, fileNodeId, fileHandle)`
+    - `FileBytesRead(client, fileNodeId, fileHandle, bytesRead, requestedLength)`
+    - `FileBytesWritten(client, fileNodeId, fileHandle, bytesWritten)`
+- 17 new unit tests (`tests/Unit/Module/FileTransfer/FileTransferModuleTest.php`) covering registration, Open with enum / Byte mode, per-method Variant typing on the wire, error propagation from both translate and call paths, per-(file, method) cache hits, dispatch via Closure pattern. Full suite stays at **1416 passing**.
+- 6 integration tests (`tests/Integration/FileTransferTest.php`) against `uanetstandard-test-suite` v1.3.0 fixtures on port 4840: Open/Read/Close on `ReadOnlyFile`, empty-file read, chunked 256 KB drain on `LargeFile`, round-trip on `WritableFile`, GetPosition/SetPosition cooperation, `BadNotWritable` on attempted Write of a read-only file. Each test self-skips if the fixture is missing (server v < 1.3.0).
+- New doc page `docs/operations/file-transfer.md` covering the six methods, the `OpenFileMode` enum, examples for read/chunked-read/overwrite, Method NodeId caching strategy, failure modes, dispatched events. Cascading updates in `docs/index.md`, `docs/overview.md` (9 → 10 modules), `docs/extensibility/modules.md` (nine → ten + new row), `docs/reference/client-api.md` (new "File Transfer" divider), `docs/observability/event-reference.md` (52 → 56), `docs/reference/enums.md` (new `OpenFileMode` section).
+
+### Added — File Transfer · FileDirectoryType wrappers
+
+- 4 new methods on `OpcUaClientInterface` / `Client` / `MockClient` covering OPC UA Part 5 §C.3 (the `FileDirectoryType` management surface):
+    - `createDirectory(NodeId|string $directoryNodeId, string $directoryName): NodeId`.
+    - `createFileInDirectory(NodeId|string $directoryNodeId, string $fileName, bool $requestFileOpen = false): CreateFileResult`. Returns a two-tuple `(NodeId, fileHandle)`; `fileHandle` is `0` when the caller did not also ask to open the file.
+    - `deleteFileSystemObject(NodeId|string $directoryNodeId, NodeId|string $targetNodeId): void`.
+    - `moveOrCopyFileSystemObject(NodeId|string $directoryNodeId, NodeId|string $sourceNodeId, NodeId|string $targetDirectoryNodeId, bool $createCopy, string $newName = ''): NodeId`. Both move (`createCopy = false`, source removed) and copy (`createCopy = true`, source preserved) are supported.
+- **`CreateFileResult` DTO** (readonly, `WireSerializable`) — registered on the wire registry by the module's `registerWireTypes()`.
+- Method NodeId resolution uses the same per-`(directory, method)` cache as the FileType six.
+- Cascading updates in `docs/operations/file-transfer.md` (new "FileDirectoryType" section with the `CreateFileResult` DTO + move-vs-copy worked examples) and `docs/reference/client-api.md` (four new `@method` lines under the existing "File Transfer" divider).
 
 ## [v4.3.2] - 2026-05-15
 

@@ -14,7 +14,7 @@ next: { label: 'Client-side aggregates',  href: './client-side-aggregates.md' }
 
 # History writes — HistoryUpdate
 
-Added in v4.4.0. The HistoryUpdate service set (Part 11 §6.9) lets a
+The HistoryUpdate service set (Part 11 §6.9) lets a
 client mutate the historical record itself — insert missing samples,
 replace one that turned out to be wrong, delete a range, manage
 historical events. Like HistoryRead, it is **optional** in the spec:

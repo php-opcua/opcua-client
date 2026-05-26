@@ -8,12 +8,12 @@ see_also:
   - { href: 'https://opcfoundation.org/specs/part13', meta: 'external', label: 'OPC UA Part 13 — Aggregates' }
 
 prev: { label: 'History writes',  href: './history-writes.md' }
-next: { label: 'Managing nodes',  href: './managing-nodes.md' }
+next: { label: 'File Transfer',   href: './file-transfer.md' }
 ---
 
 # Client-side aggregates
 
-The `AggregateModule` (added in v4.4.0, registered by default) computes
+The `AggregateModule` (registered by default) computes
 OPC UA Part 13 aggregate functions **on the client**, from a buffer of
 raw `DataValue`s you supply — or from raw history it fetches for you
 in one call.

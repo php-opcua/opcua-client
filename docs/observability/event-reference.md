@@ -1,6 +1,6 @@
 ---
 eyebrow: 'Docs · Observability'
-lede:    'The full event catalogue — 52 classes grouped by lifecycle. Each event carries a $client reference plus a handful of typed fields.'
+lede:    'The full event catalogue — 56 classes grouped by lifecycle. Each event carries a $client reference plus a handful of typed fields.'
 
 see_also:
   - { href: './events.md',          meta: '6 min' }
@@ -13,7 +13,7 @@ next: { label: 'Caching',  href: './caching.md' }
 
 # Event reference
 
-The library dispatches **52** event classes. Every event extends a
+The library dispatches **56** event classes. Every event extends a
 common shape with a `$client` property; the per-event fields below are
 the additions on top of that.
 
@@ -123,7 +123,7 @@ library dispatches one of the specific events below in addition.
 
 ## History updates (4)
 
-Dispatched after each HistoryUpdate call returns. Added in v4.4.0.
+Dispatched after each HistoryUpdate call returns.
 
 | Event                  | Fires when                                                          | Key fields                                                                                       |
 | ---------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -139,13 +139,28 @@ Dispatched after each HistoryUpdate call returns. Added in v4.4.0.
 ## Aggregates (1)
 
 Dispatched after the client-side aggregator finishes a windowed
-computation. Added in v4.4.0.
+computation.
 
 | Event              | Fires when                                          | Key fields                                                                                            |
 | ------------------ | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `AggregateComputed`| `aggregate()` or `historyAggregate()` returned      | `function` (`AggregateFunction`), `rawInputCount`, `intervalCount`, `nodeId` (`?NodeId`, null for in-memory) |
 
 See [Operations · Client-side aggregates](../operations/client-side-aggregates.md).
+
+## File Transfer (4)
+
+Dispatched after each File Transfer call returns.
+
+| Event              | Fires when                          | Key fields                                                                |
+| ------------------ | ----------------------------------- | ------------------------------------------------------------------------- |
+| `FileOpened`       | `openFile()` returned                | `fileNodeId`, `fileHandle`, `mode` (Byte bit-field per Part 5 §C.2.1)     |
+| `FileClosed`       | `closeFile()` returned               | `fileNodeId`, `fileHandle`                                                |
+| `FileBytesRead`    | `readFile()` returned                | `fileNodeId`, `fileHandle`, `bytesRead`, `requestedLength` (may differ on EOF) |
+| `FileBytesWritten` | `writeFile()` returned               | `fileNodeId`, `fileHandle`, `bytesWritten`                                |
+
+`getFilePosition()` and `setFilePosition()` do not dispatch events
+— they're considered low-noise diagnostics. See
+[Operations · File Transfer](../operations/file-transfer.md).
 
 ## Cache (2)
 
