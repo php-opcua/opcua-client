@@ -37,7 +37,7 @@ class TcpTransport implements ClientTransportInterface
      */
     public static function fromConnectedSocket(mixed $socket, null|float $readTimeout = null): self
     {
-        if (!is_resource($socket)) {
+        if (! is_resource($socket)) {
             throw new ConnectionException('fromConnectedSocket requires a valid stream resource');
         }
 

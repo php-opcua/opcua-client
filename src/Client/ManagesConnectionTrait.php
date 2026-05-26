@@ -198,7 +198,7 @@ trait ManagesConnectionTrait
         $this->logger->info('Connecting to {endpoint}', $this->logContext(['endpoint' => $endpointUrl]));
 
         try {
-            if (!$this->transport->isConnected()) {
+            if (! $this->transport->isConnected()) {
                 $this->transport->connect($host, $port, $this->timeout);
                 $this->logger->debug('TCP connection established to {host}:{port}', $this->logContext(['host' => $host, 'port' => $port]));
             } else {

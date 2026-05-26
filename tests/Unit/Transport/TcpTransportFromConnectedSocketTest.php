@@ -86,7 +86,7 @@ describe('TcpTransport::fromConnectedSocket', function () {
         $transport = TcpTransport::fromConnectedSocket($a);
 
         try {
-            $payload = "HELF" . pack('V', 8);
+            $payload = 'HELF' . pack('V', 8);
             $transport->send($payload);
 
             $received = fread($b, 8);
@@ -104,7 +104,7 @@ describe('TcpTransport::fromConnectedSocket', function () {
         $transport = TcpTransport::fromConnectedSocket($a, 2.0);
 
         try {
-            $frame = "ACKF" . pack('V', 12) . "\x01\x02\x03\x04";
+            $frame = 'ACKF' . pack('V', 12) . "\x01\x02\x03\x04";
             fwrite($b, $frame);
 
             $received = $transport->receive();
