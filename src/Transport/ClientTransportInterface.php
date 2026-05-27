@@ -104,4 +104,33 @@ interface ClientTransportInterface
      * @return bool
      */
     public function isConnected(): bool;
+
+    /**
+     * Create a fresh, independent transport instance suitable for use as a
+     * discovery probe — `Client::connect()` opens a side connection to
+     * `GetEndpoints` before the main secure channel, and that probe needs a
+     * transport configured the same way as the main one (same `opc.tcp://`,
+     * `opc.https://`, …) but with its own socket / HTTP client lifecycle.
+     *
+     * The returned instance is unconnected; the caller invokes `connect()` on
+     * it as usual. For stateless transports (HTTPS) `connect()` can be a no-op.
+     *
+     * @return self
+     */
+    public function createProbe(): self;
+
+    /**
+     * Whether the transport already provides a confidential, authenticated
+     * channel at a layer below UA-TCP — typically TLS in the HTTPS mappings
+     * defined in OPC UA Part 6 §7.4.
+     *
+     * When `true`, `Client::connect()` skips the OPC UA OpenSecureChannel
+     * exchange and proceeds straight to CreateSession, because the wire-level
+     * secure channel is already established by the transport.
+     *
+     * Returns `false` for the default `opc.tcp://` transport.
+     *
+     * @return bool
+     */
+    public function isSecureChannelExternal(): bool;
 }

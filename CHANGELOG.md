@@ -3,9 +3,9 @@
 ## [v4.4.0] - TBD
 
 - Bump extra-test-suite to v1.2.0
-- Bump uanetstandard-test-suite to v1.4.0
+- Bump uanetstandard-test-suite to v1.5.0
 
-Minor release. New `AggregateModule` for client-side aggregate computation, `HistoryModule` gains write access via the OPC UA HistoryUpdate service, the wire transport is now pluggable via `ClientTransportInterface`, a `TcpTransport::fromConnectedSocket()` seam enables the companion [`opcua-client-ext-reverse-connect`](https://github.com/php-opcua/opcua-client-ext-reverse-connect) listener (OPC UA Part 6 §7.1.2.3), and a new `FileTransferModule` wraps the OPC UA Part 5 File Transfer service set.
+Minor release. New `AggregateModule` for client-side aggregate computation, `HistoryModule` gains write access via the OPC UA HistoryUpdate service, the wire transport is now pluggable via `ClientTransportInterface`, a `TcpTransport::fromConnectedSocket()` seam enables the companion [`opcua-client-ext-reverse-connect`](https://github.com/php-opcua/opcua-client-ext-reverse-connect) listener (OPC UA Part 6 §7.1.2.3), two new transport-contract methods (`createProbe` + `isSecureChannelExternal`) plus an `openSecureChannelExternal()` branch open the door for the [`opcua-client-ext-transport-https`](https://github.com/php-opcua/opcua-client-ext-transport-https) `opc.https://` transport (OPC UA Part 6 §7.4), and a new `FileTransferModule` wraps the OPC UA Part 5 File Transfer service set.
 
 ### Added — AggregateModule
 
@@ -65,6 +65,17 @@ Minor release. New `AggregateModule` for client-side aggregate computation, `His
 - 10 new unit tests (`tests/Unit/Transport/TcpTransportFromConnectedSocketTest.php`) using `stream_socket_server()` over loopback TCP so the suite stays portable on Linux, macOS, and Windows. Full suite at **1426 passing**.
 - The listener, RHE parser, whitelist validator, and orchestration live in [`php-opcua/opcua-client-ext-reverse-connect`](https://github.com/php-opcua/opcua-client-ext-reverse-connect). The core only exposes the seam.
 - New doc section in `docs/extensibility/transport.md` covering `fromConnectedSocket()`.
+
+### Added — HTTPS transport seam
+
+- **`ClientTransportInterface::createProbe(): self`** — returns a fresh, independent transport sibling for the discovery probe. `Client::connect()` opens a side connection to `GetEndpoints` before the main secure channel; previously the probe was hardcoded to `new TcpTransport()`, which broke when the main transport spoke anything else (e.g. HTTPS).
+- **`ClientTransportInterface::isSecureChannelExternal(): bool`** — when `true`, the client skips the OPC UA `OpenSecureChannel` exchange because the transport already wraps the wire in a confidential, authenticated channel (e.g. TLS in HTTPS).
+- **`ManagesSecureChannelTrait::openSecureChannelExternal()`** — new branch invoked when `isSecureChannelExternal() === true`. Initialises `SessionService` with synthetic `secureChannelId` / `tokenId` (read-and-discarded by the response decoder), registers all built-in modules against the session via `initServices()`, and skips OPN entirely.
+- **`ManagesSecureChannelTrait::closeSecureChannel()`** — early-returns when the transport reports `isSecureChannelExternal() === true`. There is no UA-level `CloseSecureChannel` to send: TLS (or the equivalent lower-layer transport) owns the channel and closes it through its own mechanism.
+- **`ManagesHandshakeTrait::performDiscoveryHandshake()`** — short-circuits the probe-side OPN exchange when the probe transport reports `isSecureChannelExternal() === true`.
+- `TcpTransport` implements both new methods (`createProbe` returns `new self()`, `isSecureChannelExternal` returns `false`). The test fixture `InMemoryTransport` mirrors the same defaults.
+- `tests/Unit/Transport/ClientTransportInterfaceTest.php` updated for the new 8-method contract. Full suite at **1426 passing**.
+- The `opc.https://` transport itself (Part 6 §7.4 — binary, JSON, XML-SOAP) lives in the companion package [`php-opcua/opcua-client-ext-transport-https`](https://github.com/php-opcua/opcua-client-ext-transport-https). The core only exposes the seam.
 
 ### Added — File Transfer (Part 5)
 

@@ -80,6 +80,16 @@ class InMemoryTransport implements ClientTransportInterface
         return $this->connected;
     }
 
+    public function createProbe(): self
+    {
+        return new self();
+    }
+
+    public function isSecureChannelExternal(): bool
+    {
+        return false;
+    }
+
     /**
      * Pre-load the next response {@see receive()} will return.
      *

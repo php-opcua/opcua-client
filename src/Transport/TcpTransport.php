@@ -180,4 +180,21 @@ class TcpTransport implements ClientTransportInterface
     {
         return $this->socket !== null;
     }
+
+    /**
+     * A fresh `TcpTransport` for use as a discovery probe — same defaults,
+     * its own socket.
+     */
+    public function createProbe(): self
+    {
+        return new self();
+    }
+
+    /**
+     * `opc.tcp://` relies on the OPC UA secure channel; TLS is not involved.
+     */
+    public function isSecureChannelExternal(): bool
+    {
+        return false;
+    }
 }

@@ -13,7 +13,7 @@ describe('ClientTransportInterface', function () {
         expect(new TcpTransport())->toBeInstanceOf(ClientTransportInterface::class);
     });
 
-    it('exposes the six contract methods on TcpTransport', function () {
+    it('exposes the eight contract methods on TcpTransport', function () {
         $reflection = new ReflectionClass(ClientTransportInterface::class);
         $names = array_map(fn ($m) => $m->getName(), $reflection->getMethods());
 
@@ -24,6 +24,8 @@ describe('ClientTransportInterface', function () {
             'setReceiveBufferSize',
             'close',
             'isConnected',
+            'createProbe',
+            'isSecureChannelExternal',
         ]);
     });
 

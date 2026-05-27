@@ -41,13 +41,46 @@ trait ManagesSecureChannelTrait
         $isSecure = $this->securityPolicy !== SecurityPolicy::None
             && $this->securityMode !== SecurityMode::None;
 
-        if ($isSecure) {
+        if ($this->transport->isSecureChannelExternal()) {
+            // TLS (or equivalent lower-layer transport security) is already
+            // the secure channel — skip the UA OpenSecureChannel exchange.
+            $this->openSecureChannelExternal();
+        } elseif ($isSecure) {
             $this->openSecureChannelWithSecurity();
         } else {
             $this->openSecureChannelNoSecurity();
         }
 
         $this->dispatch(fn () => new SecureChannelOpened($this, $this->secureChannelId, $this->securityPolicy, $this->securityMode));
+    }
+
+    /**
+     * Initialise the SessionService when the transport already supplies a
+     * confidential channel (e.g. HTTPS / TLS). No OPN frame goes on the wire;
+     * we pin synthetic `secureChannelId` and `tokenId` so the rest of the
+     * client pipeline (CreateSession, ActivateSession, …) frames messages
+     * consistently.
+     */
+    private function openSecureChannelExternal(): void
+    {
+        $this->secureChannel = new SecureChannel(SecurityPolicy::None, SecurityMode::None);
+        $this->secureChannelId = 1;
+
+        $this->session = new SessionService($this->secureChannelId, 1);
+        $this->session->setUserTokenPolicyIds(
+            $this->usernamePolicyId,
+            $this->certificatePolicyId,
+            $this->anonymousPolicyId,
+            $this->usernameTokenSecurityPolicyUri,
+        );
+        $this->session->setUserTokenEncryptionContext(
+            $this->serverCertDer,
+            $this->secureChannel->getMessageSecurity() ?? new MessageSecurity(new CertificateManager()),
+        );
+
+        $this->initServices($this->session);
+
+        $this->logger->debug('SecureChannel skipped — transport provides external security (e.g. TLS)', $this->logContext());
     }
 
     /**
@@ -216,6 +249,10 @@ trait ManagesSecureChannelTrait
     {
         $this->logger->debug('CloseSecureChannel request (channelId={channelId})', $this->logContext(['channelId' => $this->secureChannelId]));
         $this->dispatch(fn () => new SecureChannelClosed($this, $this->secureChannelId));
+
+        if ($this->transport->isSecureChannelExternal()) {
+            return;
+        }
 
         if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
             $this->closeSecureChannelSecure();

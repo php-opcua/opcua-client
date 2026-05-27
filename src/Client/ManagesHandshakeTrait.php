@@ -19,7 +19,6 @@ use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\Client\Transport\ClientTransportInterface;
-use PhpOpcua\Client\Transport\TcpTransport;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\UserTokenPolicy;
 
@@ -75,7 +74,7 @@ trait ManagesHandshakeTrait
     private function discoverServerCertificate(string $host, int $port, string $endpointUrl, bool $requireCertificate = true): void
     {
         $this->logger->debug('Discovering server certificate from {host}:{port}', $this->logContext(['host' => $host, 'port' => $port]));
-        $discoveryTransport = new TcpTransport();
+        $discoveryTransport = $this->transport->createProbe();
         $discoveryTransport->connect($host, $port, $this->timeout);
 
         $session = $this->performDiscoveryHandshake($discoveryTransport, $endpointUrl);
@@ -126,6 +125,14 @@ trait ManagesHandshakeTrait
             throw new MessageTypeException('ACK', $helloHeader->getMessageType());
         }
         AcknowledgeMessage::decode($helloDecoder);
+
+        if ($transport->isSecureChannelExternal()) {
+            // TLS already wraps the channel — synthetic IDs are enough for
+            // the probe's GetEndpoints exchange.
+            $this->logger->debug('Discovery: secure channel supplied by transport (TLS), skipping OPN', $this->logContext());
+
+            return new SessionService(1, 1);
+        }
 
         $this->logger->debug('Discovery ACK received, sending OPN request', $this->logContext());
         $opnRequest = new SecureChannelRequest();
