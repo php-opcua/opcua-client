@@ -31,7 +31,7 @@ Pick one by intent:
 
 ## browse()
 
-<!-- @method name="$client->browse(NodeId|string \$nodeId, BrowseDirection \$direction = BrowseDirection::Forward, bool \$includeSubtypes = true, int \$nodeClassMask = 0, bool \$useCache = true): array" returns="ReferenceDescription[]" visibility="public" -->
+<!-- @method name="$client->browse(NodeId|string \$nodeId, BrowseDirection \$direction = BrowseDirection::Forward, ?NodeId \$referenceTypeId = null, bool \$includeSubtypes = true, array \$nodeClasses = [], bool \$useCache = true): array" returns="ReferenceDescription[]" visibility="public" -->
 
 <!-- @code-block language="php" label="examples/browse.php" -->
 ```php
@@ -58,7 +58,7 @@ under one root), you will see only the first ~100–1000 entries; use
 | ------------------- | ------------------------------------------------------- |
 | `$direction`        | `Forward` (default), `Inverse`, or `Both`. Inverse follows references pointing *at* the node. |
 | `$includeSubtypes`  | When `true` (default), references whose `ReferenceTypeId` is a subtype of the standard reference types are included. Set `false` to follow a single specific reference type. |
-| `$nodeClassMask`    | Bitmask filter on the target node's class. `0` = all. Combine `NodeClass` enum values with `\|`. |
+| `$nodeClasses`      | Array of `NodeClass` enum cases to filter on. Empty array (the default) = all classes. |
 
 <!-- @code-block language="php" label="filter to variables only" -->
 ```php
@@ -66,7 +66,7 @@ use PhpOpcua\Client\Types\NodeClass;
 
 $variables = $client->browse(
     'ns=2;s=Devices',
-    nodeClassMask: NodeClass::Variable->value
+    nodeClasses: [NodeClass::Variable],
 );
 ```
 <!-- @endcode-block -->
@@ -91,14 +91,22 @@ items. Each follow-up call respects the same `$useCache` flag.
 For tree walks, `browseRecursive()` traverses children-of-children up
 to a configurable depth, with built-in cycle detection:
 
-<!-- @method name="$client->browseRecursive(NodeId|string \$nodeId, ?int \$maxDepth = null, int \$nodeClassMask = 0): BrowseNode" returns="BrowseNode" visibility="public" -->
+<!-- @method name="$client->browseRecursive(NodeId|string \$nodeId, BrowseDirection \$direction = BrowseDirection::Forward, ?int \$maxDepth = null, ?NodeId \$referenceTypeId = null, bool \$includeSubtypes = true, array \$nodeClasses = []): BrowseNode[]" returns="BrowseNode[]" visibility="public" -->
+
+The return value is the **array of `BrowseNode` rooted at the immediate
+children of `$nodeId`** — not a single wrapper node. Iterate it
+explicitly:
 
 <!-- @code-block language="php" label="full subtree" -->
 ```php
-$tree = $client->browseRecursive('ns=2;s=Devices', maxDepth: 3);
+use PhpOpcua\Client\Types\BrowseNode;
 
-// $tree is a BrowseNode — each node has a reference and an array of children.
-walk($tree, depth: 0);
+$roots = $client->browseRecursive('ns=2;s=Devices', maxDepth: 3);
+
+// $roots is BrowseNode[] — each element is a child of the starting node.
+foreach ($roots as $root) {
+    walk($root, depth: 0);
+}
 
 function walk(BrowseNode $node, int $depth): void
 {
@@ -114,6 +122,9 @@ function walk(BrowseNode $node, int $depth): void
   (`setDefaultBrowseMaxDepth()`, ships at `4`). Cap it deliberately for
   large address spaces — an OPC UA server with 50 000 nodes will
   exhaust memory long before the network does.
+- `$nodeClasses` is an **array of `NodeClass` enum cases** to filter the
+  traversal (empty array means "all classes"). It is *not* an integer
+  bitmask — pass e.g. `[NodeClass::Object, NodeClass::Variable]`.
 - Cycle detection tracks NodeIds already visited and short-circuits.
 - Internally, each level runs `browseAll()` and inherits its caching.
 
@@ -150,7 +161,7 @@ and unique to the originating call — pass it back unchanged.
 ## Caching
 
 By default every browse call caches its result keyed by endpoint URL,
-NodeId, direction, includeSubtypes, and nodeClassMask. Cache hits fire
+NodeId, direction, includeSubtypes, and nodeClasses. Cache hits fire
 the `CacheHit` event, misses fire `CacheMiss`. Bypass per call with
 `useCache: false`; flush all entries with `$client->flushCache()` or
 invalidate one node with `$client->invalidateCache($nodeId)`.

@@ -19,6 +19,12 @@ dump, a small tree on a tame server. For anything larger, you need a
 streaming approach: walk node-by-node, process as you go, never hold
 the whole tree at once.
 
+`browseRecursive()` returns the **array of `BrowseNode` rooted at the
+immediate children of the starting node**, not a single wrapper node.
+A walker has to iterate the array; passing the array directly to a
+function that expects a single `BrowseNode` is the most common usage
+bug.
+
 ## The simple case
 
 <!-- @code-block language="php" label="examples/recursive-small.php" -->
@@ -26,13 +32,15 @@ the whole tree at once.
 use PhpOpcua\Client\Types\BrowseNode;
 use PhpOpcua\Client\Types\NodeClass;
 
-$tree = $client->browseRecursive(
+$roots = $client->browseRecursive(
     'ns=2;s=Devices',
     maxDepth: 3,
-    nodeClassMask: NodeClass::Object->value | NodeClass::Variable->value,
+    nodeClasses: [NodeClass::Object, NodeClass::Variable],
 );
 
-walk($tree, depth: 0);
+foreach ($roots as $root) {
+    walk($root, depth: 0);
+}
 
 function walk(BrowseNode $node, int $depth): void
 {
@@ -48,6 +56,9 @@ function walk(BrowseNode $node, int $depth): void
 (set via `setDefaultBrowseMaxDepth()`, ships at `4`) is fine for the
 "I want to see what's in there" case; lower it when you only need the
 top level.
+
+`nodeClasses` takes an **array of `NodeClass` enum cases**, not an
+integer bitmask. An empty array (the default) returns all classes.
 
 `browseRecursive()` has cycle detection — references back to an
 ancestor stop the recursion. Useful, because the OPC UA address space
@@ -81,11 +92,11 @@ function streamVariables($client, NodeId|string $rootNodeId): \Generator
         }
         $visited[$key] = true;
 
-        foreach ($client->browseAll($node, nodeClassMask: NodeClass::Variable->value) as $ref) {
+        foreach ($client->browseAll($node, nodeClasses: [NodeClass::Variable]) as $ref) {
             yield $ref;
         }
 
-        foreach ($client->browseAll($node, nodeClassMask: NodeClass::Object->value) as $ref) {
+        foreach ($client->browseAll($node, nodeClasses: [NodeClass::Object]) as $ref) {
             $stack[] = $ref->nodeId;
         }
     }
