@@ -115,7 +115,7 @@ use PhpOpcua\Client\Types\NodeClass;
 
 $methods = $client->browse(
     $objectId,
-    nodeClassMask: NodeClass::Method->value,
+    nodeClasses: [NodeClass::Method],
 );
 
 foreach ($methods as $m) {

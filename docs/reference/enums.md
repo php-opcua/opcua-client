@@ -56,11 +56,11 @@ with `|` when filtering Browse results.
 | `DataType`      | 64    | A DataType definition                      |
 | `View`          | 128   | A view (subset of the address space)       |
 
-<!-- @code-block language="php" label="bitmask filter" -->
+<!-- @code-block language="php" label="array filter" -->
 ```php
 $client->browse(
     'i=85',
-    nodeClassMask: NodeClass::Variable->value | NodeClass::Method->value,
+    nodeClasses: [NodeClass::Variable, NodeClass::Method],
 );
 ```
 <!-- @endcode-block -->

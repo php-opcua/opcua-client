@@ -63,9 +63,9 @@ See [Operations · Writing values](../operations/writing-values.md).
 Address-space navigation.
 <!-- @enddivider -->
 
-<!-- @method name="browse(NodeId|string \$nodeId, BrowseDirection \$direction = BrowseDirection::Forward, bool \$includeSubtypes = true, int \$nodeClassMask = 0, bool \$useCache = true): ReferenceDescription[]" returns="ReferenceDescription[]" visibility="public" -->
-<!-- @method name="browseAll(NodeId|string \$nodeId, BrowseDirection \$direction = BrowseDirection::Forward, bool \$includeSubtypes = true, int \$nodeClassMask = 0, bool \$useCache = true): ReferenceDescription[]" returns="ReferenceDescription[]" visibility="public" -->
-<!-- @method name="browseRecursive(NodeId|string \$nodeId, BrowseDirection \$direction = BrowseDirection::Forward, ?int \$maxDepth = null, ?NodeId \$referenceTypeId = null, bool \$includeSubtypes = true, array \$nodeClasses = []): array" returns="array" visibility="public" -->
+<!-- @method name="browse(NodeId|string \$nodeId, BrowseDirection \$direction = BrowseDirection::Forward, ?NodeId \$referenceTypeId = null, bool \$includeSubtypes = true, array \$nodeClasses = [], bool \$useCache = true): ReferenceDescription[]" returns="ReferenceDescription[]" visibility="public" -->
+<!-- @method name="browseAll(NodeId|string \$nodeId, BrowseDirection \$direction = BrowseDirection::Forward, ?NodeId \$referenceTypeId = null, bool \$includeSubtypes = true, array \$nodeClasses = [], bool \$useCache = true): ReferenceDescription[]" returns="ReferenceDescription[]" visibility="public" -->
+<!-- @method name="browseRecursive(NodeId|string \$nodeId, BrowseDirection \$direction = BrowseDirection::Forward, ?int \$maxDepth = null, ?NodeId \$referenceTypeId = null, bool \$includeSubtypes = true, array \$nodeClasses = []): BrowseNode[]" returns="BrowseNode[]" visibility="public" -->
 <!-- @method name="browseWithContinuation(NodeId|string \$nodeId, ...): BrowseResultSet" returns="BrowseResultSet" visibility="public" -->
 <!-- @method name="browseNext(string \$continuationPoint): BrowseResultSet" returns="BrowseResultSet" visibility="public" -->
 
