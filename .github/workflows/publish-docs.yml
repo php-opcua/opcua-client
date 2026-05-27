@@ -2,7 +2,7 @@ name: Publish docs
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, 'v*.x']
     tags: ['v*']
     paths:
       - 'docs/**'
@@ -37,6 +37,8 @@ jobs:
             RAW="${{ inputs.version }}"
           elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             RAW="${GITHUB_REF#refs/tags/}"
+          elif [[ "${GITHUB_REF}" == refs/heads/v*.x ]]; then
+            RAW="${GITHUB_REF#refs/heads/}"
           else
             RAW="master"
           fi
