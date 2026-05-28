@@ -91,6 +91,30 @@ describe('DataValue', function () {
         expect($dv->getVariant())->toBe($variant);
     });
 
+    it('exposes BuiltinType via getType() and ->type property', function () {
+        $dv = new DataValue(new Variant(BuiltinType::UInt16, 7));
+        expect($dv->getType())->toBe(BuiltinType::UInt16);
+        expect($dv->type)->toBe(BuiltinType::UInt16);
+    });
+
+    it('returns null type when DataValue has no Variant', function () {
+        $dv = new DataValue();
+        expect($dv->getType())->toBeNull();
+        expect($dv->type)->toBeNull();
+
+        $bad = DataValue::bad(0x80020000);
+        expect($bad->getType())->toBeNull();
+        expect($bad->type)->toBeNull();
+    });
+
+    it('keeps type consistent with the inner Variant for every BuiltinType', function () {
+        foreach (BuiltinType::cases() as $case) {
+            $dv = new DataValue(new Variant($case, null));
+            expect($dv->getType())->toBe($case);
+            expect($dv->type)->toBe($case);
+        }
+    });
+
     it('auto-extracts decoded ExtensionObject value', function () {
         $decoded = ['field1' => 'hello', 'field2' => 123];
         $extObj = new ExtensionObject(NodeId::numeric(2, 5001), 0x01, null, $decoded);

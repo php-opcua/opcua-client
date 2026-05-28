@@ -28,18 +28,21 @@ A `Variant` carries:
 
 ## Reading values
 
-`DataValue::getValue()` unwraps the `Variant` to its native PHP value:
+`DataValue::getValue()` unwraps the `Variant` to its native PHP value, and `DataValue::getType()` returns the OPC UA `BuiltinType` of that value — symmetric accessors for the two halves of every read:
 
 <!-- @code-block language="php" label="value extraction" -->
 ```php
 $dv = $client->read('ns=2;s=Devices/PLC/Speed');
 
-$dv->value;            // Variant — typed wrapper
 $dv->getValue();       // float — unwrapped scalar
+$dv->getType();        // BuiltinType::Double — the OPC UA data type
+$dv->type;             // BuiltinType::Double — same as getType(), public readonly property
 $dv->statusCode;       // int
 $dv->sourceTimestamp;  // ?DateTimeImmutable
 ```
 <!-- @endcode-block -->
+
+The `type` property and the matching `getType()` accessor (both added in v4.4.0) are the canonical way to inspect the OPC UA data type of a read result. They return `null` only when the `DataValue` was constructed without a `Variant` (e.g. a `bad()` fault).
 
 `getValue()` also handles two convenience cases:
 
@@ -195,7 +198,7 @@ only the underlying value, compare `$a->getValue() === $b->getValue()`.
 ## Common pitfalls
 
 - **`getValue()` on a Null Variant.** Returns `null`. Always check
-  `$dv->value->type !== BuiltinType::Null` before treating the value
+  `$dv->type !== BuiltinType::Null` before treating the value
   as present.
 - **Float comparisons.** OPC UA `Float` (single precision) → PHP
   `float` (double precision) round-trips lose precision. Compare with

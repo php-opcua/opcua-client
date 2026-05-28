@@ -37,14 +37,14 @@ A PHP library for connecting to OPC UA servers (industrial automation protocol).
 - Automatic DataType Discovery: discoverDataTypes() auto-detects and decodes custom structures without manual codecs (OPC UA 1.04+)
 - PSR-3 Logging: optional structured logging via any PSR-3 logger (Monolog, Laravel, etc.); NullLogger by default
 - PSR-16 Cache: browse/browseAll/resolveNodeId/getEndpoints/discoverDataTypes results cached by default (InMemoryCache, 300s TTL). Any PSR-16 driver works (FileCache, Laravel Cache, Redis, etc.). Per-call bypass with useCache: false. Invalidate per-node or flush all. discoverDataTypes replays cached type definitions without server round-trips. Metadata read cache (DisplayName, BrowseName, DataType, etc.) opt-in via setReadMetadataCache(true), Value never cached, refresh: true to bypass.
-- PSR-14 Events: 47 granular events dispatched at lifecycle points (connection, session, subscription, data change, alarms, read/write, browse, cache, retry, trust store). NullEventDispatcher by default (zero overhead). Alarm-specific events auto-deduced from notification fields. All events carry a $client reference.
+- PSR-14 Events: 57 granular events dispatched at lifecycle points (connection, session, subscription, data change, alarms, read/write, browse, cache, retry, trust store, secure channel, history update, file transfer, aggregate). NullEventDispatcher by default (zero overhead). Alarm-specific events auto-deduced from notification fields. All events carry a $client reference.
 - Server Trust Store: persistent server certificate validation via FileTrustStore (~/.opcua/ default). Three policies: Fingerprint, FingerprintAndExpiry, Full (CA chain). TOFU auto-accept with force option. setTrustPolicy(null) disables (default). UntrustedCertificateException thrown on rejection. CLI: trust, trust:list, trust:remove.
 - Connection State: lifecycle tracking (Disconnected, Connected, Broken) with reconnect()
 - MockClient: in-memory test double implementing OpcUaClientInterface — register handlers, assert calls, no TCP connection
 - Typed everywhere: all service responses return public readonly DTOs, not arrays
 - Wire serialization (v4.2.0): src/Wire/WireSerializable + src/Wire/WireTypeRegistry turn every core / module DTO into a JSON-safe payload wrapped with a `__t` discriminator. CoreWireTypes registers NodeId, QualifiedName, LocalizedText, DataValue, Variant, ExtensionObject, BrowseNode, ReferenceDescription, EndpointDescription, UserTokenPolicy plus enums BuiltinType/NodeClass/BrowseDirection/ConnectionState. Each ServiceModule::registerWireTypes() hook adds its own result DTOs. Consumers (opcua-session-manager ManagedClient) build a matching registry to safely decode — unregistered __t ids are rejected, no unserialize() anywhere, no gadget-chain surface.
 - Client introspection (v4.2.0): OpcUaClientInterface adds getRegisteredMethods(): string[] and getLoadedModules(): class-string[] alongside existing hasMethod() / hasModule(). Implemented on Client, MockClient, ManagedClient.
-- Thoroughly tested: 1300+ tests (1040+ unit, 250+ integration), 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
+- Thoroughly tested: 1400+ unit tests and integration suite against the OPC Foundation UA-.NETStandard reference implementation, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
 
 ## Property access style
 
@@ -59,18 +59,20 @@ All Type classes and result DTOs use public readonly properties. Access is $ref-
 - Kernel/ (src/Kernel/): kernel contract for modules
   - ClientKernelInterface: public contract that modules depend on (executeWithRetry, ensureConnected, send, receive, createDecoder, dispatch, logContext, getCacheCodec, etc.) — implemented directly by Client via its ClientBuilder/Manages*Traits; there is no separate concrete kernel class
   - ModuleRegistry: module lifecycle, topological dependency sort, method conflict detection
-- Module/ (src/Module/): 8 self-contained service modules, each with its own protocol service(s) and DTOs
+- Module/ (src/Module/): 10 self-contained service modules, each with its own protocol service(s) and DTOs
   - ServiceModule: abstract base class (register, boot, reset, requires)
   - ReadWrite/: ReadWriteModule, ReadService, WriteService, CallService, CallResult
   - Browse/: BrowseModule, BrowseService, GetEndpointsService, BrowseResultSet
   - Subscription/: SubscriptionModule, SubscriptionService, MonitoredItemService, PublishService, SubscriptionResult, MonitoredItemResult, PublishResult, TransferResult
-  - History/: HistoryModule, HistoryReadService
+  - History/: HistoryModule, HistoryReadService, HistoryUpdateService, HistoryUpdateResult — raw / processed (aggregated) / at-time reads + Insert/Replace/Update/Remove for data and events
+  - Aggregate/ (v4.4.0): AggregateModule, AggregateFunction, AggregateOptions, AggregateCalculatorInterface — client-side aggregate computation (Interpolate, Minimum, Maximum, Average, Count) on raw history buffers
   - NodeManagement/: NodeManagementModule, NodeManagementService, AddNodesResult
   - TranslateBrowsePath/: TranslateBrowsePathModule, TranslateBrowsePathService, BrowsePathResult, BrowsePathTarget
   - ServerInfo/: ServerInfoModule, BuildInfo
   - TypeDiscovery/: TypeDiscoveryModule
+  - FileTransfer/ (v4.4.0): FileTransferModule — Part 5 File Transfer service set (Open / Read / Write / Close / GetPosition / SetPosition + FileDirectoryType helpers)
 - ClientBuilder/ (src/ClientBuilder/): builder traits for configuration (cache, events, timeout, trust store, batching, modules)
-- Transport (src/Transport/): TCP socket communication
+- Transport (src/Transport/): wire transport contract + built-in TCP. `ClientTransportInterface` (8 methods including v4.4.0 seams `createProbe(): self` and `isSecureChannelExternal(): bool`) makes wire transports pluggable via `ClientBuilder::setTransport()`. `TcpTransport` is the default; `TcpTransport::fromConnectedSocket()` enables the `opcua-client-ext-reverse-connect` listener; companion `opcua-client-ext-transport-https` plugs in for `opc.https://`.
 - Protocol (src/Protocol/): shared protocol infrastructure — AbstractProtocolService base class, ServiceTypeId constants, SessionService (kernel-level)
 - Encoding (src/Encoding/): binary serialization (BinaryEncoder, BinaryDecoder)
 - Security (src/Security/): secure channel, crypto operations, certificate management
@@ -213,7 +215,7 @@ $client = ClientBuilder::create()
 - PhpOpcua\Client\Exception\WriteTypeMismatchException — thrown when explicit write type mismatches detected type (public readonly: nodeId, expectedType, givenType)
 - PhpOpcua\Client\Event\WriteTypeDetecting — dispatched before write type detection starts (public readonly: client, nodeId)
 - PhpOpcua\Client\Event\WriteTypeDetected — dispatched after write type detection (public readonly: client, nodeId, detectedType, fromCache)
-- PhpOpcua\Client\Event\* — 47 readonly event classes (connection, session, subscription, monitored item, alarms, read/write, write type detection, browse, cache, retry, secure channel, trust store)
+- PhpOpcua\Client\Event\* — 57 readonly event classes (connection, session, subscription, monitored item, alarms, read/write, write type detection, browse, cache, retry, secure channel, trust store, history update, file transfer, aggregate)
 
 ## Related packages
 
@@ -261,6 +263,6 @@ MIT
 ## Links
 
 - Repository: https://github.com/php-opcua/opcua-client
-- Documentation: https://github.com/php-opcua/opcua-client/tree/master/doc
+- Documentation: https://github.com/php-opcua/opcua-client/tree/master/docs (or https://www.php-opcua.com/documentation/opcua-client)
 - Issues: https://github.com/php-opcua/opcua-client/issues
 - Packagist: https://packagist.org/packages/php-opcua/opcua-client

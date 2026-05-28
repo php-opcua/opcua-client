@@ -37,7 +37,7 @@ composer require php-opcua/opcua-client
 - Authentication — anonymous, username/password, X.509 certificate
 - PSR-3 Logging — optional structured logging via any PSR-3 logger; NullLogger by default
 - PSR-16 Cache — browse/browseAll/resolveNodeId/getEndpoints/discoverDataTypes results cached by default (InMemoryCache, 300s TTL). Any PSR-16 driver works (FileCache, Laravel, Redis). Per-call bypass with useCache: false. discoverDataTypes replays cached type definitions without server round-trips. Metadata read cache opt-in via setReadMetadataCache(true): caches non-Value attributes (DisplayName, BrowseName, DataType, NodeClass, etc.). Value never cached. read($nodeId, $attr, refresh: true) to bypass.
-- PSR-14 Events — 47 granular events at lifecycle points (connection, session, subscription, data change, alarms, read/write, browse, cache, retry, trust store). NullEventDispatcher by default (zero overhead). Alarm events auto-deduced from notification fields. All events carry a $client reference.
+- PSR-14 Events — 57 granular events at lifecycle points (connection, session, subscription, data change, alarms, read/write, browse, cache, retry, trust store, secure channel, history update, file transfer, aggregate). NullEventDispatcher by default (zero overhead). Alarm events auto-deduced from notification fields. All events carry a $client reference.
 - Server Trust Store — persistent server certificate validation via FileTrustStore. Three policies (Fingerprint, FingerprintAndExpiry, Full). TOFU auto-accept. setTrustPolicy(null) disables (default). 5 trust-specific events. CLI trust/trust:list/trust:remove commands.
 - Auto-Retry — automatic reconnect on failure
 - Fluent Builder API — readMulti(), writeMulti(), createMonitoredItems(), and translateBrowsePaths() support a chainable builder when called without arguments
@@ -47,7 +47,7 @@ composer require php-opcua/opcua-client
 - Typed everywhere — all responses return public readonly DTOs, not arrays
 - MockClient — in-memory test double implementing OpcUaClientInterface; register handlers, assert calls, no TCP connection
 - DataValue factory methods — ofInt32(), ofDouble(), ofString(), ofBoolean(), of($value, BuiltinType), bad(StatusCode), etc.
-- 1300+ tests (1040+ unit, 250+ integration), 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
+- 1400+ unit tests and integration suite against the OPC Foundation UA-.NETStandard reference implementation, 99%+ code coverage on PHP 8.2/8.3/8.4/8.5
 
 ### Property access style
 
@@ -232,7 +232,7 @@ $builder->setEventDispatcher($yourDispatcher);
 $builder->setEventDispatcher(app(EventDispatcherInterface::class));
 ```
 
-NullEventDispatcher by default (zero overhead). 47 events covering connection, session, subscription, data change, alarms, read/write, write type detection, browse, cache, retry, trust store. See section 14 for the full list.
+NullEventDispatcher by default (zero overhead). 57 events covering connection, session, subscription, data change, alarms, read/write, write type detection, browse, cache, retry, trust store, secure channel, history update, file transfer, and aggregate computation. See section 14 for the full list.
 
 Log levels: DEBUG (handshake, secure channel, session), INFO (connect/disconnect, batch splits), WARNING (retries, server limits), ERROR (connection failures).
 
@@ -636,7 +636,7 @@ Methods: isMultiDimensional()
 
 ### DataValue
 Properties: statusCode (int), sourceTimestamp (?DateTimeImmutable), serverTimestamp (?DateTimeImmutable)
-Methods: getValue() (unwraps Variant), getVariant()
+Methods: getValue() (unwraps Variant), getType() (returns BuiltinType of the inner Variant), getVariant() (@deprecated)
 Factory methods: ofInt32(int), ofDouble(float), ofString(string), ofBoolean(bool), ofFloat(float), ofUInt32(int), ofInt16(int), ofUInt16(int), ofInt64(int), ofUInt64(int), ofDateTime(DateTimeImmutable), of(mixed, BuiltinType), bad(int statusCode)
 
 ### QualifiedName
@@ -943,7 +943,7 @@ $results = $client->readMulti()
 
 ## 14. Events (PSR-14)
 
-The client dispatches 47 granular PSR-14 events. Inject any EventDispatcherInterface via $builder->setEventDispatcher($dispatcher) on the ClientBuilder. NullEventDispatcher is used by default (zero overhead — event objects lazily instantiated via closures).
+The client dispatches 57 granular PSR-14 events. Inject any EventDispatcherInterface via $builder->setEventDispatcher($dispatcher) on the ClientBuilder. NullEventDispatcher is used by default (zero overhead — event objects lazily instantiated via closures).
 
 ### Configuration
 
@@ -1020,7 +1020,7 @@ Alarm-specific events are deduced from event notification fields:
 - PhpOpcua\Client\Exception\WriteTypeMismatchException — thrown when explicit write type mismatches detected type (public readonly: nodeId, expectedType, givenType)
 - PhpOpcua\Client\Event\WriteTypeDetecting — dispatched before write type detection starts (public readonly: client, nodeId)
 - PhpOpcua\Client\Event\WriteTypeDetected — dispatched after write type detection (public readonly: client, nodeId, detectedType, fromCache)
-- PhpOpcua\Client\Event\* — 47 readonly event classes with $client property (ClientConnecting, ClientConnected, ConnectionFailed, SessionCreated, SessionActivated, SubscriptionCreated, DataChangeReceived, EventNotificationReceived, AlarmEventReceived, AlarmActivated, AlarmDeactivated, NodeValueRead, NodeValueWritten, NodeBrowsed, WriteTypeDetecting, WriteTypeDetected, CacheHit, CacheMiss, RetryAttempt, etc.)
+- PhpOpcua\Client\Event\* — 57 readonly event classes with $client property (ClientConnecting, ClientConnected, ConnectionFailed, SessionCreated, SessionActivated, SubscriptionCreated, DataChangeReceived, EventNotificationReceived, AlarmEventReceived, AlarmActivated, AlarmDeactivated, NodeValueRead, NodeValueWritten, NodeBrowsed, WriteTypeDetecting, WriteTypeDetected, CacheHit, CacheMiss, RetryAttempt, SecureChannelOpened, SecureChannelClosed, HistoryDataUpdated, HistoryDataDeleted, HistoryEventUpdated, HistoryEventDeleted, AggregateComputed, FileTransfer*, etc.)
 - PhpOpcua\Client\Testing\MockClient — in-memory test double (static create(), onRead/onWrite/onBrowse/onCall/onResolveNodeId, getCalls/getCallsFor/callCount/resetCalls, hasMethod, hasModule)
 - PhpOpcua\Client\Repository\ExtensionObjectRepository — per-client codec registry (instance-level)
 - PhpOpcua\Client\Wire\WireSerializable — interface (jsonSerialize, fromWireArray, wireTypeId) implemented by every core / module DTO
@@ -1052,7 +1052,7 @@ Cross-language: node-opcua (TS), opcua-asyncio (Python), UA-.NETStandard (C#), g
 ## Links
 
 - Repository: https://github.com/php-opcua/opcua-client
-- Documentation: https://github.com/php-opcua/opcua-client/tree/master/doc
+- Documentation: https://github.com/php-opcua/opcua-client/tree/master/docs (or https://www.php-opcua.com/documentation/opcua-client)
 - Issues: https://github.com/php-opcua/opcua-client/issues
 - Packagist: https://packagist.org/packages/php-opcua/opcua-client
 - Changelog: https://github.com/php-opcua/opcua-client/blob/master/CHANGELOG.md

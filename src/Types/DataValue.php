@@ -13,6 +13,15 @@ use PhpOpcua\Client\Wire\WireSerializable;
 readonly class DataValue implements WireSerializable
 {
     /**
+     * OPC UA built-in type of the value carried by the inner Variant.
+     *
+     * Mirrors `$this->value->type` so the type can be inspected without going through
+     * the {@see getVariant()} accessor. `null` when the DataValue has no Variant
+     * (typically a bad-status fault constructed via {@see bad()}).
+     */
+    public ?BuiltinType $type;
+
+    /**
      * @param ?Variant $value
      * @param int $statusCode
      * @param ?DateTimeImmutable $sourceTimestamp
@@ -24,6 +33,7 @@ readonly class DataValue implements WireSerializable
         public ?DateTimeImmutable $sourceTimestamp = null,
         public ?DateTimeImmutable $serverTimestamp = null,
     ) {
+        $this->type = $value?->type;
     }
 
     /**
@@ -43,6 +53,18 @@ readonly class DataValue implements WireSerializable
         }
 
         return $raw;
+    }
+
+    /**
+     * Returns the OPC UA built-in type of the inner Variant, or null if no Variant is set.
+     *
+     * Symmetric with {@see getValue()}: one returns the unwrapped value, the other the type. Equivalent
+     * to reading the public `->type` property and provided for callers that prefer method calls (mocks,
+     * proxies, fluent chains).
+     */
+    public function getType(): ?BuiltinType
+    {
+        return $this->type;
     }
 
     /**

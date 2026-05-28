@@ -110,6 +110,14 @@ Minor release. New `AggregateModule` for client-side aggregate computation, `His
 - Method NodeId resolution uses the same per-`(directory, method)` cache as the FileType six.
 - Cascading updates in `docs/operations/file-transfer.md` (new "FileDirectoryType" section with the `CreateFileResult` DTO + move-vs-copy worked examples) and `docs/reference/client-api.md` (four new `@method` lines under the existing "File Transfer" divider).
 
+### Added — DataValue type accessor
+
+- **`DataValue::$type`** (`public readonly ?BuiltinType`) — derived from the inner `Variant` at construction time. Mirrors what was previously only reachable as `$dv->getVariant()->type`, removing the dependency on the `@deprecated` `getVariant()` method and on `DataValue::$value` (which is private — the deprecation note's "use `->value` instead" wording cannot be acted on directly).
+- **`DataValue::getType(): ?BuiltinType`** — symmetric with the existing `getValue()`: one returns the unwrapped value, the other the OPC UA data type of that value. Returns `null` when the `DataValue` was constructed without a `Variant` (e.g. a `DataValue::bad($statusCode)` fault).
+- The new accessor is what GitHub Discussion #9 raised — discovering the `BuiltinType` of a read result previously meant `$client->read($id)->getVariant()->type`. Now `$client->read($id)->type` (or `->getType()`) covers the same need with one less hop.
+- 3 new unit tests in `tests/Unit/Types/TypesTest.php` (encode-fixture, `null`-Variant case, parametric across every `BuiltinType` case). Full suite stays at **1429 passing**.
+- Doc cascade: `docs/types/data-value-and-variant.md` (new symmetric section + null-Variant pitfall updated), `llms.txt` / `llms-full.txt` (DataValue surface), the `opcua-client` v4.4.0 skill's `references/TYPES.md` + `references/ARCHITECTURE.md` + `references/PITFALLS.md`.
+
 ## [v4.3.2] - 2026-05-15
 
 Patch release. Closes the remaining `BadIdentityTokenInvalid (0x80200000)`

@@ -1,0 +1,81 @@
+name: Sync skills to ai-skills
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - '.ai/skills/**'
+  workflow_dispatch:
+
+concurrency:
+  group: sync-ai-skills-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+
+      - name: Generate GitHub App token (ai-skills only)
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.AI_SKILLS_APP_ID }}
+          private-key: ${{ secrets.AI_SKILLS_APP_PRIVATE_KEY }}
+          owner: php-opcua
+          repositories: ai-skills
+
+      - name: Checkout ai-skills (destination)
+        uses: actions/checkout@v4
+        with:
+          repository: php-opcua/ai-skills
+          ref: master
+          token: ${{ steps.app-token.outputs.token }}
+          path: ai-skills
+
+      - name: Mirror each skill (additive at top level — never remove a skill directory)
+        run: |
+          set -euo pipefail
+          if [ ! -d .ai/skills ]; then
+            echo "::notice::No .ai/skills directory in source repo — nothing to sync"
+            exit 0
+          fi
+          mkdir -p ai-skills/skills
+          shopt -s nullglob
+          for skill_dir in .ai/skills/*/; do
+            skill_name=$(basename "$skill_dir")
+            if [ -z "$(ls -A "$skill_dir")" ]; then
+              echo "::warning::Skipping empty skill directory: $skill_name"
+              continue
+            fi
+            echo "Syncing $skill_name"
+            mkdir -p "ai-skills/skills/$skill_name"
+            rsync -av --delete \
+                  --exclude='.git' \
+                  --exclude='.DS_Store' \
+                  "$skill_dir" "ai-skills/skills/$skill_name/"
+          done
+
+      - name: Commit and push
+        working-directory: ai-skills
+        run: |
+          set -euo pipefail
+          git config user.name  'php-opcua-skills-bot[bot]'
+          git config user.email '<auto>@users.noreply.github.com'
+          git add skills/
+          if git diff --cached --quiet; then
+            echo "::notice::No changes to commit"
+            exit 0
+          fi
+          REPO=${GITHUB_REPOSITORY##*/}
+          SHA=${GITHUB_SHA:0:7}
+          git commit -m "sync(${REPO}): from ${SHA}
+
+          Source: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          Triggered by: ${{ github.event_name }}"
+          git push origin HEAD:master
