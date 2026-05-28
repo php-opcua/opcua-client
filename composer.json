@@ -17,7 +17,7 @@
   "authors": [
     {
       "name": "Gianfrancesco Aurecchia",
-      "email": "gianfri.aur@gmail.com"
+      "email": "gianfri@php-opcua.com"
     }
   ],
   "autoload-dev": {
