@@ -58,6 +58,7 @@
   - [Exceptions](./reference/exceptions.md)
   - [Enums](./reference/enums.md)
 - Recipes
+  - [Upgrading to v4.4](./recipes/upgrading-to-v4.4.md)
   - [Upgrading to v4.3](./recipes/upgrading-to-v4.3.md)
   - [Recovering from disconnection](./recipes/disconnection-recovery.md)
   - [Handling unsupported services](./recipes/service-unsupported.md)

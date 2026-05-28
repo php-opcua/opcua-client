@@ -1,6 +1,6 @@
 # Changelog
 
-## [v4.4.0] - TBD
+## [v4.4.0] - 2026-05-28
 
 - Bump extra-test-suite to v1.2.0
 - Bump uanetstandard-test-suite to v1.5.0

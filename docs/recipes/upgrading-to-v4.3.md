@@ -7,7 +7,7 @@ see_also:
   - { href: '../observability/caching.md',         meta: '5 min' }
   - { href: '../extensibility/modules.md',         meta: '8 min' }
 
-prev: { label: 'Enums',                  href: '../reference/enums.md' }
+prev: { label: 'Upgrading to v4.4',      href: './upgrading-to-v4.4.md' }
 next: { label: 'Recovering from disconnection', href: './disconnection-recovery.md' }
 ---
 

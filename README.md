@@ -541,7 +541,7 @@ Full documentation is available in [`docs/`](docs/index.md). Highlights:
 | **Observability** — [Logging](docs/observability/logging.md) · [Events](docs/observability/events.md) · [Event reference](docs/observability/event-reference.md) · [Caching](docs/observability/caching.md) | Logging, PSR-14 events, caching |
 | **Testing** — [MockClient](docs/testing/mock-client.md) · [Handlers](docs/testing/handlers.md) · [Integration](docs/testing/integration.md) | Test fixtures and integration suites |
 | **Reference** — [Client API](docs/reference/client-api.md) · [Builder API](docs/reference/builder-api.md) · [Exceptions](docs/reference/exceptions.md) · [Enums](docs/reference/enums.md) | Public API surface |
-| **Recipes** — [Upgrading to v4.3](docs/recipes/upgrading-to-v4.3.md) · [Disconnection recovery](docs/recipes/disconnection-recovery.md) · [Unsupported services](docs/recipes/service-unsupported.md) · [Recursive browse](docs/recipes/browsing-recursively.md) · [Subscribing to data changes](docs/recipes/subscribing-to-data-changes.md) · [Typed arrays](docs/recipes/writing-typed-arrays.md) · [Server capabilities](docs/recipes/detecting-server-capabilities.md) | Task-oriented walkthroughs |
+| **Recipes** — [Upgrading to v4.4](docs/recipes/upgrading-to-v4.4.md) · [Upgrading to v4.3](docs/recipes/upgrading-to-v4.3.md) · [Disconnection recovery](docs/recipes/disconnection-recovery.md) · [Unsupported services](docs/recipes/service-unsupported.md) · [Recursive browse](docs/recipes/browsing-recursively.md) · [Subscribing to data changes](docs/recipes/subscribing-to-data-changes.md) · [Typed arrays](docs/recipes/writing-typed-arrays.md) · [Server capabilities](docs/recipes/detecting-server-capabilities.md) | Task-oriented walkthroughs |
 
 ## Testing
 

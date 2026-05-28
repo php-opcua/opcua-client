@@ -8,7 +8,7 @@ see_also:
   - { href: '../security/policies.md',    meta: '7 min' }
 
 prev: { label: 'Exceptions',    href: './exceptions.md' }
-next: { label: 'Upgrading to v4.3', href: '../recipes/upgrading-to-v4.3.md' }
+next: { label: 'Upgrading to v4.4', href: '../recipes/upgrading-to-v4.4.md' }
 ---
 
 # Enums
