@@ -24,6 +24,30 @@ class BinaryDecoder
     private int $offset = 0;
 
     /**
+     * Current nesting depth while decoding recursive structures (Variant,
+     * DiagnosticInfo, ...). Guards against stack-exhaustion DoS from a
+     * malicious server sending deeply nested structures.
+     */
+    private int $depth = 0;
+
+    /** Maximum permitted nesting depth for recursive structures. */
+    private const MAX_NESTING_DEPTH = 64;
+
+    private function enterNesting(): void
+    {
+        if (++$this->depth > self::MAX_NESTING_DEPTH) {
+            throw new EncodingException(
+                'Maximum nesting depth (' . self::MAX_NESTING_DEPTH . ') exceeded while decoding',
+            );
+        }
+    }
+
+    private function leaveNesting(): void
+    {
+        $this->depth--;
+    }
+
+    /**
      * @param string $buffer
      * @param ?ExtensionObjectRepository $extensionObjectRepository
      */
@@ -275,7 +299,10 @@ class BinaryDecoder
 
     public function readVariant(): Variant
     {
-        $encodingByte = $this->readByte();
+        $this->enterNesting();
+
+        try {
+            $encodingByte = $this->readByte();
         $typeId = $encodingByte & 0x3F;
         $isArray = ($encodingByte & 0x80) !== 0;
         $hasMultiDimensions = ($encodingByte & 0x40) !== 0;
@@ -304,9 +331,12 @@ class BinaryDecoder
             return new Variant($type, $values, $dimensions);
         }
 
-        $value = $this->readVariantValue($type);
+            $value = $this->readVariantValue($type);
 
-        return new Variant($type, $value);
+            return new Variant($type, $value);
+        } finally {
+            $this->leaveNesting();
+        }
     }
 
     /**
@@ -383,8 +413,11 @@ class BinaryDecoder
 
     public function readDiagnosticInfo(): array
     {
-        $mask = $this->readByte();
-        $info = [];
+        $this->enterNesting();
+
+        try {
+            $mask = $this->readByte();
+            $info = [];
 
         if ($mask & 0x01) {
             $info['symbolicId'] = $this->readInt32();
@@ -405,7 +438,10 @@ class BinaryDecoder
             $info['innerDiagnosticInfo'] = $this->readDiagnosticInfo();
         }
 
-        return $info;
+            return $info;
+        } finally {
+            $this->leaveNesting();
+        }
     }
 
     public function readDataValue(): DataValue

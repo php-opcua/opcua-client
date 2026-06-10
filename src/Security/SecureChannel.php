@@ -314,8 +314,17 @@ class SecureChannel
         $receiverThumbprint = $decoder->readByteString();
 
         if ($this->isSecurityActive()) {
-            if ($senderCert !== null) {
+
+            if ($senderCert !== null && $this->serverCertDer === null) {
                 $this->serverCertDer = $senderCert;
+            }
+
+            if ($senderCert !== null && $this->serverCertDer !== null
+                && ! hash_equals($this->serverCertDer, $senderCert)
+            ) {
+                throw new SecurityException(
+                    'OPN response sender certificate does not match the pinned server certificate',
+                );
             }
 
             if ($this->policy->isEcc()) {

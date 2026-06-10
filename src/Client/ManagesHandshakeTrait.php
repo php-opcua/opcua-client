@@ -56,8 +56,14 @@ trait ManagesHandshakeTrait
         }
 
         $ack = AcknowledgeMessage::decode($decoder);
-        $this->logger->debug('ACK received (receiveBufferSize={bufferSize})', $this->logContext(['bufferSize' => $ack->getReceiveBufferSize()]));
-        $this->transport->setReceiveBufferSize($ack->getReceiveBufferSize());
+
+        $negotiatedBufferSize = min($ack->getReceiveBufferSize(), HelloMessage::DEFAULT_BUFFER_SIZE);
+        $this->logger->debug('ACK received (receiveBufferSize={bufferSize}, negotiated={negotiated})', $this->logContext([
+            'bufferSize' => $ack->getReceiveBufferSize(),
+            'negotiated' => $negotiatedBufferSize,
+        ]));
+
+        $this->transport->setReceiveBufferSize($negotiatedBufferSize);
     }
 
     /**

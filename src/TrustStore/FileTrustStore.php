@@ -244,7 +244,30 @@ class FileTrustStore implements TrustStoreInterface
             return false;
         }
 
-        $result = @openssl_x509_verify($certResource, openssl_pkey_get_public($caCertPem));
+        // returns false on malformed input and must not be passed to verify().
+        $caPublicKey = @openssl_pkey_get_public($caCertPem);
+        if ($caPublicKey === false) {
+            return false;
+        }
+
+        $caParsed = @openssl_x509_parse($caCertPem);
+        if ($caParsed === false) {
+            return false;
+        }
+        $basicConstraints = $caParsed['extensions']['basicConstraints'] ?? '';
+        if (stripos($basicConstraints, 'CA:TRUE') === false) {
+            return false;
+        }
+
+        // Reject if the CA certificate is outside its validity window.
+        $now = (new DateTimeImmutable())->getTimestamp();
+        if (isset($caParsed['validFrom_time_t'], $caParsed['validTo_time_t'])
+            && ($now < $caParsed['validFrom_time_t'] || $now > $caParsed['validTo_time_t'])
+        ) {
+            return false;
+        }
+
+        $result = @openssl_x509_verify($certResource, $caPublicKey);
 
         return $result === 1;
     }

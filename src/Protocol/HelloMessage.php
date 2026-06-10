@@ -12,6 +12,8 @@ use PhpOpcua\Client\Encoding\BinaryEncoder;
  */
 class HelloMessage
 {
+    public const DEFAULT_BUFFER_SIZE = 65535;
+
     /**
      * @param int $protocolVersion
      * @param int $receiveBufferSize
@@ -22,8 +24,8 @@ class HelloMessage
      */
     public function __construct(
         private readonly int $protocolVersion = 0,
-        private readonly int $receiveBufferSize = 65535,
-        private readonly int $sendBufferSize = 65535,
+        private readonly int $receiveBufferSize = self::DEFAULT_BUFFER_SIZE,
+        private readonly int $sendBufferSize = self::DEFAULT_BUFFER_SIZE,
         private readonly int $maxMessageSize = 0,
         private readonly int $maxChunkCount = 0,
         private readonly string $endpointUrl = '',
