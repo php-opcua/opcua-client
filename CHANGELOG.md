@@ -1,5 +1,32 @@
 # Changelog
 
+## [v4.4.1] - 2026-06-10
+
+- Bump uanetstandard-test-suite to v1.5.2
+
+### Fixed
+
+- **`AttributeId::DataTypeDefinition` corrected from `26` to `23`** (OPC 10000-6
+  Annex A.1 — `26` is `AccessRestrictions`). With the wrong id, servers replied
+  `Bad_AttributeIdInvalid` to the DataTypeDefinition read and
+  `discoverDataTypes()` silently skipped every custom type, returning `0`.
+  Thanks to the community report that caught this.
+
+### Tests
+
+- New `tests/Unit/Types/AttributeIdTest.php` pinning all `AttributeId`
+  constants to the values defined in OPC 10000-6 Annex A.1.
+- `ClientTypeDiscoveryTest` now decodes the raw ReadRequest captured by
+  `MockTransport` and asserts the attributeId actually serialized on the wire
+  is `23` (previously the mock never inspected outgoing requests, which is why
+  the wrong id went unnoticed).
+- Integration `TypeDiscoveryTest` strengthened: `discoverDataTypes()` must now
+  find at least 1 custom type on the test server, and a new test verifies that
+  a discovered `DynamicCodec` decodes the `PointValue` ExtensionObject without
+  any manually registered codec. Requires `uanetstandard-test-suite` v1.5.2+,
+  where the custom DataType nodes expose the `DataTypeDefinition` attribute
+  and link their encoding nodes via `HasEncoding` (previously `HasComponent`).
+
 ## [v4.4.0] - 2026-05-28
 
 - Bump extra-test-suite to v1.2.0

@@ -96,8 +96,8 @@ The library's own CI does the same:
 - The `integration` workflow runs against both stacks on every PHP
   matrix leg.
 - Both stacks are consumed via composite GitHub Actions
-  (`php-opcua/uanetstandard-test-suite@v1.2.0`,
-  `php-opcua/extra-test-suite@v1.0.0`) that `docker compose pull` +
+  (`php-opcua/uanetstandard-test-suite@v1.5.2`,
+  `php-opcua/extra-test-suite@v1.2.0`) that `docker compose pull` +
   `up -d` and emit health checks.
 - Stack containers run with `restart: "no"` in CI — failures surface
   rather than auto-recover.
@@ -108,10 +108,10 @@ servers:
 
 <!-- @code-block language="text" label=".github/workflows/integration.yml" -->
 ```text
-- uses: php-opcua/uanetstandard-test-suite@v1.2.0
+- uses: php-opcua/uanetstandard-test-suite@v1.5.2
   with:
     profile: full   # or 'no-security' for the minimum
-- uses: php-opcua/extra-test-suite@v1.0.0
+- uses: php-opcua/extra-test-suite@v1.2.0
   with:
     services: node-management
 - run: vendor/bin/pest --group=integration
