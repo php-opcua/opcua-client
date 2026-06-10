@@ -53,5 +53,5 @@ class AttributeId
 
     public const UserExecutable = 22;
 
-    public const DataTypeDefinition = 26;
+    public const DataTypeDefinition = 23;
 }

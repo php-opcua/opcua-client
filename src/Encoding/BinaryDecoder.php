@@ -303,33 +303,33 @@ class BinaryDecoder
 
         try {
             $encodingByte = $this->readByte();
-        $typeId = $encodingByte & 0x3F;
-        $isArray = ($encodingByte & 0x80) !== 0;
-        $hasMultiDimensions = ($encodingByte & 0x40) !== 0;
+            $typeId = $encodingByte & 0x3F;
+            $isArray = ($encodingByte & 0x80) !== 0;
+            $hasMultiDimensions = ($encodingByte & 0x40) !== 0;
 
-        $type = BuiltinType::tryFrom($typeId);
-        if ($type === null) {
-            throw new EncodingException("Unknown variant type: {$typeId}");
-        }
-
-        if ($isArray) {
-            $arrayLength = $this->readInt32();
-            $values = [];
-            for ($i = 0; $i < $arrayLength; $i++) {
-                $values[] = $this->readVariantValue($type);
+            $type = BuiltinType::tryFrom($typeId);
+            if ($type === null) {
+                throw new EncodingException("Unknown variant type: {$typeId}");
             }
 
-            $dimensions = null;
-            if ($hasMultiDimensions) {
-                $dimCount = $this->readInt32();
-                $dimensions = [];
-                for ($i = 0; $i < $dimCount; $i++) {
-                    $dimensions[] = $this->readInt32();
+            if ($isArray) {
+                $arrayLength = $this->readInt32();
+                $values = [];
+                for ($i = 0; $i < $arrayLength; $i++) {
+                    $values[] = $this->readVariantValue($type);
                 }
-            }
 
-            return new Variant($type, $values, $dimensions);
-        }
+                $dimensions = null;
+                if ($hasMultiDimensions) {
+                    $dimCount = $this->readInt32();
+                    $dimensions = [];
+                    for ($i = 0; $i < $dimCount; $i++) {
+                        $dimensions[] = $this->readInt32();
+                    }
+                }
+
+                return new Variant($type, $values, $dimensions);
+            }
 
             $value = $this->readVariantValue($type);
 
@@ -419,24 +419,24 @@ class BinaryDecoder
             $mask = $this->readByte();
             $info = [];
 
-        if ($mask & 0x01) {
-            $info['symbolicId'] = $this->readInt32();
-        }
-        if ($mask & 0x02) {
-            $info['namespaceUri'] = $this->readInt32();
-        }
-        if ($mask & 0x04) {
-            $info['locale'] = $this->readInt32();
-        }
-        if ($mask & 0x08) {
-            $info['additionalInfo'] = $this->readString();
-        }
-        if ($mask & 0x10) {
-            $info['innerStatusCode'] = $this->readUInt32();
-        }
-        if ($mask & 0x20) {
-            $info['innerDiagnosticInfo'] = $this->readDiagnosticInfo();
-        }
+            if ($mask & 0x01) {
+                $info['symbolicId'] = $this->readInt32();
+            }
+            if ($mask & 0x02) {
+                $info['namespaceUri'] = $this->readInt32();
+            }
+            if ($mask & 0x04) {
+                $info['locale'] = $this->readInt32();
+            }
+            if ($mask & 0x08) {
+                $info['additionalInfo'] = $this->readString();
+            }
+            if ($mask & 0x10) {
+                $info['innerStatusCode'] = $this->readUInt32();
+            }
+            if ($mask & 0x20) {
+                $info['innerDiagnosticInfo'] = $this->readDiagnosticInfo();
+            }
 
             return $info;
         } finally {

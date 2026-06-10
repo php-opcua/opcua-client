@@ -67,6 +67,29 @@ function tdReadDefResponse(NodeId $encodingId, array $fields): string
     });
 }
 
+function tdReadRequestAttributeId(string $raw): int
+{
+    $d = new PhpOpcua\Client\Encoding\BinaryDecoder(substr($raw, 12));
+    $d->readUInt32(); // tokenId
+    $d->readUInt32(); // sequenceNumber
+    $d->readUInt32(); // requestId
+    $d->readNodeId(); // typeId (ReadRequest)
+    $d->readNodeId(); // RequestHeader.authenticationToken
+    $d->readDateTime(); // RequestHeader.timestamp
+    $d->readUInt32(); // RequestHeader.requestHandle
+    $d->readUInt32(); // RequestHeader.returnDiagnostics
+    $d->readString(); // RequestHeader.auditEntryId
+    $d->readUInt32(); // RequestHeader.timeoutHint
+    $d->readNodeId(); // RequestHeader.additionalHeader.typeId
+    $d->readByte(); // RequestHeader.additionalHeader.encoding
+    $d->readDouble(); // maxAge
+    $d->readUInt32(); // timestampsToReturn
+    $d->readInt32(); // nodesToRead count
+    $d->readNodeId(); // nodesToRead[0].nodeId
+
+    return $d->readUInt32(); // nodesToRead[0].attributeId
+}
+
 function tdBadReadResponse(): string
 {
     return buildMsgResponse(634, function (BinaryEncoder $e) {
@@ -111,6 +134,9 @@ describe('ManagesTypeDiscoveryTrait via MockTransport', function () {
         $codec = $client->getExtensionObjectRepository()->get(NodeId::numeric(2, 3010));
         expect($codec)->toBeInstanceOf(DynamicCodec::class);
         expect($codec->getDefinition()->fields)->toHaveCount(3);
+
+        expect($mock->sent)->toHaveCount(4);
+        expect(tdReadRequestAttributeId($mock->sent[3]))->toBe(23);
     });
 
     it('skips namespace 0 types', function () {

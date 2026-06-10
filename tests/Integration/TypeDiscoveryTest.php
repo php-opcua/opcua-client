@@ -8,15 +8,33 @@ use PhpOpcua\Client\Types\NodeId;
 
 describe('Automatic DataType discovery', function () {
 
-    it('discoverDataTypes returns without error', function () {
+    it('discoverDataTypes discovers the custom types exposed by the test server', function () {
         $client = null;
         try {
             $client = TestHelper::connectNoSecurity();
 
             $count = $client->discoverDataTypes();
 
-            expect($count)->toBeInt();
-            expect($count)->toBeGreaterThanOrEqual(0);
+            expect($count)->toBeGreaterThanOrEqual(1);
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
+    it('decodes an ExtensionObject value via a discovered codec', function () {
+        $client = null;
+        try {
+            $client = TestHelper::connectNoSecurity();
+
+            $count = $client->discoverDataTypes();
+            expect($count)->toBeGreaterThanOrEqual(1);
+
+            $nodeId = $client->resolveNodeId('/Objects/1:TestServer/1:ExtensionObjects/1:PointValue');
+            $dv = $client->read($nodeId);
+
+            $point = $dv->getValue();
+            expect($point)->toBeArray();
+            expect($point)->toHaveCount(3);
         } finally {
             TestHelper::safeDisconnect($client);
         }
