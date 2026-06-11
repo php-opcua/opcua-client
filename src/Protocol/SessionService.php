@@ -24,6 +24,8 @@ class SessionService
 
     private ?string $currentEccServerEphemeralKey = null;
 
+    private ?string $lastClientNonce = null;
+
     private string $certificatePolicyId = 'certificate';
 
     private string $anonymousPolicyId = 'anonymous';
@@ -170,9 +172,18 @@ class SessionService
         }
 
         $decoder->readString();
-        $decoder->readByteString();
+        $serverSignature = $decoder->readByteString();
 
         $decoder->readUInt32();
+
+        if ($this->secureChannel !== null
+            && $this->secureChannel->isSecurityActive()
+            && $serverCertificate !== null
+            && $serverSignature !== null
+            && $serverSignature !== ''
+        ) {
+            $this->verifyServerSignature($serverCertificate, $serverSignature);
+        }
 
         $eccServerEphemeralKey = $this->readEccServerEphemeralKey($decoder);
 
@@ -388,11 +399,48 @@ class SessionService
                     $extBodyLen = $dec->readInt32();
                     $publicKey = $dec->readByteString();
                     $signature = $dec->readByteString();
+                    $this->verifyEccEphemeralKeySignature($publicKey, $signature);
                     $this->lastEccServerEphemeralKey = $publicKey;
                 }
             } else {
                 $this->skipVariantValue($dec, $variantEncoding);
             }
+        }
+    }
+
+    /**
+     * @param ?string $publicKey
+     * @param ?string $signature
+     *
+     * @throws ServiceException If the signature does not verify.
+     */
+    private function verifyEccEphemeralKeySignature(?string $publicKey, ?string $signature): void
+    {
+        if ($this->secureChannel === null || ! $this->secureChannel->isSecurityActive()) {
+            return;
+        }
+
+        $serverCertDer = $this->secureChannel->getServerCertDer();
+        if ($publicKey === null || $publicKey === '' || $serverCertDer === null) {
+            return;
+        }
+
+        if ($signature === null || $signature === '') {
+            throw new ServiceException('ECDH ephemeral key is missing the server signature');
+        }
+
+        $policy = $this->secureChannel->getPolicy();
+        $messageSecurity = $this->secureChannel->getMessageSecurity();
+
+        if ($policy->isEcc()) {
+            $coordinateSize = (int) ($policy->getEphemeralKeyLength() / 2);
+            $signature = $messageSecurity->ecdsaRawToDer($signature, $coordinateSize);
+        }
+
+        $serverLeafCert = $this->extractLeafCertificate($serverCertDer);
+        $ok = $messageSecurity->asymmetricVerify($publicKey, $signature, $serverLeafCert, $policy);
+        if (! $ok) {
+            throw new ServiceException('ECDH ephemeral key server signature verification failed');
         }
     }
 
@@ -606,6 +654,7 @@ class SessionService
         $innerBody->writeString('opcua-client-session');
 
         $nonce = random_bytes(32);
+        $this->lastClientNonce = $nonce;
         $innerBody->writeByteString($nonce);
 
         $clientCertDer = $this->secureChannel->getClientCertDer();
@@ -678,6 +727,36 @@ class SessionService
         }
 
         return $this->secureChannel->buildMessage($innerBody->getBuffer());
+    }
+
+    /**
+     * @param string $serverCertDer
+     * @param string $serverSignature
+     *
+     * @throws ServiceException If the signature does not verify.
+     */
+    private function verifyServerSignature(string $serverCertDer, string $serverSignature): void
+    {
+        $clientCertDer = $this->secureChannel->getClientCertDer();
+        $clientNonce = $this->lastClientNonce;
+        if ($clientCertDer === null || $clientNonce === null) {
+            return;
+        }
+
+        $policy = $this->secureChannel->getPolicy();
+        $messageSecurity = $this->secureChannel->getMessageSecurity();
+        $dataToVerify = $clientCertDer . $clientNonce;
+
+        if ($policy->isEcc()) {
+            $coordinateSize = (int) ($policy->getEphemeralKeyLength() / 2);
+            $serverSignature = $messageSecurity->ecdsaRawToDer($serverSignature, $coordinateSize);
+        }
+
+        $serverLeafCert = $this->extractLeafCertificate($serverCertDer);
+        $ok = $messageSecurity->asymmetricVerify($dataToVerify, $serverSignature, $serverLeafCert, $policy);
+        if (! $ok) {
+            throw new ServiceException('CreateSessionResponse server signature verification failed');
+        }
     }
 
     /**
@@ -954,6 +1033,7 @@ class SessionService
         $body->writeString('opcua-client-session');
 
         $nonce = random_bytes(32);
+        $this->lastClientNonce = $nonce;
         $body->writeByteString($nonce);
 
         $body->writeByteString(null);

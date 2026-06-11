@@ -394,6 +394,11 @@ class BinaryDecoder
                 $bodyStart = $this->offset;
                 $decoded = $codec->decode($this);
                 $consumed = $this->offset - $bodyStart;
+                if ($consumed > $bodyLength) {
+                    throw new EncodingException(
+                        "ExtensionObject codec consumed {$consumed} bytes but the body is only {$bodyLength} bytes",
+                    );
+                }
                 if ($consumed < $bodyLength) {
                     $this->skip($bodyLength - $consumed);
                 }

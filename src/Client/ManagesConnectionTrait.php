@@ -16,6 +16,8 @@ use PhpOpcua\Client\Event\RetryExhausted;
 use PhpOpcua\Client\Exception\ConfigurationException;
 use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\OpcUaException;
+use PhpOpcua\Client\Exception\UntrustedCertificateException;
+use PhpOpcua\Client\Security\CertificateManager;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\Client\Types\ConnectionState;
@@ -192,6 +194,7 @@ trait ManagesConnectionTrait
 
         if ($isSecure) {
             $this->validateServerCertificate();
+            $this->validateServerApplicationUri();
         }
 
         $this->dispatch(fn () => new ClientConnecting($this, $endpointUrl));
@@ -227,6 +230,39 @@ trait ManagesConnectionTrait
         $this->discoverServerOperationLimits();
         $this->logger->info('Connected to {endpoint}', $this->logContext(['endpoint' => $endpointUrl]));
         $this->dispatch(fn () => new ClientConnected($this, $endpointUrl));
+    }
+
+    /**
+     * @return void
+     * @throws UntrustedCertificateException If the URIs do not match.
+     */
+    private function validateServerApplicationUri(): void
+    {
+        if (! $this->verifyApplicationUri
+            || $this->serverCertDer === null
+            || $this->expectedServerApplicationUri === null
+            || $this->expectedServerApplicationUri === ''
+        ) {
+            return;
+        }
+
+        $certUri = (new CertificateManager())->getApplicationUri($this->serverCertDer);
+        if ($certUri === null) {
+            $this->logger->warning('Server certificate has no SAN ApplicationUri, skipping endpoint binding check', $this->logContext());
+
+            return;
+        }
+
+        if (! hash_equals($this->expectedServerApplicationUri, $certUri)) {
+            $fingerprint = implode(':', str_split(sha1($this->serverCertDer), 2));
+            throw new UntrustedCertificateException(
+                $fingerprint,
+                $this->serverCertDer,
+                "Server certificate ApplicationUri ({$certUri}) does not match endpoint ({$this->expectedServerApplicationUri})",
+            );
+        }
+
+        $this->logger->debug('Server certificate ApplicationUri matches endpoint ({uri})', $this->logContext(['uri' => $certUri]));
     }
 
     /**

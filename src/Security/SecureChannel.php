@@ -40,11 +40,11 @@ class SecureChannel
 
     private int $sequenceNumber;
 
-    /** OPC UA Part 6 §6.7.2.4: RSA wrap threshold (UInt32.MaxValue - 1024). */
     private const RSA_MAX_SEQUENCE_NUMBER = 0xFFFFFBFF;
 
-    /** OPC UA Part 6 §6.7.2.4: ECC wrap threshold (UInt32.MaxValue). */
     private const ECC_MAX_SEQUENCE_NUMBER = 0xFFFFFFFF;
+
+    private ?int $lastReceivedSequenceNumber = null;
 
     private ?string $clientSigningKey = null;
 
@@ -515,6 +515,18 @@ class SecureChannel
         $channelId = $decoder->readUInt32();
         $tokenId = $decoder->readUInt32();
 
+        if ($channelId !== $this->secureChannelId) {
+            throw new SecurityException(
+                "MSG response secure channel id mismatch (expected {$this->secureChannelId}, got {$channelId})",
+            );
+        }
+
+        if ($tokenId !== $this->tokenId) {
+            throw new SecurityException(
+                "MSG response token id mismatch (expected {$this->tokenId}, got {$tokenId})",
+            );
+        }
+
         $tokenIdBytes = pack('V', $tokenId);
 
         $remaining = $decoder->readRawBytes($decoder->getRemainingLength());
@@ -539,6 +551,7 @@ class SecureChannel
             }
 
             $plainData = $this->stripSymmetricPadding($dataWithoutSig);
+            $this->validateIncomingSequenceNumber($plainData);
 
             return $tokenIdBytes . $plainData;
         }
@@ -551,7 +564,36 @@ class SecureChannel
             throw new SecurityException('MSG response symmetric signature verification failed');
         }
 
+        $this->validateIncomingSequenceNumber($dataWithoutSig);
+
         return $tokenIdBytes . $dataWithoutSig;
+    }
+
+    /**
+     * @param string $plainData Verified plaintext starting with the sequence header.
+     *
+     * @throws SecurityException If the sequence number does not increase.
+     */
+    private function validateIncomingSequenceNumber(string $plainData): void
+    {
+        if (strlen($plainData) < 4) {
+            return;
+        }
+
+        $sequenceNumber = unpack('V', substr($plainData, 0, 4))[1];
+
+        if ($this->lastReceivedSequenceNumber !== null) {
+            $wrapThreshold = $this->policy->isEcc() ? self::ECC_MAX_SEQUENCE_NUMBER : self::RSA_MAX_SEQUENCE_NUMBER;
+            $rolledOver = $this->lastReceivedSequenceNumber >= $wrapThreshold - 1024 && $sequenceNumber < 1024;
+
+            if (! $rolledOver && $sequenceNumber <= $this->lastReceivedSequenceNumber) {
+                throw new SecurityException(
+                    "MSG response sequence number not increasing (last {$this->lastReceivedSequenceNumber}, got {$sequenceNumber})",
+                );
+            }
+        }
+
+        $this->lastReceivedSequenceNumber = $sequenceNumber;
     }
 
     private function deriveSymmetricKeys(): void

@@ -360,6 +360,7 @@ class ClientBuilder implements ClientBuilderInterface
             enumMappings: $this->enumMappings,
             moduleRegistry: $this->moduleRegistry,
             transport: $this->transport,
+            verifyApplicationUri: $this->verifyApplicationUri,
         );
     }
 }

@@ -171,6 +171,7 @@ trait ManagesHandshakeTrait
                 if ($ep->getServerCertificate() !== null) {
                     $this->serverCertDer = $ep->getServerCertificate();
                 }
+                $this->expectedServerApplicationUri = $ep->applicationUri;
                 $this->extractTokenPolicies($ep);
 
                 break;
@@ -181,6 +182,7 @@ trait ManagesHandshakeTrait
             foreach ($endpoints as $ep) {
                 if ($ep->getServerCertificate() !== null) {
                     $this->serverCertDer = $ep->getServerCertificate();
+                    $this->expectedServerApplicationUri = $ep->applicationUri;
 
                     break;
                 }

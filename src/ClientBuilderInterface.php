@@ -153,6 +153,14 @@ interface ClientBuilderInterface
     public function autoAccept(bool $enabled = true, bool $force = false): self;
 
     /**
+     * Enable or disable verification that the server certificate's
+     *
+     * @param bool $enabled
+     * @return self
+     */
+    public function verifyApplicationUri(bool $enabled = true): self;
+
+    /**
      * Set the cache driver. Pass null to disable caching entirely.
      *
      * @param ?CacheInterface $cache A PSR-16 cache instance, or null to disable.

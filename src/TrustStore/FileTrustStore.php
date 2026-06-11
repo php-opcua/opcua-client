@@ -40,8 +40,21 @@ class FileTrustStore implements TrustStoreInterface
     public function isTrusted(string $certDer): bool
     {
         $fingerprint = $this->computeFingerprint($certDer);
+        $path = $this->trustedPath($fingerprint);
 
-        return file_exists($this->trustedPath($fingerprint));
+        if (! file_exists($path)) {
+            return false;
+        }
+
+        $storedDer = file_get_contents($path);
+        if ($storedDer === false) {
+            return false;
+        }
+
+        return hash_equals(
+            hash('sha256', $storedDer, true),
+            hash('sha256', $certDer, true),
+        );
     }
 
     /**

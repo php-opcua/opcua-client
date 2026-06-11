@@ -1,5 +1,58 @@
 # Changelog
 
+## [Unreleased]
+
+Security hardening release: the remaining items from the security review are
+implemented. All checks are interoperability-tested against UA-.NETStandard in
+None / Sign / SignAndEncrypt, RSA (Basic256Sha256) and ECC (NIST P-256/P-384,
+Brainpool P256r1/P384r1).
+
+### [v4.5.0] - TBD
+
+- **CreateSessionResponse `serverSignature` is now verified** (OPC UA Part 4
+  §5.6.2 proof of possession). The client stores the nonce it sends in the
+  CreateSessionRequest and verifies that the server signed
+  `clientCertificate || clientNonce` with the private key of its application
+  instance certificate — mirror of the existing `clientSignature`. For ECC
+  policies the raw `r||s` wire signature is converted to DER before
+  verification. A failed verification aborts the session with
+  `ServiceException`. Previously the signature was read and discarded.
+- **ECDH ephemeral key signature is now verified** (ECC profiles): the
+  `EphemeralKeyType.signature` returned in the AdditionalParameters of
+  CreateSession/ActivateSession responses is verified over the raw public key
+  bytes against the server certificate before the key is accepted for nonce
+  derivation. A missing or invalid signature aborts with `ServiceException`.
+- **Server certificate is bound to the endpoint's ApplicationUri**: on secure
+  connections the SAN `ApplicationUri` of the server certificate must match
+  the `ApplicationUri` declared in the endpoint's ApplicationDescription
+  during discovery, otherwise `UntrustedCertificateException` is thrown — a
+  certificate trusted for server A is no longer accepted from server B.
+  Configurable via the new `ClientBuilder::verifyApplicationUri(bool)`
+  (default `true`); disable only for servers with misconfigured SAN
+  extensions. `EndpointDescription` gains a nullable `applicationUri` property
+  (BC-safe, also round-tripped through the wire cache codec).
+- **Incoming secure channel headers are validated** (`SecureChannel::processMessage`):
+  `channelId` and `tokenId` must match the negotiated values, and the
+  sequence number of every verified message must be strictly increasing
+  (anti-replay, OPC UA Part 6 §6.7.2.4), allowing the documented wrap-around
+  below 1024 past the policy threshold. Violations throw `SecurityException`.
+- **Trust store decisions no longer rely on SHA-1 alone**:
+  `FileTrustStore::isTrusted()` keeps the SHA-1 fingerprint for file naming
+  (wire thumbprint compatibility) but compares the stored DER against the
+  presented certificate via SHA-256, so a SHA-1 collision cannot impersonate
+  a trusted certificate.
+- **`BinaryDecoder::readExtensionObject()` guards against over-consuming
+  codecs**: a codec reading past the declared body length now raises
+  `EncodingException` instead of attempting a negative skip.
+
+### Tests
+
+- New `tests/Unit/Security/SecurityHardeningFixesTest.php` (17 tests):
+  serverSignature accept/tamper/MITM cases, ApplicationUri match/mismatch/
+  opt-out, trust-store SHA-256 content binding, channelId/tokenId mismatch,
+  sequence monotonicity (replay, regression, wrap-around), ExtensionObject
+  over-consumption guard.
+
 ## [v4.4.1] - 2026-06-10
 
 - Bump uanetstandard-test-suite to v1.5.2

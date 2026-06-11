@@ -19,6 +19,7 @@ readonly class EndpointDescription implements WireSerializable
      * @param UserTokenPolicy[] $userIdentityTokens
      * @param string $transportProfileUri
      * @param int $securityLevel
+     * @param ?string $applicationUri The ApplicationUri declared in the endpoint's ApplicationDescription.
      */
     public function __construct(
         public string $endpointUrl,
@@ -28,6 +29,7 @@ readonly class EndpointDescription implements WireSerializable
         public array $userIdentityTokens,
         public string $transportProfileUri,
         public int $securityLevel,
+        public ?string $applicationUri = null,
     ) {
     }
 
@@ -102,7 +104,7 @@ readonly class EndpointDescription implements WireSerializable
     }
 
     /**
-     * @return array{url: string, cert: ?string, mode: int, policy: string, tokens: UserTokenPolicy[], profile: string, level: int}
+     * @return array{url: string, cert: ?string, mode: int, policy: string, tokens: UserTokenPolicy[], profile: string, level: int, appUri: ?string}
      */
     public function jsonSerialize(): array
     {
@@ -114,11 +116,12 @@ readonly class EndpointDescription implements WireSerializable
             'tokens' => $this->userIdentityTokens,
             'profile' => $this->transportProfileUri,
             'level' => $this->securityLevel,
+            'appUri' => $this->applicationUri,
         ];
     }
 
     /**
-     * @param array{url?: string, cert?: ?string, mode?: int, policy?: string, tokens?: array, profile?: string, level?: int} $data
+     * @param array{url?: string, cert?: ?string, mode?: int, policy?: string, tokens?: array, profile?: string, level?: int, appUri?: ?string} $data
      * @return static
      */
     public static function fromWireArray(array $data): static
@@ -136,6 +139,7 @@ readonly class EndpointDescription implements WireSerializable
             $data['tokens'] ?? [],
             $data['profile'] ?? '',
             $data['level'] ?? 0,
+            $data['appUri'] ?? null,
         );
     }
 
