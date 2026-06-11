@@ -124,6 +124,8 @@ class FileCache implements CacheInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @param iterable<string, mixed> $values
      */
     public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
     {

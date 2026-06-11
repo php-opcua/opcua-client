@@ -62,7 +62,7 @@ class TranslateBrowsePathService extends AbstractProtocolService
     /**
      * @param BinaryEncoder $body
      * @param int $requestId
-     * @param array $browsePaths
+     * @param array<int, array<string, mixed>> $browsePaths
      * @param NodeId $authToken
      */
     private function writeTranslateInnerBody(BinaryEncoder $body, int $requestId, array $browsePaths, NodeId $authToken): void

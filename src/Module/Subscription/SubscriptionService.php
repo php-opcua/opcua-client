@@ -402,7 +402,7 @@ class SubscriptionService extends AbstractProtocolService
 
     /**
      * @param BinaryDecoder $decoder
-     * @return array{sequenceNumber: int, publishTime: ?\DateTimeImmutable, notifications: array}
+     * @return array{sequenceNumber: int, publishTime: ?\DateTimeImmutable, notifications: array<int, mixed>}
      */
     public function decodeRepublishResponse(BinaryDecoder $decoder): array
     {

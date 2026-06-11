@@ -946,7 +946,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
     /**
      * @param int $subscriptionId
      * @param int $retransmitSequenceNumber
-     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array}
+     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array<int, mixed>}
      */
     public function republish(int $subscriptionId, int $retransmitSequenceNumber): array
     {

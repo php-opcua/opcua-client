@@ -71,7 +71,7 @@ class MockClient implements OpcUaClientInterface
     /** @var ?callable */
     private $endpointsHandler = null;
 
-    /** @var array<array{method: string, args: array}> */
+    /** @var array<array{method: string, args: array<int, mixed>}> */
     private array $calls = [];
 
     private ConnectionState $state = ConnectionState::Disconnected;
@@ -193,7 +193,7 @@ class MockClient implements OpcUaClientInterface
     }
 
     /**
-     * @return array<array{method: string, args: array}>
+     * @return array<array{method: string, args: array<int, mixed>}>
      */
     public function getCalls(): array
     {
@@ -202,7 +202,7 @@ class MockClient implements OpcUaClientInterface
 
     /**
      * @param string $method
-     * @return array<array{method: string, args: array}>
+     * @return array<array{method: string, args: array<int, mixed>}>
      */
     public function getCallsFor(string $method): array
     {
@@ -1214,6 +1214,9 @@ class MockClient implements OpcUaClientInterface
         return $this;
     }
 
+    /**
+     * @param array<int, mixed> $args
+     */
     private function record(string $method, array $args): void
     {
         $this->calls[] = ['method' => $method, 'args' => $args];

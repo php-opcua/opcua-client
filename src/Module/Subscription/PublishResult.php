@@ -17,7 +17,7 @@ final readonly class PublishResult implements WireSerializable
      * @param int $subscriptionId
      * @param int $sequenceNumber
      * @param bool $moreNotifications
-     * @param array $notifications
+     * @param array<int, mixed> $notifications
      * @param int[] $availableSequenceNumbers
      */
     public function __construct(
@@ -30,7 +30,7 @@ final readonly class PublishResult implements WireSerializable
     }
 
     /**
-     * @return array{subId: int, seq: int, more: bool, notif: array, avail: int[]}
+     * @return array{subId: int, seq: int, more: bool, notif: array<int, mixed>, avail: int[]}
      */
     public function jsonSerialize(): array
     {
@@ -44,7 +44,7 @@ final readonly class PublishResult implements WireSerializable
     }
 
     /**
-     * @param array{subId?: int, seq?: int, more?: bool, notif?: array, avail?: int[]} $data
+     * @param array{subId?: int, seq?: int, more?: bool, notif?: array<int, mixed>, avail?: int[]} $data
      * @return static
      */
     public static function fromWireArray(array $data): static

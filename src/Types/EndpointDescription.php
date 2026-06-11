@@ -121,7 +121,7 @@ final readonly class EndpointDescription implements WireSerializable
     }
 
     /**
-     * @param array{url?: string, cert?: ?string, mode?: int, policy?: string, tokens?: array, profile?: string, level?: int, appUri?: ?string} $data
+     * @param array{url?: string, cert?: ?string, mode?: int, policy?: string, tokens?: array<int, UserTokenPolicy>, profile?: string, level?: int, appUri?: ?string} $data
      * @return static
      */
     public static function fromWireArray(array $data): static

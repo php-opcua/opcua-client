@@ -409,6 +409,9 @@ class ReadWriteModule extends ServiceModule
         return $writeItems;
     }
 
+    /**
+     * @param array<int, array<string, mixed>> $items
+     */
     private function prefetchWriteTypes(array $items): void
     {
         if (! $this->kernel->isAutoDetectWriteType()) {

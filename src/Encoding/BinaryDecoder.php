@@ -416,6 +416,9 @@ class BinaryDecoder
         return new \PhpOpcua\Client\Types\ExtensionObject($typeId, $encoding, body: $body);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function readDiagnosticInfo(): array
     {
         $this->enterNesting();

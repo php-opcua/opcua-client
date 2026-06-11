@@ -721,7 +721,7 @@ class SecureChannel
     }
 
     /**
-     * @param array|false $details
+     * @param array<string, mixed>|false $details
      * @return int
      */
     private function extractKeyLengthBytes(array|false $details): int

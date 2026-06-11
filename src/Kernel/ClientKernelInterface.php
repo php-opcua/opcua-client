@@ -44,11 +44,15 @@ interface ClientKernelInterface
 
     public function resolveNodeId(NodeId|string $nodeId): NodeId;
 
+    /** @param array<int, array<string, mixed>> $items */
     public function resolveNodeIdArray(array &$items, string $key = 'nodeId'): void;
 
     public function log(): LoggerInterface;
 
-    /** @param array<string, mixed> $context @return array<string, mixed> */
+    /**
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>
+     */
     public function logContext(array $context = []): array;
 
     public function dispatch(object $event): void;

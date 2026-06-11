@@ -671,7 +671,7 @@ interface OpcUaClientInterface
     /**
      * @param int $subscriptionId
      * @param int $retransmitSequenceNumber
-     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array}
+     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array<int, mixed>}
      *
      * @throws ConnectionException If the connection is lost during the request.
      * @throws ServiceException If the server returns an error response.

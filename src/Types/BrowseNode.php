@@ -116,7 +116,7 @@ final class BrowseNode implements WireSerializable
     }
 
     /**
-     * @param array{reference?: mixed, children?: array} $data
+     * @param array{reference?: mixed, children?: array<int, mixed>} $data
      * @return static
      * @throws EncodingException
      */

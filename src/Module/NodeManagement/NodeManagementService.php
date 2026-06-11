@@ -237,7 +237,7 @@ class NodeManagementService extends AbstractProtocolService
      * Encode the node attributes as an ExtensionObject based on the node class.
      *
      * @param BinaryEncoder $body
-     * @param array $item
+     * @param array<string, mixed> $item
      */
     private function writeNodeAttributes(BinaryEncoder $body, array $item): void
     {
@@ -278,7 +278,7 @@ class NodeManagementService extends AbstractProtocolService
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param array<string, mixed> $item
      */
     private function writeCommonAttributes(BinaryEncoder $e, array $item, int $specifiedAttributes): void
     {
@@ -291,7 +291,7 @@ class NodeManagementService extends AbstractProtocolService
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param array<string, mixed> $item
      */
     private function writeObjectAttributes(BinaryEncoder $e, array $item): void
     {
@@ -301,7 +301,7 @@ class NodeManagementService extends AbstractProtocolService
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param array<string, mixed> $item
      */
     private function writeVariableAttributes(BinaryEncoder $e, array $item): void
     {
@@ -333,7 +333,7 @@ class NodeManagementService extends AbstractProtocolService
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param array<string, mixed> $item
      */
     private function writeMethodAttributes(BinaryEncoder $e, array $item): void
     {
@@ -344,7 +344,7 @@ class NodeManagementService extends AbstractProtocolService
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param array<string, mixed> $item
      */
     private function writeObjectTypeAttributes(BinaryEncoder $e, array $item): void
     {
@@ -354,7 +354,7 @@ class NodeManagementService extends AbstractProtocolService
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param array<string, mixed> $item
      */
     private function writeVariableTypeAttributes(BinaryEncoder $e, array $item): void
     {
@@ -380,7 +380,7 @@ class NodeManagementService extends AbstractProtocolService
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param array<string, mixed> $item
      */
     private function writeReferenceTypeAttributes(BinaryEncoder $e, array $item): void
     {
@@ -392,7 +392,7 @@ class NodeManagementService extends AbstractProtocolService
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param array<string, mixed> $item
      */
     private function writeDataTypeAttributes(BinaryEncoder $e, array $item): void
     {
@@ -402,7 +402,7 @@ class NodeManagementService extends AbstractProtocolService
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param array<string, mixed> $item
      */
     private function writeViewAttributes(BinaryEncoder $e, array $item): void
     {
