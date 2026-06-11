@@ -65,6 +65,43 @@ final readonly class Variant implements WireSerializable
     }
 
     /**
+     * The variant value coerced to int. Fails when the value is not numeric.
+     *
+     * @throws EncodingException
+     */
+    public function asInt(): int
+    {
+        if (is_int($this->value)) {
+            return $this->value;
+        }
+        if (is_float($this->value) || is_bool($this->value) || (is_string($this->value) && is_numeric($this->value))) {
+            return (int) $this->value;
+        }
+
+        throw new EncodingException("Variant value of type {$this->type->name} cannot be read as int");
+    }
+
+    /**
+     * The variant value coerced to string. Fails when the value is not stringable.
+     *
+     * @throws EncodingException
+     */
+    public function asString(): string
+    {
+        if (is_string($this->value)) {
+            return $this->value;
+        }
+        if (is_int($this->value) || is_float($this->value)) {
+            return (string) $this->value;
+        }
+        if ($this->value instanceof \Stringable) {
+            return (string) $this->value;
+        }
+
+        throw new EncodingException("Variant value of type {$this->type->name} cannot be read as string");
+    }
+
+    /**
      * @return array{type: BuiltinType, value: mixed, dims: null|int[], bytesB64: ?string}
      */
     public function jsonSerialize(): array

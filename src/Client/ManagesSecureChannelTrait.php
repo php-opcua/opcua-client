@@ -187,7 +187,7 @@ trait ManagesSecureChannelTrait
     /**
      * Load the client certificate and private key for secure channel setup.
      *
-     * @return array{0: ?string, 1: mixed}
+     * @return array{0: ?string, 1: ?\OpenSSLAsymmetricKey}
      *
      * @throws ConfigurationException If the certificate file cannot be read.
      */

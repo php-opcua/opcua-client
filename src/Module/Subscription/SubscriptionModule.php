@@ -79,6 +79,8 @@ class SubscriptionModule extends ServiceModule
         $registry->register(MonitoredItemResult::class);
         $registry->register(MonitoredItemModifyResult::class);
         $registry->register(PublishResult::class);
+        $registry->register(DataChangeNotification::class);
+        $registry->register(EventNotification::class);
         $registry->register(SetTriggeringResult::class);
     }
 
@@ -582,27 +584,24 @@ class SubscriptionModule extends ServiceModule
         }
 
         foreach ($result->notifications as $notification) {
-            if ($notification['type'] === 'DataChange') {
+            if ($notification instanceof DataChangeNotification) {
                 $this->kernel->dispatch(fn () => new DataChangeReceived(
                     $this->client,
                     $result->subscriptionId,
                     $result->sequenceNumber,
-                    $notification['clientHandle'],
-                    $notification['dataValue'],
+                    $notification->clientHandle,
+                    $notification->dataValue,
                 ));
-            } elseif ($notification['type'] === 'Event') {
-                $eventFields = $notification['eventFields'];
-                $clientHandle = $notification['clientHandle'];
-
+            } elseif ($notification instanceof EventNotification) {
                 $this->kernel->dispatch(fn () => new EventNotificationReceived(
                     $this->client,
                     $result->subscriptionId,
                     $result->sequenceNumber,
-                    $clientHandle,
-                    $eventFields,
+                    $notification->clientHandle,
+                    $notification->eventFields,
                 ));
 
-                $this->dispatchAlarmEvents($result->subscriptionId, $clientHandle, $eventFields);
+                $this->dispatchAlarmEvents($result->subscriptionId, $notification->clientHandle, $notification->eventFields);
             }
         }
     }

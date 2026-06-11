@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Encoding;
 
+use PhpOpcua\Client\Exception\EncodingException;
 use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\StructureDefinition;
 use PhpOpcua\Client\Types\StructureField;
@@ -94,6 +95,10 @@ class DynamicCodec implements ExtensionObjectCodec
      */
     public function encode(BinaryEncoder $encoder, mixed $value): void
     {
+        if (! is_array($value)) {
+            throw new EncodingException('DynamicCodec can only encode associative arrays, ' . get_debug_type($value) . ' given');
+        }
+
         if ($this->definition->structureType === StructureDefinition::WITH_OPTIONAL_FIELDS) {
             $mask = 0;
             $optionalIndex = 0;
@@ -110,6 +115,9 @@ class DynamicCodec implements ExtensionObjectCodec
 
         if ($this->definition->structureType === StructureDefinition::UNION) {
             $switchField = $value['_switchField'] ?? 0;
+            if (! is_int($switchField)) {
+                throw new EncodingException('Union "_switchField" must be an int, ' . get_debug_type($switchField) . ' given');
+            }
             $encoder->writeUInt32($switchField);
             if ($switchField === 0) {
                 return;

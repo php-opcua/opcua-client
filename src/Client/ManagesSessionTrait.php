@@ -109,7 +109,7 @@ trait ManagesSessionTrait
     /**
      * Load the user certificate and private key for X509 identity token.
      *
-     * @return array{0: ?string, 1: mixed}
+     * @return array{0: ?string, 1: ?\OpenSSLAsymmetricKey}
      */
     private function loadUserCertificate(): array
     {

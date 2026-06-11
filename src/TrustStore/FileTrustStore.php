@@ -318,9 +318,10 @@ class FileTrustStore implements TrustStoreInterface
      */
     private function defaultBasePath(): string
     {
+        $home = $_SERVER['HOME'] ?? null;
         $base = PHP_OS_FAMILY === 'Windows'
             ? (getenv('APPDATA') ?: getenv('LOCALAPPDATA') ?: null)
-            : ($_SERVER['HOME'] ?? getenv('HOME') ?: null);
+            : (is_string($home) && $home !== '' ? $home : (getenv('HOME') ?: null));
 
         $base = $base ?: sys_get_temp_dir();
         $dotPrefix = PHP_OS_FAMILY === 'Windows' ? '' : '.';

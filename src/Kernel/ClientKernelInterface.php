@@ -57,6 +57,16 @@ interface ClientKernelInterface
 
     public function dispatch(object $event): void;
 
+    /**
+     * Fetch a value from cache or compute it via the fetcher callable.
+     *
+     * The cache round-trip invariant guarantees that a hit returns a value
+     * produced by an earlier run of the same fetcher (see WireCacheCodec).
+     *
+     * @template T
+     * @param callable(): T $fetcher
+     * @return T
+     */
     public function cachedFetch(string $key, callable $fetcher, bool $useCache): mixed;
 
     public function buildCacheKey(string $type, NodeId $nodeId, string $paramsSuffix = ''): string;

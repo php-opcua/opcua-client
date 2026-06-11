@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, v4.5.x ]
   pull_request:
     branches: [ main, master ]
 
@@ -27,9 +27,28 @@ jobs:
       - name: Check code style
         run: composer format:check
 
+  phpstan:
+    if: ${{ !startsWith(github.event.head_commit.message, '[DOC]') }}
+    runs-on: ubuntu-latest
+    name: PHPStan
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup PHP 8.5
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: openssl, sockets
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run static analysis
+        run: composer phpstan
+
   unit:
-    if: ${{ !cancelled() && !startsWith(github.event.head_commit.message, '[DOC]') }}
-    needs: format
+    if: ${{ !cancelled() && needs.phpstan.result == 'success' && !startsWith(github.event.head_commit.message, '[DOC]') }}
+    needs: [ format, phpstan ]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -53,7 +72,7 @@ jobs:
         run: composer install --no-interaction --prefer-dist
 
       - name: Run unit tests
-        run: vendor/bin/pest --exclude-group=integration
+        run: composer test:unit
 
   integration:
     if: ${{ !startsWith(github.event.head_commit.message, '[DOC]') }}
@@ -89,7 +108,7 @@ jobs:
       - name: Run tests
         env:
           OPCUA_CERTS_DIR: ${{ steps.opcua.outputs.certs-dir }}
-        run: vendor/bin/pest --log-junit=results/junit.xml ${{ matrix.php-version == '8.5' && '--coverage-clover=coverage/clover.xml' || '' }}
+        run: composer ${{ matrix.php-version == '8.5' && 'test' || 'test:integration' }} -- --log-junit=results/junit.xml ${{ matrix.php-version == '8.5' && '--coverage-clover=coverage/clover.xml' || '' }}
 
       - name: Upload coverage to Codecov
         if: matrix.php-version == '8.5'

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
+use PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePath;
 use PhpOpcua\Client\Module\TranslateBrowsePath\TranslateBrowsePathService;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\NodeId;
@@ -112,12 +113,12 @@ describe('TranslateBrowsePathService diagnostic info handling', function () {
         $bytes = $service->encodeTranslateRequest(
             1,
             [
-                [
+                BrowsePath::fromArray([
                     'startingNodeId' => NodeId::numeric(0, 85),
                     'relativePath' => [
                         ['targetName' => new QualifiedName(0, 'Server')],
                     ],
-                ],
+                ]),
             ],
             NodeId::numeric(0, 0),
         );

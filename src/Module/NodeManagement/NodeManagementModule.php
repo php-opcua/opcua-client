@@ -56,7 +56,7 @@ class NodeManagementModule extends ServiceModule
      *     description?: ?string,
      *     writeMask?: int,
      *     userWriteMask?: int,
-     *     value?: mixed,
+     *     value?: ?\PhpOpcua\Client\Types\Variant,
      *     dataType?: ?NodeId,
      *     valueRank?: int,
      *     arrayDimensions?: int[],
@@ -82,23 +82,10 @@ class NodeManagementModule extends ServiceModule
      */
     public function addNodes(array $nodesToAdd): array
     {
-        $resolved = [];
-        foreach ($nodesToAdd as $node) {
-            if (is_string($node['parentNodeId'])) {
-                $node['parentNodeId'] = NodeId::parse($node['parentNodeId']);
-            }
-            if (is_string($node['referenceTypeId'])) {
-                $node['referenceTypeId'] = NodeId::parse($node['referenceTypeId']);
-            }
-            if (is_string($node['requestedNewNodeId'])) {
-                $node['requestedNewNodeId'] = NodeId::parse($node['requestedNewNodeId']);
-            }
-            if (is_string($node['typeDefinition'])) {
-                $node['typeDefinition'] = NodeId::parse($node['typeDefinition']);
-            }
-            $resolved[] = $node;
-        }
-        $nodesToAdd = $resolved;
+        $nodesToAdd = array_map(
+            static fn (array $node): AddNodeItem => AddNodeItem::fromArray($node),
+            $nodesToAdd,
+        );
 
         return $this->kernel->executeWithRetry(function () use ($nodesToAdd) {
             $this->kernel->ensureConnected();

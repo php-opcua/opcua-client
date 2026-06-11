@@ -735,7 +735,12 @@ class SecureChannel
             throw new SecurityException('Failed to get client private key details');
         }
 
-        return (int) ($details['bits'] / 8);
+        $bits = $details['bits'] ?? null;
+        if (! is_int($bits)) {
+            throw new SecurityException('Client private key details do not expose a bit length');
+        }
+
+        return intdiv($bits, 8);
     }
 
     /**

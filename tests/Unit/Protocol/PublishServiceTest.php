@@ -115,11 +115,11 @@ describe('PublishService decoding', function () {
         expect($result->moreNotifications)->toBeFalse();
         expect($result->availableSequenceNumbers)->toBe([5]);
         expect($result->notifications)->toHaveCount(2);
-        expect($result->notifications[0]['type'])->toBe('DataChange');
-        expect($result->notifications[0]['clientHandle'])->toBe(1);
-        expect($result->notifications[0]['dataValue']->getValue())->toBe(100);
-        expect($result->notifications[1]['clientHandle'])->toBe(2);
-        expect($result->notifications[1]['dataValue']->getValue())->toBe(3.14);
+        expect($result->notifications[0])->toBeInstanceOf(PhpOpcua\Client\Module\Subscription\DataChangeNotification::class);
+        expect($result->notifications[0]->clientHandle)->toBe(1);
+        expect($result->notifications[0]->dataValue->getValue())->toBe(100);
+        expect($result->notifications[1]->clientHandle)->toBe(2);
+        expect($result->notifications[1]->dataValue->getValue())->toBe(3.14);
     });
 
     it('decodes a PublishResponse with EventNotificationList', function () {
@@ -171,11 +171,11 @@ describe('PublishService decoding', function () {
         $result = $service->decodePublishResponse($decoder);
         expect($result->subscriptionId)->toBe(10);
         expect($result->notifications)->toHaveCount(1);
-        expect($result->notifications[0]['type'])->toBe('Event');
-        expect($result->notifications[0]['clientHandle'])->toBe(5);
-        expect($result->notifications[0]['eventFields'])->toHaveCount(2);
-        expect($result->notifications[0]['eventFields'][0]->getValue())->toBe('TestEvent');
-        expect($result->notifications[0]['eventFields'][1]->getValue())->toBe(500);
+        expect($result->notifications[0])->toBeInstanceOf(PhpOpcua\Client\Module\Subscription\EventNotification::class);
+        expect($result->notifications[0]->clientHandle)->toBe(5);
+        expect($result->notifications[0]->eventFields)->toHaveCount(2);
+        expect($result->notifications[0]->eventFields[0]->getValue())->toBe('TestEvent');
+        expect($result->notifications[0]->eventFields[1]->getValue())->toBe(500);
     });
 
     it('decodes a PublishResponse with unknown notification type (skips)', function () {

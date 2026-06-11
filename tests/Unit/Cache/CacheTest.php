@@ -820,7 +820,7 @@ describe('discoverDataTypes caching', function () {
         );
 
         $encodingId = NodeId::numeric(2, 5001);
-        $cachedData = [['encodingId' => $encodingId, 'definition' => $definition]];
+        $cachedData = [new PhpOpcua\Client\Module\TypeDiscovery\DiscoveredType($encodingId, $definition)];
 
         $mock = new CacheMockTransport();
         $client = setupCacheConnectedClient($mock);
@@ -845,7 +845,7 @@ describe('discoverDataTypes caching', function () {
         );
 
         $encodingId = NodeId::numeric(2, 5002);
-        $cachedData = [['encodingId' => $encodingId, 'definition' => $definition]];
+        $cachedData = [new PhpOpcua\Client\Module\TypeDiscovery\DiscoveredType($encodingId, $definition)];
 
         $mock = new CacheMockTransport();
         $client = setupCacheConnectedClient($mock);

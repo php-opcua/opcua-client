@@ -8,9 +8,7 @@ use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Protocol\AbstractProtocolService;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
-use PhpOpcua\Client\Types\DataValue;
 use PhpOpcua\Client\Types\NodeId;
-use PhpOpcua\Client\Types\Variant;
 
 class PublishService extends AbstractProtocolService
 {
@@ -92,7 +90,7 @@ class PublishService extends AbstractProtocolService
 
     /**
      * @param BinaryDecoder $decoder
-     * @return array<array{type: string, clientHandle: int, dataValue: DataValue}>
+     * @return DataChangeNotification[]
      */
     private function decodeDataChangeNotification(BinaryDecoder $decoder): array
     {
@@ -102,11 +100,7 @@ class PublishService extends AbstractProtocolService
             $clientHandle = $decoder->readUInt32();
             $dataValue = $decoder->readDataValue();
 
-            $items[] = [
-                'type' => 'DataChange',
-                'clientHandle' => $clientHandle,
-                'dataValue' => $dataValue,
-            ];
+            $items[] = new DataChangeNotification($clientHandle, $dataValue);
         }
 
         $decoder->skipDiagnosticInfoArray();
@@ -116,7 +110,7 @@ class PublishService extends AbstractProtocolService
 
     /**
      * @param BinaryDecoder $decoder
-     * @return array<array{type: string, clientHandle: int, eventFields: Variant[]}>
+     * @return EventNotification[]
      */
     private function decodeEventNotificationList(BinaryDecoder $decoder): array
     {
@@ -131,11 +125,7 @@ class PublishService extends AbstractProtocolService
                 $fields[] = $decoder->readVariant();
             }
 
-            $events[] = [
-                'type' => 'Event',
-                'clientHandle' => $clientHandle,
-                'eventFields' => $fields,
-            ];
+            $events[] = new EventNotification($clientHandle, $fields);
         }
 
         return $events;

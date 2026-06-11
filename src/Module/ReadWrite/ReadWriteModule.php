@@ -425,7 +425,7 @@ class ReadWriteModule extends ServiceModule
     }
 
     /**
-     * @param array<int, array<string, mixed>> $items
+     * @param array<array{nodeId: NodeId, value: mixed, type?: ?BuiltinType, attributeId?: int}> $items
      */
     private function prefetchWriteTypes(array $items): void
     {

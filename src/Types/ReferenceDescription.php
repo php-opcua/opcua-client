@@ -132,6 +132,11 @@ final readonly class ReferenceDescription implements WireSerializable
             }
         }
 
+        $typeDefinition = $data['typeDef'] ?? null;
+        if ($typeDefinition !== null && ! $typeDefinition instanceof NodeId) {
+            throw new EncodingException('ReferenceDescription wire payload: field "typeDef" must be a decoded NodeId instance or null.');
+        }
+
         return new self(
             $data['refType'],
             $data['isForward'] ?? false,
@@ -139,7 +144,7 @@ final readonly class ReferenceDescription implements WireSerializable
             $data['browseName'],
             $data['displayName'],
             $data['nodeClass'],
-            $data['typeDef'] ?? null,
+            $typeDefinition,
         );
     }
 
