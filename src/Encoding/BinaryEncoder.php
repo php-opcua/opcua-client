@@ -184,7 +184,12 @@ class BinaryEncoder
         $this->writeUInt32((int) hexdec($parts[0]));
         $this->writeUInt16((int) hexdec($parts[1]));
         $this->writeUInt16((int) hexdec($parts[2]));
-        $this->writeRawBytes(hex2bin($parts[3] . $parts[4]));
+
+        $tail = hex2bin($parts[3] . $parts[4]);
+        if ($tail === false) {
+            throw new EncodingException("Invalid GUID format: {$guid}");
+        }
+        $this->writeRawBytes($tail);
     }
 
     /**
@@ -223,7 +228,11 @@ class BinaryEncoder
             case 0x05:
                 $this->writeByte(0x05);
                 $this->writeUInt16($nodeId->getNamespaceIndex());
-                $this->writeByteString(hex2bin((string) $identifier));
+                $opaque = hex2bin((string) $identifier);
+                if ($opaque === false) {
+                    throw new EncodingException("Invalid opaque NodeId identifier: {$identifier}");
+                }
+                $this->writeByteString($opaque);
                 break;
         }
     }

@@ -310,6 +310,9 @@ class MessageSecurity
         $totalLen = $sigKeyLen + $encKeyLen + $ivLen;
 
         $algorithm = $policy->getKeyDerivationAlgorithm();
+        if ($algorithm === '') {
+            throw new SecurityException("Security policy {$policy->name} has no key derivation algorithm");
+        }
         $derived = hash_hkdf($algorithm, $sharedSecret, $totalLen, $info, $salt);
 
         return [

@@ -113,10 +113,17 @@ class ReadWriteModule extends ServiceModule
             return new ReadMultiBuilder($this->client);
         }
 
-        $this->kernel->resolveNodeIdArray($readItems);
+        $resolved = [];
+        foreach ($readItems as $item) {
+            if (is_string($item['nodeId'])) {
+                $item['nodeId'] = NodeId::parse($item['nodeId']);
+            }
+            $resolved[] = $item;
+        }
+        $readItems = $resolved;
 
         $batchSize = $this->kernel->getEffectiveReadBatchSize();
-        if ($batchSize !== null && count($readItems) > $batchSize) {
+        if ($batchSize !== null && $batchSize > 0 && count($readItems) > $batchSize) {
             return $this->readMultiBatched($readItems, $batchSize);
         }
 
@@ -179,10 +186,17 @@ class ReadWriteModule extends ServiceModule
             return new WriteMultiBuilder($this->client);
         }
 
-        $this->kernel->resolveNodeIdArray($writeItems);
+        $resolved = [];
+        foreach ($writeItems as $item) {
+            if (is_string($item['nodeId'])) {
+                $item['nodeId'] = NodeId::parse($item['nodeId']);
+            }
+            $resolved[] = $item;
+        }
+        $writeItems = $resolved;
 
         $batchSize = $this->kernel->getEffectiveWriteBatchSize();
-        if ($batchSize !== null && count($writeItems) > $batchSize) {
+        if ($batchSize !== null && $batchSize > 0 && count($writeItems) > $batchSize) {
             return $this->writeMultiBatched($writeItems, $batchSize);
         }
 
@@ -337,7 +351,7 @@ class ReadWriteModule extends ServiceModule
 
     /**
      * @param array<array{nodeId: NodeId, attributeId?: int}> $items
-     * @param int $batchSize
+     * @param int<1, max> $batchSize
      * @return DataValue[]
      */
     private function readMultiBatched(array $items, int $batchSize): array
@@ -355,7 +369,7 @@ class ReadWriteModule extends ServiceModule
 
     /**
      * @param array<array{nodeId: NodeId, value: mixed, type?: ?BuiltinType, attributeId?: int}> $items
-     * @param int $batchSize
+     * @param int<1, max> $batchSize
      * @return int[]
      */
     private function writeMultiBatched(array $items, int $batchSize): array

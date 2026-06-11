@@ -580,7 +580,11 @@ class SecureChannel
             return;
         }
 
-        $sequenceNumber = unpack('V', substr($plainData, 0, 4))[1];
+        $unpacked = unpack('V', substr($plainData, 0, 4));
+        if ($unpacked === false) {
+            throw new SecurityException('Failed to parse incoming sequence number');
+        }
+        $sequenceNumber = $unpacked[1];
 
         if ($this->lastReceivedSequenceNumber !== null) {
             $wrapThreshold = $this->policy->isEcc() ? self::ECC_MAX_SEQUENCE_NUMBER : self::RSA_MAX_SEQUENCE_NUMBER;
@@ -841,6 +845,9 @@ class SecureChannel
             : $encKeyLen + $blockSize;
 
         $algorithm = $this->policy->getKeyDerivationAlgorithm();
+        if ($algorithm === '') {
+            throw new SecurityException("Security policy {$this->policy->name} has no key derivation algorithm");
+        }
 
         $clientSalt = pack('v', $saltKeyLen) . 'opcua-client' . $this->clientNonce . $this->serverNonce;
         $clientDerived = hash_hkdf($algorithm, $sharedSecret, $totalLen, $clientSalt, $clientSalt);

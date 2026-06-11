@@ -81,10 +81,23 @@ class NodeManagementModule extends ServiceModule
      */
     public function addNodes(array $nodesToAdd): array
     {
-        $this->kernel->resolveNodeIdArray($nodesToAdd, 'parentNodeId');
-        $this->kernel->resolveNodeIdArray($nodesToAdd, 'referenceTypeId');
-        $this->kernel->resolveNodeIdArray($nodesToAdd, 'requestedNewNodeId');
-        $this->kernel->resolveNodeIdArray($nodesToAdd, 'typeDefinition');
+        $resolved = [];
+        foreach ($nodesToAdd as $node) {
+            if (is_string($node['parentNodeId'])) {
+                $node['parentNodeId'] = NodeId::parse($node['parentNodeId']);
+            }
+            if (is_string($node['referenceTypeId'])) {
+                $node['referenceTypeId'] = NodeId::parse($node['referenceTypeId']);
+            }
+            if (is_string($node['requestedNewNodeId'])) {
+                $node['requestedNewNodeId'] = NodeId::parse($node['requestedNewNodeId']);
+            }
+            if (is_string($node['typeDefinition'])) {
+                $node['typeDefinition'] = NodeId::parse($node['typeDefinition']);
+            }
+            $resolved[] = $node;
+        }
+        $nodesToAdd = $resolved;
 
         return $this->kernel->executeWithRetry(function () use ($nodesToAdd) {
             $this->kernel->ensureConnected();
@@ -117,7 +130,14 @@ class NodeManagementModule extends ServiceModule
      */
     public function deleteNodes(array $nodesToDelete): array
     {
-        $this->kernel->resolveNodeIdArray($nodesToDelete);
+        $resolved = [];
+        foreach ($nodesToDelete as $node) {
+            if (is_string($node['nodeId'])) {
+                $node['nodeId'] = NodeId::parse($node['nodeId']);
+            }
+            $resolved[] = $node;
+        }
+        $nodesToDelete = $resolved;
 
         return $this->kernel->executeWithRetry(function () use ($nodesToDelete) {
             $this->kernel->ensureConnected();
@@ -157,9 +177,20 @@ class NodeManagementModule extends ServiceModule
      */
     public function addReferences(array $referencesToAdd): array
     {
-        $this->kernel->resolveNodeIdArray($referencesToAdd, 'sourceNodeId');
-        $this->kernel->resolveNodeIdArray($referencesToAdd, 'referenceTypeId');
-        $this->kernel->resolveNodeIdArray($referencesToAdd, 'targetNodeId');
+        $resolved = [];
+        foreach ($referencesToAdd as $reference) {
+            if (is_string($reference['sourceNodeId'])) {
+                $reference['sourceNodeId'] = NodeId::parse($reference['sourceNodeId']);
+            }
+            if (is_string($reference['referenceTypeId'])) {
+                $reference['referenceTypeId'] = NodeId::parse($reference['referenceTypeId']);
+            }
+            if (is_string($reference['targetNodeId'])) {
+                $reference['targetNodeId'] = NodeId::parse($reference['targetNodeId']);
+            }
+            $resolved[] = $reference;
+        }
+        $referencesToAdd = $resolved;
 
         return $this->kernel->executeWithRetry(function () use ($referencesToAdd) {
             $this->kernel->ensureConnected();
@@ -198,9 +229,20 @@ class NodeManagementModule extends ServiceModule
      */
     public function deleteReferences(array $referencesToDelete): array
     {
-        $this->kernel->resolveNodeIdArray($referencesToDelete, 'sourceNodeId');
-        $this->kernel->resolveNodeIdArray($referencesToDelete, 'referenceTypeId');
-        $this->kernel->resolveNodeIdArray($referencesToDelete, 'targetNodeId');
+        $resolved = [];
+        foreach ($referencesToDelete as $reference) {
+            if (is_string($reference['sourceNodeId'])) {
+                $reference['sourceNodeId'] = NodeId::parse($reference['sourceNodeId']);
+            }
+            if (is_string($reference['referenceTypeId'])) {
+                $reference['referenceTypeId'] = NodeId::parse($reference['referenceTypeId']);
+            }
+            if (is_string($reference['targetNodeId'])) {
+                $reference['targetNodeId'] = NodeId::parse($reference['targetNodeId']);
+            }
+            $resolved[] = $reference;
+        }
+        $referencesToDelete = $resolved;
 
         return $this->kernel->executeWithRetry(function () use ($referencesToDelete) {
             $this->kernel->ensureConnected();

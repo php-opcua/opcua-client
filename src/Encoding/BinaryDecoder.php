@@ -99,20 +99,12 @@ class BinaryDecoder
 
     public function readSByte(): int
     {
-        $this->ensureAvailable(1);
-        $data = unpack('c', $this->buffer, $this->offset);
-        $this->offset++;
-
-        return $data[1];
+        return $this->unpackInt('c', 1);
     }
 
     public function readUInt16(): int
     {
-        $this->ensureAvailable(2);
-        $data = unpack('v', $this->buffer, $this->offset);
-        $this->offset += 2;
-
-        return $data[1];
+        return $this->unpackInt('v', 2);
     }
 
     public function readInt16(): int
@@ -128,20 +120,13 @@ class BinaryDecoder
     /** @phpstan-impure */
     public function readUInt32(): int
     {
-        $this->ensureAvailable(4);
-        $data = unpack('V', $this->buffer, $this->offset);
-        $this->offset += 4;
-
-        return $data[1];
+        return $this->unpackInt('V', 4);
     }
 
     /** @phpstan-impure */
     public function readInt32(): int
     {
-        $this->ensureAvailable(4);
-        $data = unpack('V', $this->buffer, $this->offset);
-        $this->offset += 4;
-        $value = $data[1];
+        $value = $this->unpackInt('V', 4);
         if ($value >= 0x80000000) {
             $value -= 0x100000000;
         }
@@ -151,11 +136,7 @@ class BinaryDecoder
 
     public function readInt64(): int
     {
-        $this->ensureAvailable(8);
-        $data = unpack('P', $this->buffer, $this->offset);
-        $this->offset += 8;
-
-        return $data[1];
+        return $this->unpackInt('P', 8);
     }
 
     public function readUInt64(): int
@@ -165,20 +146,46 @@ class BinaryDecoder
 
     public function readFloat(): float
     {
-        $this->ensureAvailable(4);
-        $data = unpack('g', $this->buffer, $this->offset);
-        $this->offset += 4;
-
-        return $data[1];
+        return $this->unpackFloat('g', 4);
     }
 
     public function readDouble(): float
     {
-        $this->ensureAvailable(8);
-        $data = unpack('e', $this->buffer, $this->offset);
-        $this->offset += 8;
+        return $this->unpackFloat('e', 8);
+    }
 
-        return $data[1];
+    /**
+     * Read one integer value of the given byte size using a pack() format code.
+     *
+     * @phpstan-impure
+     */
+    private function unpackInt(string $format, int $size): int
+    {
+        $this->ensureAvailable($size);
+        $data = unpack($format, $this->buffer, $this->offset);
+        if ($data === false) {
+            throw new EncodingException("Failed to unpack '{$format}' at offset {$this->offset}");
+        }
+        $this->offset += $size;
+
+        return (int) $data[1];
+    }
+
+    /**
+     * Read one floating-point value of the given byte size using a pack() format code.
+     *
+     * @phpstan-impure
+     */
+    private function unpackFloat(string $format, int $size): float
+    {
+        $this->ensureAvailable($size);
+        $data = unpack($format, $this->buffer, $this->offset);
+        if ($data === false) {
+            throw new EncodingException("Failed to unpack '{$format}' at offset {$this->offset}");
+        }
+        $this->offset += $size;
+
+        return (float) $data[1];
     }
 
     public function readString(): ?string

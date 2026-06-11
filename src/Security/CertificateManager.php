@@ -196,7 +196,7 @@ class CertificateManager
             fwrite($tmpHandle, $configContent);
             fflush($tmpHandle);
             $meta = stream_get_meta_data($tmpHandle);
-            $configPath = $meta['uri'];
+            $configPath = $meta['uri'] ?? throw new SecurityException('Failed to resolve temporary OpenSSL config path');
 
             if ($eccCurveName !== null) {
                 $keyConfig = [
@@ -220,10 +220,10 @@ class CertificateManager
 
             $dn = ['CN' => 'OPC UA PHP Client', 'O' => 'OPC UA PHP Client'];
 
-            $csr = self::ensureNotFalse(
-                openssl_csr_new($dn, $privateKey, ['digest_alg' => $digestAlg, 'config' => $configPath]),
-                'Failed to generate CSR',
-            );
+            $csr = openssl_csr_new($dn, $privateKey, ['digest_alg' => $digestAlg, 'config' => $configPath]);
+            if (! $csr instanceof \OpenSSLCertificateSigningRequest) {
+                throw new SecurityException('Failed to generate CSR');
+            }
 
             $cert = self::ensureNotFalse(
                 openssl_csr_sign($csr, null, $privateKey, 365, ['digest_alg' => $digestAlg, 'config' => $configPath, 'x509_extensions' => 'v3_req']),

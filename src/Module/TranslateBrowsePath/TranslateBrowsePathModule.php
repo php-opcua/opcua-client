@@ -68,7 +68,14 @@ class TranslateBrowsePathModule extends ServiceModule
             return new \PhpOpcua\Client\Builder\BrowsePathsBuilder($this->client);
         }
 
-        $this->kernel->resolveNodeIdArray($browsePaths, 'startingNodeId');
+        $resolved = [];
+        foreach ($browsePaths as $path) {
+            if (is_string($path['startingNodeId'])) {
+                $path['startingNodeId'] = NodeId::parse($path['startingNodeId']);
+            }
+            $resolved[] = $path;
+        }
+        $browsePaths = $resolved;
 
         return $this->kernel->executeWithRetry(function () use ($browsePaths) {
             $this->kernel->ensureConnected();

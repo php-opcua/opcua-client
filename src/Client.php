@@ -66,7 +66,7 @@ use Psr\SimpleCache\CacheInterface;
  * @see ClientKernelInterface
  * @see ClientBuilder
  */
-class Client implements OpcUaClientInterface, ClientKernelInterface
+class Client implements OpcUaClientInterface, ClientKernelInterface, Module\ModuleHostInterface
 {
     use ManagesEventDispatchTrait;
     use ManagesCacheRuntimeTrait;
@@ -346,7 +346,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
     /**
      * Check whether a module class is loaded.
      *
-     * @param string $moduleClass The fully-qualified module class name.
+     * @param class-string<Module\ServiceModule> $moduleClass The fully-qualified module class name.
      * @return bool
      */
     public function hasModule(string $moduleClass): bool

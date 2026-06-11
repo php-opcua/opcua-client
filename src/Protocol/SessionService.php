@@ -7,6 +7,7 @@ namespace PhpOpcua\Client\Protocol;
 use OpenSSLAsymmetricKey;
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
+use PhpOpcua\Client\Exception\SecurityException;
 use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Security\MessageSecurity;
 use PhpOpcua\Client\Security\SecureChannel;
@@ -901,6 +902,9 @@ class SessionService
         $clientCertDer = $this->secureChannel->getClientCertDer();
         $curveName = $policy->getEcdhCurveName();
         $algorithm = $policy->getKeyDerivationAlgorithm();
+        if ($algorithm === '') {
+            throw new SecurityException("Security policy {$policy->name} has no key derivation algorithm");
+        }
         $coordinateSize = $policy->getEphemeralKeyLength() / 2;
         $signatureSize = $coordinateSize * 2;
 
@@ -938,6 +942,9 @@ class SessionService
 
         $cipher = $policy->getSymmetricEncryptionAlgorithm();
         $encryptedData = openssl_encrypt($dataToEncrypt, $cipher, $encKey, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $iv);
+        if ($encryptedData === false) {
+            throw new SecurityException('Failed to encrypt ECC user token secret');
+        }
 
         $headerLen = strlen($senderNonce) + strlen($eccReceiverNonce) + 8;
 

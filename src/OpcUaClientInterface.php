@@ -210,7 +210,7 @@ interface OpcUaClientInterface
     /**
      * Check whether a module class is loaded.
      *
-     * @param string $moduleClass The fully-qualified module class name.
+     * @param class-string<Module\ServiceModule> $moduleClass The fully-qualified module class name.
      * @return bool
      */
     public function hasModule(string $moduleClass): bool;
@@ -434,8 +434,8 @@ interface OpcUaClientInterface
     /**
      * Translate one or more browse paths to their target NodeIds.
      *
-     * @param array<array{startingNodeId: NodeId|string, relativePath: array<array{referenceTypeId?: NodeId, isInverse?: bool, includeSubtypes?: bool, targetName: QualifiedName}>}> $browsePaths
-     * @return BrowsePathResult[]
+     * @param ?array<array{startingNodeId: NodeId|string, relativePath: array<array{referenceTypeId?: NodeId, isInverse?: bool, includeSubtypes?: bool, targetName: QualifiedName}>}> $browsePaths
+     * @return ($browsePaths is null ? Builder\BrowsePathsBuilder : BrowsePathResult[])
      *
      * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
      * @throws ConnectionException If the connection is lost during the request.
@@ -560,8 +560,8 @@ interface OpcUaClientInterface
      * Create monitored items within an existing subscription.
      *
      * @param int $subscriptionId The subscription to add items to.
-     * @param array<array{nodeId: NodeId|string, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int}> $items Items to monitor.
-     * @return MonitoredItemResult[]
+     * @param ?array<array{nodeId: NodeId|string, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int}> $items Items to monitor, or null to get a fluent builder.
+     * @return ($items is null ? Builder\MonitoredItemsBuilder : MonitoredItemResult[])
      *
      * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
      * @throws ConnectionException If the connection is lost during the request.

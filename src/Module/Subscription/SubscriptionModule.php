@@ -153,7 +153,14 @@ class SubscriptionModule extends ServiceModule
             return new \PhpOpcua\Client\Builder\MonitoredItemsBuilder($this->client, $subscriptionId);
         }
 
-        $this->kernel->resolveNodeIdArray($monitoredItems);
+        $resolved = [];
+        foreach ($monitoredItems as $item) {
+            if (is_string($item['nodeId'])) {
+                $item['nodeId'] = NodeId::parse($item['nodeId']);
+            }
+            $resolved[] = $item;
+        }
+        $monitoredItems = $resolved;
 
         return $this->kernel->executeWithRetry(function () use ($subscriptionId, $monitoredItems) {
             $this->kernel->ensureConnected();

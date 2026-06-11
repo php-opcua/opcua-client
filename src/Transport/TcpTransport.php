@@ -114,6 +114,9 @@ class TcpTransport implements ClientTransportInterface
         $header = $this->readExact(8);
 
         $size = unpack('V', $header, 4);
+        if ($size === false) {
+            throw new ProtocolException('Failed to parse message size header');
+        }
         $messageSize = $size[1];
 
         if ($messageSize < 8 || $messageSize > $this->receiveBufferSize) {

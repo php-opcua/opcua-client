@@ -1,5 +1,5 @@
 parameters:
-    level: 6
+    level: 7
     treatPhpDocTypesAsCertain: false
     phpVersion: 80200  # PHP 8.2
     paths:
