@@ -12,7 +12,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see ReadWriteModule::call()
  */
-readonly class CallResult implements WireSerializable
+final readonly class CallResult implements WireSerializable
 {
     /**
      * @param int $statusCode

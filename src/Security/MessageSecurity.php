@@ -372,6 +372,7 @@ class MessageSecurity
             'secp384r1' => "\x06\x05\x2b\x81\x04\x00\x22",
             'brainpoolP256r1' => "\x06\x09\x2b\x24\x03\x03\x02\x08\x01\x01\x07",
             'brainpoolP384r1' => "\x06\x09\x2b\x24\x03\x03\x02\x08\x01\x01\x0b",
+            default => throw new SecurityException("Unsupported EC curve: {$curveName}"),
         };
 
         $ecOid = "\x06\x07\x2a\x86\x48\xce\x3d\x02\x01";

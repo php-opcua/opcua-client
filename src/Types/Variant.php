@@ -10,7 +10,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Represents an OPC UA Variant, a union type that can hold any built-in data type value.
  */
-readonly class Variant implements WireSerializable
+final readonly class Variant implements WireSerializable
 {
     /**
      * @param BuiltinType $type

@@ -17,7 +17,6 @@ use PhpOpcua\Client\Protocol\SecureChannelResponse;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Security\CertificateManager;
-use PhpOpcua\Client\Security\MessageSecurity;
 use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
@@ -75,7 +74,7 @@ trait ManagesSecureChannelTrait
         );
         $this->session->setUserTokenEncryptionContext(
             $this->serverCertDer,
-            $this->secureChannel->getMessageSecurity() ?? new MessageSecurity(new CertificateManager()),
+            $this->secureChannel->getMessageSecurity(),
         );
 
         $this->initServices($this->session);
@@ -124,7 +123,7 @@ trait ManagesSecureChannelTrait
         );
         $this->session->setUserTokenEncryptionContext(
             $this->serverCertDer,
-            $this->secureChannel?->getMessageSecurity() ?? new MessageSecurity(new CertificateManager()),
+            $this->secureChannel->getMessageSecurity(),
         );
 
         $this->initServices($this->session);
@@ -179,7 +178,7 @@ trait ManagesSecureChannelTrait
         );
         $this->session->setUserTokenEncryptionContext(
             $this->serverCertDer,
-            $this->secureChannel?->getMessageSecurity() ?? new MessageSecurity(new CertificateManager()),
+            $this->secureChannel->getMessageSecurity(),
         );
 
         $this->initServices($this->session);

@@ -57,11 +57,13 @@
   },
   "require-dev": {
     "pestphp/pest": "^3.0",
-    "friendsofphp/php-cs-fixer": "^3.0"
+    "friendsofphp/php-cs-fixer": "^3.0",
+    "phpstan/phpstan": "^2.2"
   },
   "scripts": {
     "format": "php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes",
-    "format:check": "php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes --dry-run --diff"
+    "format:check": "php-cs-fixer fix --config=.php-cs-fixer.php --allow-risky=yes --dry-run --diff",
+    "phpstan": "phpstan analyse --memory-limit=1G"
   },
   "config": {
     "allow-plugins": {

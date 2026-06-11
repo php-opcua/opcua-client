@@ -11,7 +11,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see SubscriptionModule::modifyMonitoredItems()
  */
-readonly class MonitoredItemModifyResult implements WireSerializable
+final readonly class MonitoredItemModifyResult implements WireSerializable
 {
     /**
      * @param int $statusCode

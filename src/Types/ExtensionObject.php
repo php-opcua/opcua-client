@@ -17,7 +17,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  * @see \PhpOpcua\Client\Encoding\BinaryDecoder::readExtensionObject()
  * @see \PhpOpcua\Client\Encoding\ExtensionObjectCodec
  */
-readonly class ExtensionObject implements WireSerializable
+final readonly class ExtensionObject implements WireSerializable
 {
     /**
      * @param NodeId $typeId The encoding NodeId identifying the ExtensionObject type.

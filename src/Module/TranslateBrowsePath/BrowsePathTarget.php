@@ -13,7 +13,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see BrowsePathResult
  */
-readonly class BrowsePathTarget implements WireSerializable
+final readonly class BrowsePathTarget implements WireSerializable
 {
     /**
      * @param NodeId $targetId

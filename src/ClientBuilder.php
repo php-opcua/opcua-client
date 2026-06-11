@@ -41,8 +41,6 @@ use Psr\Log\NullLogger;
  * The builder is reusable: calling `connect()` multiple times creates independent
  * connected clients sharing the same configuration snapshot.
  *
- * @implements ClientBuilderInterface
- *
  * @see ClientBuilderInterface
  * @see Client
  */
@@ -99,7 +97,7 @@ class ClientBuilder implements ClientBuilderInterface
      * @param ?ExtensionObjectRepository $extensionObjectRepository Optional custom repository for extension object decoding.
      * @param ?LoggerInterface $logger Optional PSR-3 logger for connection events, retries, and errors.
      */
-    public function __construct(?ExtensionObjectRepository $extensionObjectRepository = null, ?LoggerInterface $logger = null)
+    final public function __construct(?ExtensionObjectRepository $extensionObjectRepository = null, ?LoggerInterface $logger = null)
     {
         $this->extensionObjectRepository = $extensionObjectRepository ?? new ExtensionObjectRepository();
         $this->logger = $logger ?? new NullLogger();

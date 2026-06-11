@@ -65,36 +65,7 @@ describe('SecureChannel getClientKeyLengthBytes null key', function () {
     });
 });
 
-describe('SecureChannel asymmetricSignAndEncrypt (dead code coverage)', function () {
-
-    it('exercises asymmetricSignAndEncrypt via Reflection (lines 507-525)', function () {
-        [$certDer, $privKey] = generateTestCertKeyPair();
-        $policy = SecurityPolicy::Basic256Sha256;
-        $sc = new SecureChannel($policy, SecurityMode::SignAndEncrypt, $certDer, $privKey, $certDer);
-
-        $secHeader = new BinaryEncoder();
-        $secHeader->writeString($policy->value);
-        $secHeader->writeByteString($certDer);
-        $secHeader->writeByteString($sc->getCertificateManager()->getThumbprint($certDer));
-
-        $plainBody = new BinaryEncoder();
-        $plainBody->writeUInt32(1);
-        $plainBody->writeUInt32(1);
-        $plainBody->writeNodeId(NodeId::numeric(0, 446));
-        $plainBody->writeNodeId(NodeId::numeric(0, 0));
-        $plainBody->writeInt64(0);
-        $plainBody->writeUInt32(1);
-        $plainBody->writeUInt32(0);
-        $plainBody->writeString(null);
-        $plainBody->writeUInt32(10000);
-        $plainBody->writeNodeId(NodeId::numeric(0, 0));
-        $plainBody->writeByte(0);
-
-        $ref = new ReflectionMethod($sc, 'asymmetricSignAndEncrypt');
-        $encrypted = $ref->invoke($sc, $secHeader->getBuffer(), $plainBody->getBuffer());
-
-        expect(strlen($encrypted))->toBeGreaterThan(0);
-    });
+describe('SecureChannel private helpers', function () {
 
     it('extractKeyLengthBytes throws SecurityException on false input', function () {
         [$certDer, $privKey] = generateTestCertKeyPair();

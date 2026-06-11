@@ -10,7 +10,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Represents an OPC UA ReferenceDescription returned from a Browse operation.
  */
-readonly class ReferenceDescription implements WireSerializable
+final readonly class ReferenceDescription implements WireSerializable
 {
     /**
      * @param NodeId $referenceTypeId

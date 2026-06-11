@@ -10,7 +10,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Represents an OPC UA NodeId, uniquely identifying a node within a server address space.
  */
-readonly class NodeId implements WireSerializable
+final readonly class NodeId implements WireSerializable
 {
     public const TYPE_NUMERIC = 'numeric';
 
@@ -200,6 +200,7 @@ readonly class NodeId implements WireSerializable
             self::TYPE_STRING => 's',
             self::TYPE_GUID => 'g',
             self::TYPE_OPAQUE => 'b',
+            default => throw new InvalidNodeIdException("Unknown NodeId type: {$this->type}"),
         };
 
         $prefix = $this->namespaceIndex > 0 ? "ns={$this->namespaceIndex};" : '';
@@ -227,7 +228,7 @@ readonly class NodeId implements WireSerializable
     }
 
     /**
-     * @param array{v: string} $data
+     * @param array<string, mixed> $data
      * @return static
      * @throws InvalidNodeIdException If the wire payload is malformed.
      */

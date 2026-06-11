@@ -7,7 +7,6 @@ namespace PhpOpcua\Client\Module\Browse;
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Event\NodeBrowsed;
 use PhpOpcua\Client\Module\ServiceModule;
-use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\BrowseDirection;
 use PhpOpcua\Client\Types\BrowseNode;
@@ -83,7 +82,7 @@ class BrowseModule extends ServiceModule
                 $this->kernel->ensureConnected();
 
                 $requestId = $this->kernel->nextRequestId();
-                $authToken = $this->kernel->getAuthToken() ?? NodeId::numeric(0, ServiceTypeId::NULL);
+                $authToken = $this->kernel->getAuthToken();
                 $request = $this->getEndpointsService->encodeGetEndpointsRequest($requestId, $endpointUrl, $authToken);
                 $this->kernel->log()->debug('GetEndpoints request for {url}', $this->kernel->logContext(['url' => $endpointUrl]));
                 $this->kernel->send($request);

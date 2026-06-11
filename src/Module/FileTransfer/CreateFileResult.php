@@ -15,7 +15,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/C.3.2 OPC UA Part 5 §C.3.2
  * @see FileTransferModule::createFileInDirectory()
  */
-readonly class CreateFileResult implements WireSerializable
+final readonly class CreateFileResult implements WireSerializable
 {
     /**
      * @param NodeId $fileNodeId

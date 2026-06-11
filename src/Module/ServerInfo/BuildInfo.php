@@ -16,7 +16,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see https://reference.opcfoundation.org/Core/Part5/v105/docs/12.4
  */
-readonly class BuildInfo implements WireSerializable
+final readonly class BuildInfo implements WireSerializable
 {
     /**
      * @param ?string $productName The name of the server product (ns=0;i=2262).

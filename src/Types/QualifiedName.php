@@ -10,7 +10,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Represents an OPC UA QualifiedName, consisting of a namespace index and a name string.
  */
-readonly class QualifiedName implements WireSerializable
+final readonly class QualifiedName implements WireSerializable
 {
     /**
      * @param int $namespaceIndex
@@ -65,7 +65,7 @@ readonly class QualifiedName implements WireSerializable
     }
 
     /**
-     * @param array{ns: int, n: string} $data
+     * @param array<string, mixed> $data
      * @return static
      * @throws EncodingException
      */

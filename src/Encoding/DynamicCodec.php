@@ -99,7 +99,7 @@ class DynamicCodec implements ExtensionObjectCodec
             $optionalIndex = 0;
             foreach ($this->definition->fields as $field) {
                 if ($field->isOptional) {
-                    if (isset($value[$field->name]) && $value[$field->name] !== null) {
+                    if (isset($value[$field->name])) {
                         $mask |= (1 << $optionalIndex);
                     }
                     $optionalIndex++;
@@ -126,7 +126,7 @@ class DynamicCodec implements ExtensionObjectCodec
         $optionalIndex = 0;
         foreach ($this->definition->fields as $field) {
             if ($this->definition->structureType === StructureDefinition::WITH_OPTIONAL_FIELDS && $field->isOptional) {
-                if (! isset($value[$field->name]) || $value[$field->name] === null) {
+                if (! isset($value[$field->name])) {
                     $optionalIndex++;
                     continue;
                 }

@@ -13,7 +13,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see NodeManagementModule::addNodes()
  */
-readonly class AddNodesResult implements WireSerializable
+final readonly class AddNodesResult implements WireSerializable
 {
     /**
      * @param int $statusCode The OPC UA status code for this operation.

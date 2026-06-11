@@ -21,7 +21,11 @@ use Psr\SimpleCache\CacheInterface;
  */
 interface ClientKernelInterface
 {
-    /** @template T @param Closure(): T $operation @return T */
+    /**
+     * @template T
+     * @param Closure(): T $operation
+     * @return T
+     */
     public function executeWithRetry(Closure $operation): mixed;
 
     public function ensureConnected(): void;

@@ -12,7 +12,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see StructureField
  */
-readonly class StructureDefinition implements WireSerializable
+final readonly class StructureDefinition implements WireSerializable
 {
     public const STRUCTURE = 0;
 

@@ -11,7 +11,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see SubscriptionModule::publish()
  */
-readonly class PublishResult implements WireSerializable
+final readonly class PublishResult implements WireSerializable
 {
     /**
      * @param int $subscriptionId

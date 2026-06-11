@@ -10,7 +10,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Holds the result of a browse operation, including references and an optional continuation point.
  */
-readonly class BrowseResultSet implements WireSerializable
+final readonly class BrowseResultSet implements WireSerializable
 {
     /**
      * @param ReferenceDescription[] $references

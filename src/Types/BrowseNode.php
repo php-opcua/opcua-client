@@ -10,7 +10,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Represents a node in a hierarchical browse tree, wrapping a ReferenceDescription with child nodes.
  */
-class BrowseNode implements WireSerializable
+final class BrowseNode implements WireSerializable
 {
     /** @var BrowseNode[] */
     private array $children = [];

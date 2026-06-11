@@ -115,7 +115,6 @@ trait ManagesConnectionTrait
         throw match ($this->connectionState) {
             ConnectionState::Disconnected => new ConnectionException('Not connected: call connect() first'),
             ConnectionState::Broken => new ConnectionException('Connection lost: call reconnect() or connect() to re-establish'),
-            default => new ConnectionException('No explicit exception for state: ' . $this->connectionState->name),
         };
     }
 

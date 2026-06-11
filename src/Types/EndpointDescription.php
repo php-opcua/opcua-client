@@ -9,7 +9,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Represents an OPC UA EndpointDescription describing a server endpoint and its security configuration.
  */
-readonly class EndpointDescription implements WireSerializable
+final readonly class EndpointDescription implements WireSerializable
 {
     /**
      * @param string $endpointUrl

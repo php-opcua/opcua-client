@@ -10,8 +10,6 @@ use Psr\SimpleCache\CacheInterface;
 /**
  * File-based PSR-16 cache. Each entry is stored as JSON `{"v": <value>, "e": <expiresAt|null>}`.
  * Entries written by pre-4.3.0 versions use `serialize()` and are discarded on first access.
- *
- * @implements CacheInterface<mixed>
  */
 class FileCache implements CacheInterface
 {
@@ -49,7 +47,7 @@ class FileCache implements CacheInterface
             return $default;
         }
 
-        if (isset($entry['e']) && $entry['e'] !== null && $entry['e'] < time()) {
+        if (isset($entry['e']) && $entry['e'] < time()) {
             @unlink($path);
 
             return $default;

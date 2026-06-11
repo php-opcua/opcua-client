@@ -618,33 +618,6 @@ class SecureChannel
     }
 
     /**
-     * @param string $securityHeaderBytes
-     * @param string $plainBodyBytes
-     */
-    private function asymmetricSignAndEncrypt(string $securityHeaderBytes, string $plainBodyBytes): string
-    {
-        $keyLengthBytes = $this->certManager->getPublicKeyLength($this->serverCertDer);
-        $paddingOverhead = $this->policy->getAsymmetricPaddingOverhead();
-        $plainTextBlockSize = $keyLengthBytes - $paddingOverhead;
-        $signatureSize = $this->getClientKeyLengthBytes();
-
-        $bodyWithPadding = $this->addAsymmetricPadding(
-            $plainBodyBytes,
-            $signatureSize,
-            $plainTextBlockSize,
-            $keyLengthBytes,
-        );
-
-        $dataToSign = $securityHeaderBytes . $bodyWithPadding;
-        $signature = $this->messageSecurity->asymmetricSign($dataToSign, $this->clientPrivateKey, $this->policy);
-
-        $dataToEncrypt = $bodyWithPadding . $signature;
-        $encrypted = $this->messageSecurity->asymmetricEncrypt($dataToEncrypt, $this->serverCertDer, $this->policy);
-
-        return $encrypted;
-    }
-
-    /**
      * @param string $plainBody
      * @param int $signatureSize
      * @param int $plainTextBlockSize
