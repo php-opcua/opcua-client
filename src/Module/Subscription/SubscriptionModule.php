@@ -25,6 +25,7 @@ use PhpOpcua\Client\Event\SubscriptionDeleted;
 use PhpOpcua\Client\Event\SubscriptionKeepAlive;
 use PhpOpcua\Client\Event\SubscriptionTransferred;
 use PhpOpcua\Client\Event\TriggeringConfigured;
+use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Module\ServiceModule;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Protocol\SessionService;
@@ -90,7 +91,7 @@ class SubscriptionModule extends ServiceModule
      * @param int $priority Relative priority of the subscription.
      * @return SubscriptionResult
      *
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      *
      * @see SubscriptionResult
@@ -101,7 +102,7 @@ class SubscriptionModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->subscriptionService->encodeCreateSubscriptionRequest(
+            $request = $this->subscriptionService()->encodeCreateSubscriptionRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $publishingInterval,
@@ -118,7 +119,7 @@ class SubscriptionModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $result = $this->subscriptionService->decodeCreateSubscriptionResponse($decoder);
+            $result = $this->subscriptionService()->decodeCreateSubscriptionResponse($decoder);
             $this->kernel->log()->debug('CreateSubscription response: subscriptionId={subId}, revisedInterval={interval}ms', $this->kernel->logContext([
                 'subId' => $result->subscriptionId,
                 'interval' => $result->revisedPublishingInterval,
@@ -142,7 +143,7 @@ class SubscriptionModule extends ServiceModule
      * @return ($monitoredItems is null ? \PhpOpcua\Client\Builder\MonitoredItemsBuilder : MonitoredItemResult[])
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      *
      * @see MonitoredItemResult
@@ -166,7 +167,7 @@ class SubscriptionModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->monitoredItemService->encodeCreateMonitoredItemsRequest(
+            $request = $this->monitoredItemService()->encodeCreateMonitoredItemsRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $subscriptionId,
@@ -182,7 +183,7 @@ class SubscriptionModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->monitoredItemService->decodeCreateMonitoredItemsResponse($decoder);
+            $results = $this->monitoredItemService()->decodeCreateMonitoredItemsResponse($decoder);
             $this->kernel->log()->debug('CreateMonitoredItems response: {count} result(s)', $this->kernel->logContext(['count' => count($results)]));
 
             foreach ($results as $i => $result) {
@@ -208,7 +209,7 @@ class SubscriptionModule extends ServiceModule
      * @return MonitoredItemResult
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      *
      * @see MonitoredItemResult
@@ -225,7 +226,7 @@ class SubscriptionModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->monitoredItemService->encodeCreateEventMonitoredItemRequest(
+            $request = $this->monitoredItemService()->encodeCreateEventMonitoredItemRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $subscriptionId,
@@ -243,7 +244,7 @@ class SubscriptionModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->monitoredItemService->decodeCreateMonitoredItemsResponse($decoder);
+            $results = $this->monitoredItemService()->decodeCreateMonitoredItemsResponse($decoder);
             $this->kernel->log()->debug('CreateEventMonitoredItem response received', $this->kernel->logContext());
             $result = $results[0] ?? new MonitoredItemResult(0, 0, 0.0, 0);
 
@@ -264,7 +265,7 @@ class SubscriptionModule extends ServiceModule
      * @param int[] $monitoredItemIds IDs of the monitored items to delete.
      * @return int[] OPC UA status codes for each deletion.
      *
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function deleteMonitoredItems(int $subscriptionId, array $monitoredItemIds): array
@@ -273,7 +274,7 @@ class SubscriptionModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->monitoredItemService->encodeDeleteMonitoredItemsRequest(
+            $request = $this->monitoredItemService()->encodeDeleteMonitoredItemsRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $subscriptionId,
@@ -289,7 +290,7 @@ class SubscriptionModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->monitoredItemService->decodeDeleteMonitoredItemsResponse($decoder);
+            $results = $this->monitoredItemService()->decodeDeleteMonitoredItemsResponse($decoder);
             $this->kernel->log()->debug('DeleteMonitoredItems response: {count} result(s)', $this->kernel->logContext(['count' => count($results)]));
 
             foreach ($results as $i => $statusCode) {
@@ -306,7 +307,7 @@ class SubscriptionModule extends ServiceModule
      * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool}> $itemsToModify Items to modify.
      * @return MonitoredItemModifyResult[]
      *
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      *
      * @see MonitoredItemModifyResult
@@ -317,7 +318,7 @@ class SubscriptionModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->monitoredItemService->encodeModifyMonitoredItemsRequest(
+            $request = $this->monitoredItemService()->encodeModifyMonitoredItemsRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $subscriptionId,
@@ -333,7 +334,7 @@ class SubscriptionModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->monitoredItemService->decodeModifyMonitoredItemsResponse($decoder);
+            $results = $this->monitoredItemService()->decodeModifyMonitoredItemsResponse($decoder);
             $this->kernel->log()->debug('ModifyMonitoredItems response: {count} result(s)', $this->kernel->logContext(['count' => count($results)]));
 
             foreach ($results as $i => $result) {
@@ -352,7 +353,7 @@ class SubscriptionModule extends ServiceModule
      * @param int[] $linksToRemove Monitored item IDs to unlink.
      * @return SetTriggeringResult
      *
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      *
      * @see SetTriggeringResult
@@ -363,7 +364,7 @@ class SubscriptionModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->monitoredItemService->encodeSetTriggeringRequest(
+            $request = $this->monitoredItemService()->encodeSetTriggeringRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $subscriptionId,
@@ -381,7 +382,7 @@ class SubscriptionModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $result = $this->monitoredItemService->decodeSetTriggeringResponse($decoder);
+            $result = $this->monitoredItemService()->decodeSetTriggeringResponse($decoder);
             $this->kernel->log()->debug('SetTriggering response received', $this->kernel->logContext());
 
             $this->kernel->dispatch(fn () => new TriggeringConfigured(
@@ -400,7 +401,7 @@ class SubscriptionModule extends ServiceModule
      * @param int $subscriptionId The subscription to delete.
      * @return int The OPC UA status code for the deletion.
      *
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function deleteSubscription(int $subscriptionId): int
@@ -409,7 +410,7 @@ class SubscriptionModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->subscriptionService->encodeDeleteSubscriptionsRequest(
+            $request = $this->subscriptionService()->encodeDeleteSubscriptionsRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 [$subscriptionId],
@@ -421,7 +422,7 @@ class SubscriptionModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->subscriptionService->decodeDeleteSubscriptionsResponse($decoder);
+            $results = $this->subscriptionService()->decodeDeleteSubscriptionsResponse($decoder);
             $this->kernel->log()->debug('DeleteSubscription response received', $this->kernel->logContext());
             $statusCode = $results[0] ?? 0;
 
@@ -435,7 +436,7 @@ class SubscriptionModule extends ServiceModule
      * @param array<array{subscriptionId: int, sequenceNumber: int}> $acknowledgements Previously received notifications to acknowledge.
      * @return PublishResult
      *
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      *
      * @see PublishResult
@@ -446,7 +447,7 @@ class SubscriptionModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->publishService->encodePublishRequest(
+            $request = $this->publishService()->encodePublishRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $acknowledgements,
@@ -458,7 +459,7 @@ class SubscriptionModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $result = $this->publishService->decodePublishResponse($decoder);
+            $result = $this->publishService()->decodePublishResponse($decoder);
             $this->kernel->log()->debug('Publish response: subscriptionId={subId}, {count} notification(s)', $this->kernel->logContext([
                 'subId' => $result->subscriptionId,
                 'count' => count($result->notifications),
@@ -475,7 +476,7 @@ class SubscriptionModule extends ServiceModule
      * @param int $retransmitSequenceNumber The sequence number to retransmit.
      * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array<int, mixed>}
      *
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function republish(int $subscriptionId, int $retransmitSequenceNumber): array
@@ -484,7 +485,7 @@ class SubscriptionModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->subscriptionService->encodeRepublishRequest(
+            $request = $this->subscriptionService()->encodeRepublishRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $subscriptionId,
@@ -500,7 +501,7 @@ class SubscriptionModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $result = $this->subscriptionService->decodeRepublishResponse($decoder);
+            $result = $this->subscriptionService()->decodeRepublishResponse($decoder);
             $this->kernel->log()->debug('Republish response received', $this->kernel->logContext());
 
             return $result;
@@ -512,7 +513,7 @@ class SubscriptionModule extends ServiceModule
      * @param bool $sendInitialValues Whether the server should send initial values after transfer.
      * @return TransferResult[]
      *
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      *
      * @see TransferResult
@@ -523,7 +524,7 @@ class SubscriptionModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->subscriptionService->encodeTransferSubscriptionsRequest(
+            $request = $this->subscriptionService()->encodeTransferSubscriptionsRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $subscriptionIds,
@@ -536,7 +537,7 @@ class SubscriptionModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->subscriptionService->decodeTransferSubscriptionsResponse($decoder);
+            $results = $this->subscriptionService()->decodeTransferSubscriptionsResponse($decoder);
             $this->kernel->log()->debug('TransferSubscriptions response: {count} result(s)', $this->kernel->logContext(['count' => count($results)]));
 
             foreach ($results as $i => $transferResult) {
@@ -712,5 +713,20 @@ class SubscriptionModule extends ServiceModule
                 }
             }
         }
+    }
+
+    private function subscriptionService(): SubscriptionService
+    {
+        return $this->subscriptionService ?? throw new ConnectionException('Subscription module not booted: call connect() first');
+    }
+
+    private function monitoredItemService(): MonitoredItemService
+    {
+        return $this->monitoredItemService ?? throw new ConnectionException('Subscription module not booted: call connect() first');
+    }
+
+    private function publishService(): PublishService
+    {
+        return $this->publishService ?? throw new ConnectionException('Subscription module not booted: call connect() first');
     }
 }

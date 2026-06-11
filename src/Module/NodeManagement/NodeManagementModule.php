@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Module\NodeManagement;
 
+use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Module\ServiceModule;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\NodeClass;
@@ -74,7 +75,7 @@ class NodeManagementModule extends ServiceModule
      * @return AddNodesResult[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      *
      * @see AddNodesResult
@@ -103,7 +104,7 @@ class NodeManagementModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->service->encodeAddNodesRequest($requestId, $nodesToAdd, $this->kernel->getAuthToken());
+            $request = $this->service()->encodeAddNodesRequest($requestId, $nodesToAdd, $this->kernel->getAuthToken());
             $this->kernel->log()->debug('AddNodes request: {count} node(s)', $this->kernel->logContext(['count' => count($nodesToAdd)]));
             $this->kernel->send($request);
 
@@ -111,7 +112,7 @@ class NodeManagementModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->service->decodeAddNodesResponse($decoder);
+            $results = $this->service()->decodeAddNodesResponse($decoder);
             $this->kernel->log()->debug('AddNodes response: {count} result(s)', $this->kernel->logContext(['count' => count($results)]));
 
             return $results;
@@ -125,7 +126,7 @@ class NodeManagementModule extends ServiceModule
      * @return int[] OPC UA status codes for each deletion.
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function deleteNodes(array $nodesToDelete): array
@@ -143,7 +144,7 @@ class NodeManagementModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->service->encodeDeleteNodesRequest($requestId, $nodesToDelete, $this->kernel->getAuthToken());
+            $request = $this->service()->encodeDeleteNodesRequest($requestId, $nodesToDelete, $this->kernel->getAuthToken());
             $this->kernel->log()->debug('DeleteNodes request: {count} node(s)', $this->kernel->logContext(['count' => count($nodesToDelete)]));
             $this->kernel->send($request);
 
@@ -151,7 +152,7 @@ class NodeManagementModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->service->decodeDeleteNodesResponse($decoder);
+            $results = $this->service()->decodeDeleteNodesResponse($decoder);
             $this->kernel->log()->debug('DeleteNodes response: {count} result(s)', $this->kernel->logContext(['count' => count($results)]));
 
             return $results;
@@ -172,7 +173,7 @@ class NodeManagementModule extends ServiceModule
      * @return int[] OPC UA status codes for each addition.
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function addReferences(array $referencesToAdd): array
@@ -196,7 +197,7 @@ class NodeManagementModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->service->encodeAddReferencesRequest($requestId, $referencesToAdd, $this->kernel->getAuthToken());
+            $request = $this->service()->encodeAddReferencesRequest($requestId, $referencesToAdd, $this->kernel->getAuthToken());
             $this->kernel->log()->debug('AddReferences request: {count} reference(s)', $this->kernel->logContext(['count' => count($referencesToAdd)]));
             $this->kernel->send($request);
 
@@ -204,7 +205,7 @@ class NodeManagementModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->service->decodeAddReferencesResponse($decoder);
+            $results = $this->service()->decodeAddReferencesResponse($decoder);
             $this->kernel->log()->debug('AddReferences response: {count} result(s)', $this->kernel->logContext(['count' => count($results)]));
 
             return $results;
@@ -224,7 +225,7 @@ class NodeManagementModule extends ServiceModule
      * @return int[] OPC UA status codes for each deletion.
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function deleteReferences(array $referencesToDelete): array
@@ -248,7 +249,7 @@ class NodeManagementModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->service->encodeDeleteReferencesRequest($requestId, $referencesToDelete, $this->kernel->getAuthToken());
+            $request = $this->service()->encodeDeleteReferencesRequest($requestId, $referencesToDelete, $this->kernel->getAuthToken());
             $this->kernel->log()->debug('DeleteReferences request: {count} reference(s)', $this->kernel->logContext(['count' => count($referencesToDelete)]));
             $this->kernel->send($request);
 
@@ -256,10 +257,15 @@ class NodeManagementModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->service->decodeDeleteReferencesResponse($decoder);
+            $results = $this->service()->decodeDeleteReferencesResponse($decoder);
             $this->kernel->log()->debug('DeleteReferences response: {count} result(s)', $this->kernel->logContext(['count' => count($results)]));
 
             return $results;
         });
+    }
+
+    private function service(): NodeManagementService
+    {
+        return $this->service ?? throw new ConnectionException('NodeManagement module not booted: call connect() first');
     }
 }

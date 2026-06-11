@@ -138,13 +138,18 @@ class TcpTransport implements ClientTransportInterface
      */
     private function readExact(int $length): string
     {
+        $socket = $this->socket;
+        if ($socket === null) {
+            throw new ConnectionException('Not connected');
+        }
+
         $data = '';
         $remaining = $length;
 
         while ($remaining > 0) {
-            $chunk = @fread($this->socket, $remaining);
+            $chunk = @fread($socket, $remaining);
             if ($chunk === false || $chunk === '') {
-                $meta = stream_get_meta_data($this->socket);
+                $meta = stream_get_meta_data($socket);
                 if ($meta['timed_out']) {
                     throw new ConnectionException('Read timeout');
                 }

@@ -118,6 +118,11 @@ class SessionService
         return $this->secureChannel;
     }
 
+    private function requireSecureChannel(): SecureChannel
+    {
+        return $this->secureChannel ?? throw new SecurityException('Secure channel not established');
+    }
+
     /**
      * @param int $requestId
      * @param string $endpointUrl
@@ -639,9 +644,11 @@ class SessionService
             $innerBody->writeByte(0);
         }
 
-        $applicationUri = $this->secureChannel->getCertificateManager()->getApplicationUri(
-            $this->secureChannel->getClientCertDer(),
-        ) ?? 'urn:opcua-client:client';
+        $secureChannel = $this->requireSecureChannel();
+        $clientCertDer = $secureChannel->getClientCertDer();
+        $applicationUri = $clientCertDer !== null
+            ? ($secureChannel->getCertificateManager()->getApplicationUri($clientCertDer) ?? 'urn:opcua-client:client')
+            : 'urn:opcua-client:client';
         $innerBody->writeString($applicationUri);
         $innerBody->writeString(null);
         $innerBody->writeLocalizedText(new LocalizedText(null, 'opcua-client'));
@@ -658,13 +665,12 @@ class SessionService
         $this->lastClientNonce = $nonce;
         $innerBody->writeByteString($nonce);
 
-        $clientCertDer = $this->secureChannel->getClientCertDer();
         $innerBody->writeByteString($clientCertDer);
 
         $innerBody->writeDouble(120000.0);
         $innerBody->writeUInt32(0);
 
-        return $this->secureChannel->buildMessage($innerBody->getBuffer());
+        return $secureChannel->buildMessage($innerBody->getBuffer());
     }
 
     /**
@@ -727,7 +733,7 @@ class SessionService
             $innerBody->writeByteString(null);
         }
 
-        return $this->secureChannel->buildMessage($innerBody->getBuffer());
+        return $this->requireSecureChannel()->buildMessage($innerBody->getBuffer());
     }
 
     /**
@@ -738,14 +744,15 @@ class SessionService
      */
     private function verifyServerSignature(string $serverCertDer, string $serverSignature): void
     {
-        $clientCertDer = $this->secureChannel->getClientCertDer();
+        $secureChannel = $this->requireSecureChannel();
+        $clientCertDer = $secureChannel->getClientCertDer();
         $clientNonce = $this->lastClientNonce;
         if ($clientCertDer === null || $clientNonce === null) {
             return;
         }
 
-        $policy = $this->secureChannel->getPolicy();
-        $messageSecurity = $this->secureChannel->getMessageSecurity();
+        $policy = $secureChannel->getPolicy();
+        $messageSecurity = $secureChannel->getMessageSecurity();
         $dataToVerify = $clientCertDer . $clientNonce;
 
         if ($policy->isEcc()) {
@@ -766,10 +773,11 @@ class SessionService
      */
     private function writeClientSignature(BinaryEncoder $encoder, ?string $createSessionNonce = null): void
     {
-        $serverCertDer = $this->secureChannel->getServerCertDer();
-        $serverNonce = $createSessionNonce ?? $this->secureChannel->getServerNonce();
-        $clientPrivateKey = $this->secureChannel->getClientPrivateKey();
-        $policy = $this->secureChannel->getPolicy();
+        $secureChannel = $this->requireSecureChannel();
+        $serverCertDer = $secureChannel->getServerCertDer();
+        $serverNonce = $createSessionNonce ?? $secureChannel->getServerNonce();
+        $clientPrivateKey = $secureChannel->getClientPrivateKey();
+        $policy = $secureChannel->getPolicy();
 
         if ($serverCertDer === null || $serverNonce === null || $clientPrivateKey === null) {
             $encoder->writeByteString(null);
@@ -780,7 +788,7 @@ class SessionService
 
         $serverLeafCert = $this->extractLeafCertificate($serverCertDer);
         $dataToSign = $serverLeafCert . $serverNonce;
-        $signature = $this->secureChannel->getMessageSecurity()->asymmetricSign(
+        $signature = $secureChannel->getMessageSecurity()->asymmetricSign(
             $dataToSign,
             $clientPrivateKey,
             $policy,
@@ -788,7 +796,7 @@ class SessionService
 
         if ($policy->isEcc()) {
             $coordinateSize = $policy->getEphemeralKeyLength() / 2;
-            $signature = $this->secureChannel->getMessageSecurity()->ecdsaDerToRaw($signature, $coordinateSize);
+            $signature = $secureChannel->getMessageSecurity()->ecdsaDerToRaw($signature, $coordinateSize);
         }
 
         $encoder->writeString($policy->getAsymmetricSignatureUri());
@@ -897,9 +905,13 @@ class SessionService
      */
     private function buildEccEncryptedSecret(string $password, string $receiverNonce, SecurityPolicy $policy): string
     {
-        $ms = $this->secureChannel->getMessageSecurity();
-        $clientPrivateKey = $this->secureChannel->getClientPrivateKey();
-        $clientCertDer = $this->secureChannel->getClientCertDer();
+        $secureChannel = $this->requireSecureChannel();
+        $ms = $secureChannel->getMessageSecurity();
+        $clientPrivateKey = $secureChannel->getClientPrivateKey();
+        if ($clientPrivateKey === null) {
+            throw new SecurityException('Client private key required to sign the ECC encrypted secret');
+        }
+        $clientCertDer = $secureChannel->getClientCertDer();
         $curveName = $policy->getEcdhCurveName();
         $algorithm = $policy->getKeyDerivationAlgorithm();
         if ($algorithm === '') {

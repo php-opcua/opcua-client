@@ -28,7 +28,7 @@ final class StructureDefinitionParser
         $fields = [];
 
         for ($i = 0; $i < $fieldCount; $i++) {
-            $name = $decoder->readString();
+            $name = $decoder->readString() ?? '';
             $decoder->readLocalizedText();
             $dataType = $decoder->readNodeId();
             $valueRank = $decoder->readInt32();

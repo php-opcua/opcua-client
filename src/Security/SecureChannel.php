@@ -190,7 +190,7 @@ class SecureChannel
         $body->writeString($this->policy->value);
         if ($this->isSecurityActive()) {
             $body->writeByteString($this->clientCertChainDer);
-            $body->writeByteString($this->certManager->getThumbprint($this->serverCertDer));
+            $body->writeByteString($this->certManager->getThumbprint($this->requireServerCertDer()));
         } else {
             $body->writeByteString(null);
             $body->writeByteString(null);
@@ -229,7 +229,7 @@ class SecureChannel
 
             $signatureSize = $this->getClientKeyLengthBytes();
 
-            $keyLengthBytes = $this->certManager->getPublicKeyLength($this->serverCertDer);
+            $keyLengthBytes = $this->certManager->getPublicKeyLength($this->requireServerCertDer());
             $paddingOverhead = $this->policy->getAsymmetricPaddingOverhead();
             $plainTextBlockSize = $keyLengthBytes - $paddingOverhead;
 
@@ -253,10 +253,10 @@ class SecureChannel
             $headerBytes = $headerEncoder->getBuffer();
 
             $dataToSign = $headerBytes . $securityHeaderBytes . $bodyWithPadding;
-            $signature = $this->messageSecurity->asymmetricSign($dataToSign, $this->clientPrivateKey, $this->policy);
+            $signature = $this->messageSecurity->asymmetricSign($dataToSign, $this->requireClientPrivateKey(), $this->policy);
 
             $dataToEncrypt = $bodyWithPadding . $signature;
-            $encrypted = $this->messageSecurity->asymmetricEncrypt($dataToEncrypt, $this->serverCertDer, $this->policy);
+            $encrypted = $this->messageSecurity->asymmetricEncrypt($dataToEncrypt, $this->requireServerCertDer(), $this->policy);
 
             $encoder = new BinaryEncoder();
             $encoder->writeRawBytes($headerBytes);
@@ -334,11 +334,11 @@ class SecureChannel
 
                 $decryptedData = $this->messageSecurity->asymmetricDecrypt(
                     $encryptedData,
-                    $this->clientPrivateKey,
+                    $this->requireClientPrivateKey(),
                     $this->policy,
                 );
 
-                $signatureSize = $this->certManager->getPublicKeyLength($this->serverCertDer);
+                $signatureSize = $this->certManager->getPublicKeyLength($this->requireServerCertDer());
 
                 $signature = substr($decryptedData, -$signatureSize);
                 $dataWithoutSig = substr($decryptedData, 0, -$signatureSize);
@@ -350,7 +350,7 @@ class SecureChannel
                 $secHeaderEncoder->writeByteString($receiverThumbprint);
                 $signedContent = $headerBytes . $secHeaderEncoder->getBuffer() . $dataWithoutSig;
 
-                if (! $this->messageSecurity->asymmetricVerify($signedContent, $signature, $this->serverCertDer, $this->policy)) {
+                if (! $this->messageSecurity->asymmetricVerify($signedContent, $signature, $this->requireServerCertDer(), $this->policy)) {
                     throw new SignatureVerificationException('OPN response signature verification failed');
                 }
 
@@ -455,13 +455,13 @@ class SecureChannel
             $headerBytes = $headerEncoder->getBuffer();
 
             $dataToSign = $headerBytes . $tokenIdBytes . $paddedPlaintext;
-            $signature = $this->messageSecurity->symmetricSign($dataToSign, $this->clientSigningKey, $this->policy);
+            $signature = $this->messageSecurity->symmetricSign($dataToSign, $this->requireKey($this->clientSigningKey, 'client signing key'), $this->policy);
 
             $dataToEncrypt = $paddedPlaintext . $signature;
             $encrypted = $this->messageSecurity->symmetricEncrypt(
                 $dataToEncrypt,
-                $this->clientEncryptingKey,
-                $this->clientIv,
+                $this->requireKey($this->clientEncryptingKey, 'client encrypting key'),
+                $this->requireKey($this->clientIv, 'client IV'),
                 $this->policy,
             );
 
@@ -483,7 +483,7 @@ class SecureChannel
         $headerBytes = $headerEncoder->getBuffer();
 
         $dataToSign = $headerBytes . $tokenIdBytes . $plaintextBytes;
-        $signature = $this->messageSecurity->symmetricSign($dataToSign, $this->clientSigningKey, $this->policy);
+        $signature = $this->messageSecurity->symmetricSign($dataToSign, $this->requireKey($this->clientSigningKey, 'client signing key'), $this->policy);
 
         $encoder = new BinaryEncoder();
         $encoder->writeRawBytes($headerBytes);
@@ -537,8 +537,8 @@ class SecureChannel
         if ($this->mode === SecurityMode::SignAndEncrypt) {
             $decrypted = $this->messageSecurity->symmetricDecrypt(
                 $remaining,
-                $this->serverEncryptingKey,
-                $this->serverIv,
+                $this->requireKey($this->serverEncryptingKey, 'server encrypting key'),
+                $this->requireKey($this->serverIv, 'server IV'),
                 $this->policy,
             );
 
@@ -546,7 +546,7 @@ class SecureChannel
             $dataWithoutSig = substr($decrypted, 0, -$signatureSize);
 
             $dataToVerify = $headerBytes . $tokenIdBytes . $dataWithoutSig;
-            if (! $this->messageSecurity->symmetricVerify($dataToVerify, $signature, $this->serverSigningKey, $this->policy)) {
+            if (! $this->messageSecurity->symmetricVerify($dataToVerify, $signature, $this->requireKey($this->serverSigningKey, 'server signing key'), $this->policy)) {
                 throw new SignatureVerificationException('MSG response symmetric signature verification failed');
             }
 
@@ -560,7 +560,7 @@ class SecureChannel
         $dataWithoutSig = substr($remaining, 0, -$signatureSize);
 
         $dataToVerify = $headerBytes . $tokenIdBytes . $dataWithoutSig;
-        if (! $this->messageSecurity->symmetricVerify($dataToVerify, $signature, $this->serverSigningKey, $this->policy)) {
+        if (! $this->messageSecurity->symmetricVerify($dataToVerify, $signature, $this->requireKey($this->serverSigningKey, 'server signing key'), $this->policy)) {
             throw new SecurityException('MSG response symmetric signature verification failed');
         }
 
@@ -602,8 +602,9 @@ class SecureChannel
 
     private function deriveSymmetricKeys(): void
     {
+        $serverNonce = $this->requireServerNonce();
         $clientKeys = $this->messageSecurity->deriveKeys(
-            $this->serverNonce,
+            $serverNonce,
             $this->clientNonce,
             $this->policy,
         );
@@ -613,7 +614,7 @@ class SecureChannel
 
         $serverKeys = $this->messageSecurity->deriveKeys(
             $this->clientNonce,
-            $this->serverNonce,
+            $serverNonce,
             $this->policy,
         );
         $this->serverSigningKey = $serverKeys['signingKey'];
@@ -771,7 +772,7 @@ class SecureChannel
         $headerBytes = $headerEncoder->getBuffer();
 
         $dataToSign = $headerBytes . $securityHeaderBytes . $plainBodyBytes;
-        $derSignature = $this->messageSecurity->asymmetricSign($dataToSign, $this->clientPrivateKey, $this->policy);
+        $derSignature = $this->messageSecurity->asymmetricSign($dataToSign, $this->requireClientPrivateKey(), $this->policy);
         $rawSignature = $this->messageSecurity->ecdsaDerToRaw($derSignature, $coordinateSize);
 
         $encoder = new BinaryEncoder();
@@ -813,7 +814,7 @@ class SecureChannel
         $secHeaderEncoder->writeByteString($receiverThumbprint);
         $signedContent = $headerBytes . $secHeaderEncoder->getBuffer() . $dataWithoutSig;
 
-        $verified = $this->messageSecurity->asymmetricVerify($signedContent, $signature, $this->serverCertDer, $this->policy);
+        $verified = $this->messageSecurity->asymmetricVerify($signedContent, $signature, $this->requireServerCertDer(), $this->policy);
         if (! $verified) {
             throw new SignatureVerificationException('OPN response ECC signature verification failed');
         }
@@ -824,7 +825,7 @@ class SecureChannel
     private function deriveSymmetricKeysEcc(): void
     {
         $ephemeralKeyLen = $this->policy->getEphemeralKeyLength();
-        $serverEphemeralRawKey = substr($this->serverNonce, 0, $ephemeralKeyLen);
+        $serverEphemeralRawKey = substr($this->requireServerNonce(), 0, $ephemeralKeyLen);
 
         $serverEphemeralPublicKey = $this->messageSecurity->loadEcPublicKeyFromBytes(
             "\x04" . $serverEphemeralRawKey,
@@ -832,7 +833,7 @@ class SecureChannel
         );
 
         $sharedSecret = $this->messageSecurity->computeEcdhSharedSecret(
-            $this->clientEphemeralPrivateKey,
+            $this->clientEphemeralPrivateKey ?? throw new SecurityException('Client ephemeral private key not generated'),
             $serverEphemeralPublicKey,
         );
 
@@ -860,5 +861,25 @@ class SecureChannel
         $this->serverSigningKey = substr($serverDerived, 0, $sigKeyLen);
         $this->serverEncryptingKey = substr($serverDerived, $sigKeyLen, $encKeyLen);
         $this->serverIv = substr($serverDerived, $sigKeyLen + $encKeyLen, $blockSize);
+    }
+
+    private function requireServerCertDer(): string
+    {
+        return $this->serverCertDer ?? throw new SecurityException('Server certificate not available');
+    }
+
+    private function requireClientPrivateKey(): OpenSSLAsymmetricKey
+    {
+        return $this->clientPrivateKey ?? throw new SecurityException('Client private key not available');
+    }
+
+    private function requireServerNonce(): string
+    {
+        return $this->serverNonce ?? throw new SecurityException('Server nonce not received');
+    }
+
+    private function requireKey(?string $key, string $name): string
+    {
+        return $key ?? throw new SecurityException("Missing {$name}: symmetric keys not derived");
     }
 }

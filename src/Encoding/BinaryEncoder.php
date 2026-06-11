@@ -357,8 +357,9 @@ class BinaryEncoder
         $mask = $dv->getEncodingMask();
         $this->writeByte($mask);
 
-        if ($mask & 0x01) {
-            $this->writeVariant($dv->getVariant());
+        $variant = $dv->getVariant();
+        if (($mask & 0x01) !== 0 && $variant !== null) {
+            $this->writeVariant($variant);
         }
         if ($mask & 0x02) {
             $this->writeUInt32($dv->getStatusCode());

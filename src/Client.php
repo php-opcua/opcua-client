@@ -15,6 +15,7 @@ use PhpOpcua\Client\Client\ManagesSecureChannelTrait;
 use PhpOpcua\Client\Client\ManagesSessionTrait;
 use PhpOpcua\Client\Client\ManagesTrustStoreRuntimeTrait;
 use PhpOpcua\Client\Encoding\BinaryDecoder;
+use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\ModuleConflictException;
 use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Kernel\ClientKernelInterface;
@@ -213,7 +214,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
      * @param bool $verifyApplicationUri Verify that the server certificate's SAN ApplicationUri matches the endpoint's ApplicationDescription (secure connections only).
      *
      * @throws Exception\ConfigurationException If the endpoint URL is invalid.
-     * @throws Exception\ConnectionException If the TCP connection or handshake fails.
+     * @throws ConnectionException If the TCP connection or handshake fails.
      * @throws ServiceException If a protocol-level error occurs.
      */
     public function __construct(
@@ -409,7 +410,15 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
      */
     public function getAuthToken(): NodeId
     {
-        return $this->authenticationToken;
+        return $this->authenticationToken ?? NodeId::numeric(0, 0);
+    }
+
+    /**
+     * Get the active session service, failing if none is established.
+     */
+    private function requireSession(): SessionService
+    {
+        return $this->session ?? throw new ConnectionException('No active session: call connect() first');
     }
 
     /**

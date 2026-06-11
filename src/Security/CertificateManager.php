@@ -136,9 +136,11 @@ class CertificateManager
      */
     private function pemToDer(string $pem): string
     {
-        $pem = preg_replace('/-----BEGIN [^-]+-----/', '', $pem);
-        $pem = preg_replace('/-----END [^-]+-----/', '', $pem);
-        $pem = str_replace(["\r", "\n", ' '], '', $pem);
+        $stripped = preg_replace(['/-----BEGIN [^-]+-----/', '/-----END [^-]+-----/'], '', $pem);
+        if ($stripped === null) {
+            throw new SecurityException('Failed to parse PEM data');
+        }
+        $pem = str_replace(["\r", "\n", ' '], '', $stripped);
 
         $der = base64_decode($pem, true);
         if ($der === false) {

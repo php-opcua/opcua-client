@@ -9,6 +9,7 @@ use PhpOpcua\Client\Event\HistoryDataDeleted;
 use PhpOpcua\Client\Event\HistoryDataUpdated;
 use PhpOpcua\Client\Event\HistoryEventDeleted;
 use PhpOpcua\Client\Event\HistoryEventUpdated;
+use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Module\ServiceModule;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\DataValue;
@@ -68,7 +69,7 @@ class HistoryModule extends ServiceModule
      * @return DataValue[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function historyReadRaw(
@@ -84,7 +85,7 @@ class HistoryModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->historyReadService->encodeHistoryReadRawRequest(
+            $request = $this->historyReadService()->encodeHistoryReadRawRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $nodeId,
@@ -100,7 +101,7 @@ class HistoryModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->historyReadService->decodeHistoryReadResponse($decoder);
+            $results = $this->historyReadService()->decodeHistoryReadResponse($decoder);
             $this->kernel->log()->debug('HistoryReadRaw response for node {nodeId}: {count} value(s)', $this->kernel->logContext([
                 'nodeId' => (string) $nodeId,
                 'count' => count($results),
@@ -119,7 +120,7 @@ class HistoryModule extends ServiceModule
      * @return DataValue[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function historyReadProcessed(
@@ -135,7 +136,7 @@ class HistoryModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->historyReadService->encodeHistoryReadProcessedRequest(
+            $request = $this->historyReadService()->encodeHistoryReadProcessedRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $nodeId,
@@ -154,7 +155,7 @@ class HistoryModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->historyReadService->decodeHistoryReadResponse($decoder);
+            $results = $this->historyReadService()->decodeHistoryReadResponse($decoder);
             $this->kernel->log()->debug('HistoryReadProcessed response for node {nodeId}: {count} value(s)', $this->kernel->logContext([
                 'nodeId' => (string) $nodeId,
                 'count' => count($results),
@@ -170,7 +171,7 @@ class HistoryModule extends ServiceModule
      * @return DataValue[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function historyReadAtTime(
@@ -183,7 +184,7 @@ class HistoryModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->historyReadService->encodeHistoryReadAtTimeRequest(
+            $request = $this->historyReadService()->encodeHistoryReadAtTimeRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $nodeId,
@@ -199,7 +200,7 @@ class HistoryModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->historyReadService->decodeHistoryReadResponse($decoder);
+            $results = $this->historyReadService()->decodeHistoryReadResponse($decoder);
             $this->kernel->log()->debug('HistoryReadAtTime response for node {nodeId}: {count} value(s)', $this->kernel->logContext([
                 'nodeId' => (string) $nodeId,
                 'count' => count($results),
@@ -215,7 +216,7 @@ class HistoryModule extends ServiceModule
      * @return int[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException
-     * @throws \PhpOpcua\Client\Exception\ConnectionException
+     * @throws ConnectionException
      * @throws \PhpOpcua\Client\Exception\ServiceException
      */
     public function historyInsertData(NodeId|string $nodeId, array $values): array
@@ -229,7 +230,7 @@ class HistoryModule extends ServiceModule
      * @return int[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException
-     * @throws \PhpOpcua\Client\Exception\ConnectionException
+     * @throws ConnectionException
      * @throws \PhpOpcua\Client\Exception\ServiceException
      */
     public function historyReplaceData(NodeId|string $nodeId, array $values): array
@@ -243,7 +244,7 @@ class HistoryModule extends ServiceModule
      * @return int[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException
-     * @throws \PhpOpcua\Client\Exception\ConnectionException
+     * @throws ConnectionException
      * @throws \PhpOpcua\Client\Exception\ServiceException
      */
     public function historyUpdateData(NodeId|string $nodeId, array $values): array
@@ -258,7 +259,7 @@ class HistoryModule extends ServiceModule
      * @param bool $isDeleteModified
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException
-     * @throws \PhpOpcua\Client\Exception\ConnectionException
+     * @throws ConnectionException
      * @throws \PhpOpcua\Client\Exception\ServiceException
      */
     public function historyDeleteRawModified(
@@ -272,7 +273,7 @@ class HistoryModule extends ServiceModule
         return $this->kernel->executeWithRetry(function () use ($nodeId, $startTime, $endTime, $isDeleteModified) {
             $this->kernel->ensureConnected();
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->historyUpdateService->encodeDeleteRawModifiedRequest(
+            $request = $this->historyUpdateService()->encodeDeleteRawModifiedRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $nodeId,
@@ -304,7 +305,7 @@ class HistoryModule extends ServiceModule
      * @return int[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException
-     * @throws \PhpOpcua\Client\Exception\ConnectionException
+     * @throws ConnectionException
      * @throws \PhpOpcua\Client\Exception\ServiceException
      */
     public function historyDeleteAtTime(NodeId|string $nodeId, array $timestamps): array
@@ -314,7 +315,7 @@ class HistoryModule extends ServiceModule
         return $this->kernel->executeWithRetry(function () use ($nodeId, $timestamps) {
             $this->kernel->ensureConnected();
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->historyUpdateService->encodeDeleteAtTimeRequest(
+            $request = $this->historyUpdateService()->encodeDeleteAtTimeRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $nodeId,
@@ -348,7 +349,7 @@ class HistoryModule extends ServiceModule
      * @return int[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException
-     * @throws \PhpOpcua\Client\Exception\ConnectionException
+     * @throws ConnectionException
      * @throws \PhpOpcua\Client\Exception\ServiceException
      */
     public function historyInsertEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array
@@ -363,7 +364,7 @@ class HistoryModule extends ServiceModule
      * @return int[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException
-     * @throws \PhpOpcua\Client\Exception\ConnectionException
+     * @throws ConnectionException
      * @throws \PhpOpcua\Client\Exception\ServiceException
      */
     public function historyReplaceEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array
@@ -378,7 +379,7 @@ class HistoryModule extends ServiceModule
      * @return int[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException
-     * @throws \PhpOpcua\Client\Exception\ConnectionException
+     * @throws ConnectionException
      * @throws \PhpOpcua\Client\Exception\ServiceException
      */
     public function historyUpdateEvent(NodeId|string $nodeId, array $selectFields, array $eventData): array
@@ -392,7 +393,7 @@ class HistoryModule extends ServiceModule
      * @return int[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException
-     * @throws \PhpOpcua\Client\Exception\ConnectionException
+     * @throws ConnectionException
      * @throws \PhpOpcua\Client\Exception\ServiceException
      */
     public function historyDeleteEvent(NodeId|string $nodeId, array $eventIds): array
@@ -402,7 +403,7 @@ class HistoryModule extends ServiceModule
         return $this->kernel->executeWithRetry(function () use ($nodeId, $eventIds) {
             $this->kernel->ensureConnected();
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->historyUpdateService->encodeDeleteEventRequest(
+            $request = $this->historyUpdateService()->encodeDeleteEventRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $nodeId,
@@ -439,7 +440,7 @@ class HistoryModule extends ServiceModule
         return $this->kernel->executeWithRetry(function () use ($nodeId, $perform, $values) {
             $this->kernel->ensureConnected();
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->historyUpdateService->encodeUpdateDataRequest(
+            $request = $this->historyUpdateService()->encodeUpdateDataRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $nodeId,
@@ -484,7 +485,7 @@ class HistoryModule extends ServiceModule
         return $this->kernel->executeWithRetry(function () use ($nodeId, $perform, $selectFields, $eventData) {
             $this->kernel->ensureConnected();
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->historyUpdateService->encodeUpdateEventRequest(
+            $request = $this->historyUpdateService()->encodeUpdateEventRequest(
                 $requestId,
                 $this->kernel->getAuthToken(),
                 $nodeId,
@@ -523,6 +524,16 @@ class HistoryModule extends ServiceModule
         $responseBody = $this->kernel->unwrapResponse($response);
         $decoder = $this->kernel->createDecoder($responseBody);
 
-        return $this->historyUpdateService->decodeHistoryUpdateResponse($decoder);
+        return $this->historyUpdateService()->decodeHistoryUpdateResponse($decoder);
+    }
+
+    private function historyReadService(): HistoryReadService
+    {
+        return $this->historyReadService ?? throw new ConnectionException('History module not booted: call connect() first');
+    }
+
+    private function historyUpdateService(): HistoryUpdateService
+    {
+        return $this->historyUpdateService ?? throw new ConnectionException('History module not booted: call connect() first');
     }
 }

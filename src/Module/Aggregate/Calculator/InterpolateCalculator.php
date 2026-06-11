@@ -82,6 +82,12 @@ final class InterpolateCalculator extends AbstractAggregateCalculator
             );
         }
         $beforeTimestamp = $beforeDv->sourceTimestamp;
+        if ($beforeTimestamp === null) {
+            return new DataValue(
+                statusCode: StatusCode::BadNoData,
+                sourceTimestamp: $interval->startTime,
+            );
+        }
         $beforeTs = self::toMs($beforeTimestamp);
 
         $afterIdx = -1;
@@ -134,6 +140,12 @@ final class InterpolateCalculator extends AbstractAggregateCalculator
         $afterDv = $rawBuffer[$afterIdx];
         $afterValue = (float) self::extractFloat($afterDv);
         $afterTimestamp = $afterDv->sourceTimestamp;
+        if ($afterTimestamp === null) {
+            return new DataValue(
+                statusCode: StatusCode::BadNoData,
+                sourceTimestamp: $interval->startTime,
+            );
+        }
         $afterTs = self::toMs($afterTimestamp);
 
         if ($options->stepped) {

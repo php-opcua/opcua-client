@@ -146,7 +146,7 @@ describe('ManagesSessionTrait coverage', function () {
         $mock = new FailingMockTransport(failAfterSends: 999, failAfterReceives: 0);
         $client = makeConnectedClient($mock, $sc);
 
-        callClientMethod($client, 'closeSessionSecure');
+        callClientMethod($client, 'closeSessionSecure', [$sc]);
 
         expect(true)->toBeTrue();
     });

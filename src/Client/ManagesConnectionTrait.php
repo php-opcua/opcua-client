@@ -38,12 +38,17 @@ trait ManagesConnectionTrait
      */
     public function reconnect(): void
     {
-        $this->dispatch(fn () => new ClientReconnecting($this, $this->lastEndpointUrl));
-        $this->logger->info('Reconnecting to {endpoint}', $this->logContext(['endpoint' => $this->lastEndpointUrl]));
+        $endpointUrl = $this->lastEndpointUrl;
+        if ($endpointUrl === null) {
+            throw new ConnectionException('Cannot reconnect: no previous connection');
+        }
+
+        $this->dispatch(fn () => new ClientReconnecting($this, $endpointUrl));
+        $this->logger->info('Reconnecting to {endpoint}', $this->logContext(['endpoint' => $endpointUrl]));
         $this->transport->close();
         $this->resetConnectionState();
 
-        $this->performConnect($this->lastEndpointUrl);
+        $this->performConnect($endpointUrl);
     }
 
     /**
