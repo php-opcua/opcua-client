@@ -1,13 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## [v4.5.0] - TBD
 
 Security hardening release: the remaining items from the security review are
 implemented. All checks are interoperability-tested against UA-.NETStandard in
 None / Sign / SignAndEncrypt, RSA (Basic256Sha256) and ECC (NIST P-256/P-384,
 Brainpool P256r1/P384r1).
 
-### [v4.5.0] - TBD
+### Security
 
 - **CreateSessionResponse `serverSignature` is now verified** (OPC UA Part 4
   §5.6.2 proof of possession). The client stores the nonce it sends in the
@@ -44,6 +44,87 @@ Brainpool P256r1/P384r1).
 - **`BinaryDecoder::readExtensionObject()` guards against over-consuming
   codecs**: a codec reading past the declared body length now raises
   `EncodingException` instead of attempting a negative skip.
+
+### Static analysis
+
+- **PHPStan level 9 on `src/`** (`phpstan.neon`, run via `composer phpstan`)
+  with `treatPhpDocTypesAsCertain: false` — no baseline, no `@phpstan-ignore`
+  comments. The cleanup is behavior-preserving except where noted under
+  *Changed* below.
+
+### Added
+
+- **Value objects replace internal associative arrays**:
+  - `Module\NodeManagement\AddNodeItem` — typed AddNodes item (placement +
+    per-class attributes with their defaults).
+    `NodeManagementService::encodeAddNodesRequest()` now takes
+    `AddNodeItem[]`; the public `addNodes()` keeps accepting arrays and
+    converts via `AddNodeItem::fromArray()`.
+  - `Module\TranslateBrowsePath\BrowsePath` and `RelativePathElement` —
+    `TranslateBrowsePathService::encodeTranslateRequest()` now takes
+    `BrowsePath[]`; the public `translateBrowsePaths()` keeps accepting
+    arrays.
+  - `Module\Subscription\DataChangeNotification` and `EventNotification` —
+    wire-serializable notification objects (see *Changed*).
+  - `Module\TypeDiscovery\DiscoveredType` — wire-serializable cached
+    discovery entry; stale cache payloads in the old array format are
+    discarded and rediscovered transparently.
+- **`Variant::asInt()` / `Variant::asString()`** — typed accessors with
+  validated coercion; throw `EncodingException` when the value cannot be
+  coerced.
+- **`Module\ModuleHostInterface`** — names the contract
+  (`registerMethod()`) that the host client offers to modules; `Client`
+  implements it and `ServiceModule::$client` is documented as
+  `ModuleHostInterface&OpcUaClientInterface`.
+- **Conditional return types** on `OpcUaClientInterface::translateBrowsePaths()`
+  and `createMonitoredItems()` (matching the ones `readMulti()` and
+  `writeMulti()` already had): static analysers now infer the builder for
+  `null` input and the result array otherwise.
+- **Composer scripts** `test`, `test:unit`, `test:integration` (used by CI
+  as well).
+
+### Changed
+
+- **BREAKING — `PublishResult::$notifications` now contains
+  `DataChangeNotification` / `EventNotification` objects** instead of
+  `['type' => 'DataChange'|'Event', 'clientHandle' => …, …]` arrays. Replace
+  `$n['type'] === 'DataChange'` checks with `instanceof` and array offsets
+  with properties (`$n->clientHandle`, `$n->dataValue`, `$n->eventFields`).
+  The PSR-14 events (`DataChangeReceived`, `EventNotificationReceived`, …)
+  are unchanged.
+- **BREAKING — the wire DTOs are now `final`** (`NodeId`, `QualifiedName`,
+  `LocalizedText`, `DataValue`, `Variant`, `ExtensionObject`,
+  `EndpointDescription`, `ReferenceDescription`, `BrowseNode`,
+  `StructureDefinition`, `StructureField`, `UserTokenPolicy`, and the module
+  result DTOs such as `PublishResult`, `CallResult`, `BrowseResultSet`, …).
+  `ClientBuilder::__construct` is `final` to make `ClientBuilder::create()`
+  (`new static`) safe.
+- **`addNodes()` items: `value` must be a `?Variant`** — this was already
+  required at encode time; the PHPDoc shape said `mixed` and is now
+  corrected.
+- **Misuse now fails fast with a clear exception instead of a PHP fatal**:
+  module methods called before `connect()` throw `ConnectionException`
+  ("module not booted"); `reconnect()` without a previous connection throws
+  `ConnectionException`; missing key material in `SecureChannel` /
+  `SessionService` secure paths throws `SecurityException`;
+  `WriteMultiBuilder::value()`/`typed()` before `node()` throw
+  `LogicException`; `BinaryEncoder::writeVariantValue()` validates the value
+  against the `BuiltinType` and throws `EncodingException`;
+  `NodeId::toString()` on an unknown type throws
+  `InvalidNodeIdException`; loading an EC public key for an unsupported
+  curve throws `SecurityException` instead of producing garbage.
+- **`Client::getAuthToken()`** returns the OPC UA null NodeId (`i=0`) when
+  no session is active, instead of `null` (its declared return type was
+  already `NodeId`).
+- Removed the unused private `SecureChannel::asymmetricSignAndEncrypt()`.
+
+### CI
+
+- The test workflow runs in three phases: format check and PHPStan in
+  parallel (PHPStan gates the rest), then unit tests (Linux/macOS/Windows ×
+  PHP 8.2–8.5), then integration tests. The PHP 8.5 integration leg runs the
+  full suite and produces the coverage report; the other legs run the
+  integration group only.
 
 ### Tests
 

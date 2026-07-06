@@ -8,14 +8,14 @@ Mistakes AI coding assistants frequently make with `opcua-client`. Read before g
 ```php
 $id = $ref->getNodeId();
 $ts = $dv->getSourceTimestamp();
-$sid = $subscriptionResult->getSubscriptionId();
+$sc = $dv->getStatusCode();
 ```
 
 **Right** (public readonly):
 ```php
 $id = $ref->nodeId;
 $ts = $dv->sourceTimestamp;
-$sid = $subscriptionResult->subscriptionId;
+$sc = $dv->statusCode;
 ```
 
 Exception: `DataValue::getValue()` IS the canonical method — it unwraps the underlying `Variant` AND auto-decodes registered `ExtensionObject` values. Don't replace it with property access (the inner `Variant` is private). To get the OPC UA data type of the value, use the v4.4.0 additions `$dv->type` (public readonly `?BuiltinType`) or the symmetric `$dv->getType()` — both replace the older `$dv->getVariant()->type` chain.
@@ -32,11 +32,13 @@ echo $publishResult['notifications'][0]['dataValue']->getValue();
 ```php
 echo $result->subscriptionId;
 foreach ($publishResult->notifications as $notif) {
-    echo $notif['dataValue']->getValue();  // BUT $notifications IS an array of notification arrays
+    if ($notif instanceof DataChangeNotification) {
+        echo $notif->dataValue->getValue();      // notifications are objects, not arrays
+    }
 }
 ```
 
-`PublishResult::$notifications` is an `array<int, array{monitoredItemId: int, dataValue: DataValue}>`. Each element is an associative array. The DataValue inside IS an object.
+Since v4.5.0 `PublishResult::$notifications` is an `array<int, DataChangeNotification|EventNotification>` — each element is a `final readonly` object, not an associative array. `DataChangeNotification` exposes `clientHandle` + `dataValue`; `EventNotification` exposes `clientHandle` + `eventFields`. Distinguish them with `instanceof`.
 
 ## 3. Constructing NodeIds via string concatenation
 
@@ -243,7 +245,9 @@ Well-known IDs that show up often:
 - `i=2253` — Server (well-known object node)
 - `i=2259` — Server.ServerStatus.State (Int32 — 0=Running, 1=Failed, 2=NoConfiguration, 3=Suspended, 4=Shutdown, 5=Test, 6=CommunicationFault, 7=Unknown)
 
-## 13. Mixing AttributeId enum with raw integers
+## 13. Mixing AttributeId constants with raw integers
+
+`AttributeId` is a plain class exposing named `int` constants (e.g. `AttributeId::Value === 13`), not a PHP enum — there is no `::cases()` or `->value`. `read()` accepts them because its parameter is typed `int $attributeId`.
 
 **Wrong**:
 ```php
@@ -291,14 +295,17 @@ public function test_reads_temperature(): void {
 **Right**:
 ```php
 use PhpOpcua\Client\Testing\MockClient;
+use PhpOpcua\Client\Types\BuiltinType;
+use PhpOpcua\Client\Types\DataValue;
+use PhpOpcua\Client\Types\Variant;
 
 public function test_reads_temperature(): void {
     $client = MockClient::create()
-        ->onRead('ns=2;s=Temp', new DataValue(new Variant(BuiltinType::Double, 22.5)));
+        ->onRead('ns=2;s=Temp', fn () => new DataValue(new Variant(BuiltinType::Double, 22.5)));
 
     $value = $client->read('ns=2;s=Temp')->getValue();
     $this->assertEquals(22.5, $value);
-    $this->assertCount(1, $client->getReadCalls());
+    $this->assertSame(1, $client->callCount('read'));   // or assertCount(1, $client->getCallsFor('read'))
 }
 ```
 
@@ -323,7 +330,9 @@ $result = $client->read('ns=2;s=ComplexStruct')->getValue();
 
 For non-1.04 servers or non-spec types, register a codec manually:
 ```php
-$client->getRepository()->register(new MyCodec());
+$client->getExtensionObjectRepository()->register($typeId, new MyCodec());
+// register(NodeId $typeId, string|ExtensionObjectCodec $codec): void
+// $typeId is the encoding/type NodeId; the codec may be an instance or a class-string<ExtensionObjectCodec>
 ```
 
 ## 17. Generating code that imports module-specific types from the wrong namespace

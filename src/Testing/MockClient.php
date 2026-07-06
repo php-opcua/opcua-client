@@ -76,9 +76,6 @@ class MockClient implements OpcUaClientInterface
 
     private ConnectionState $state = ConnectionState::Disconnected;
 
-    /** @phpstan-ignore property.onlyWritten */
-    private ?string $endpointUrl = null;
-
     private float $timeout = 5.0;
 
     private int $autoRetry = 0;
@@ -233,7 +230,6 @@ class MockClient implements OpcUaClientInterface
     public function connect(string $endpointUrl): void
     {
         $this->record('connect', [$endpointUrl]);
-        $this->endpointUrl = $endpointUrl;
         $this->state = ConnectionState::Connected;
     }
 
@@ -253,7 +249,6 @@ class MockClient implements OpcUaClientInterface
     {
         $this->record('disconnect', []);
         $this->state = ConnectionState::Disconnected;
-        $this->endpointUrl = null;
     }
 
     /**

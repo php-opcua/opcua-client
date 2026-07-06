@@ -1,6 +1,6 @@
 # Events reference
 
-57 PSR-14 events under `PhpOpcua\Client\Event\`. All `final readonly`. Every event carries a `$client` reference (the firing `Client` instance).
+56 PSR-14 events under `PhpOpcua\Client\Event\`. All `readonly`. Every event carries a `$client` reference, typed `OpcUaClientInterface` (the firing client — at runtime a `Client` instance).
 
 ## Setup
 
@@ -16,17 +16,17 @@ $client = ClientBuilder::create()
 
 ## Event catalog
 
-### Connection lifecycle (4)
+### Connection lifecycle (5)
 
 - `ClientConnecting($client, $endpointUrl)` — before connect attempt
 - `ClientConnected($client, $endpointUrl)` — after successful connect
-- `ConnectionFailed($client, $endpointUrl, Throwable $cause)` — connect failed
+- `ConnectionFailed($client, $endpointUrl, Throwable $exception)` — connect failed (access the throwable via `$e->exception`)
 - `ClientDisconnecting($client, $endpointUrl)`, `ClientDisconnected($client)` — disconnect
 
-### Secure channel (2 — v4.4)
+### Secure channel (2 — v4.0)
 
-- `SecureChannelOpened($client, $secureChannelId, $securityPolicy, $securityMode)`
-- `SecureChannelClosed($client, $secureChannelId)`
+- `SecureChannelOpened($client, int $channelId, SecurityPolicy $securityPolicy, SecurityMode $securityMode)`
+- `SecureChannelClosed($client, int $channelId)`
 
 ### Session (3)
 
@@ -36,76 +36,95 @@ $client = ClientBuilder::create()
 
 ### Subscription (5)
 
-- `SubscriptionCreated($client, $subscriptionId, $publishingInterval, ...)`
-- `SubscriptionModified($client, $subscriptionId, ...)`
-- `SubscriptionDeleted($client, $subscriptionId)`
-- `SubscriptionTransferred($client, $subscriptionId, $sourceSessionId, $availableSequenceNumbers)`
-- `SubscriptionRepublishRequested($client, $subscriptionId, $sequenceNumber)`
+- `SubscriptionCreated($client, int $subscriptionId, float $revisedPublishingInterval, int $revisedLifetimeCount, int $revisedMaxKeepAliveCount)`
+- `SubscriptionDeleted($client, int $subscriptionId, int $statusCode)`
+- `SubscriptionTransferred($client, int $subscriptionId, int $statusCode)`
+- `SubscriptionKeepAlive($client, int $subscriptionId, int $sequenceNumber)` — publish response with no notifications
+- `PublishResponseReceived($client, int $subscriptionId, int $sequenceNumber, int $notificationCount, bool $moreNotifications)` — after every publish response is decoded
 
 ### Monitored items (3)
 
-- `MonitoredItemCreated($client, $subscriptionId, $monitoredItemId, $nodeId, $samplingInterval)`
-- `MonitoredItemModified($client, $monitoredItemId, ...)`
-- `MonitoredItemDeleted($client, $subscriptionId, $monitoredItemId)`
+- `MonitoredItemCreated($client, int $subscriptionId, int $monitoredItemId, NodeId $nodeId, int $statusCode)`
+- `MonitoredItemModified($client, int $subscriptionId, int $monitoredItemId, int $statusCode)`
+- `MonitoredItemDeleted($client, int $subscriptionId, int $monitoredItemId, int $statusCode)`
+
+### Triggering (1)
+
+- `TriggeringConfigured($client, int $subscriptionId, int $triggeringItemId, array $addResults, array $removeResults)` — triggering links added/removed for a triggering item
 
 ### Data / event / alarm notifications (5)
 
-- `DataChangeReceived($client, $monitoredItemId, DataValue $dataValue)`
-- `EventNotificationReceived($client, $monitoredItemId, Variant[] $eventFields)`
-- `AlarmEventReceived($client, $monitoredItemId, $eventFields)`
-- `AlarmActivated($client, $monitoredItemId, $eventFields)`
-- `AlarmDeactivated($client, $monitoredItemId, $eventFields)`
+- `DataChangeReceived($client, int $subscriptionId, int $sequenceNumber, int $clientHandle, DataValue $dataValue)`
+- `EventNotificationReceived($client, int $subscriptionId, int $sequenceNumber, int $clientHandle, Variant[] $eventFields)`
+- `AlarmEventReceived($client, int $subscriptionId, int $clientHandle, Variant[] $eventFields, ?int $severity = null, ?string $sourceName = null, ?string $message = null, ?NodeId $eventType = null, ?DateTimeImmutable $time = null)`
+- `AlarmActivated($client, int $subscriptionId, int $clientHandle, ?string $sourceName = null, ?int $severity = null, ?string $message = null)`
+- `AlarmDeactivated($client, int $subscriptionId, int $clientHandle, ?string $sourceName = null, ?string $message = null)`
 
-Alarm vs data-change is auto-deduced from the notification fields (presence of `Severity`, `Time`, `SourceNode`, etc.).
+Correlate each notification to its monitored item via `$e->clientHandle` (the client handle assigned when the item was created) — there is no `monitoredItemId` on these events. Data-change vs event is decided by notification type — `DataChangeNotification` vs `EventNotification` (`instanceof`), not by field inspection. An event notification is then classified as an alarm only when its `EventNotification` fields yield a `Severity` value (field index 5) or an `EventType` NodeId (field index 1); otherwise no `Alarm*` event fires. The `Time` (field 3) and `SourceName` (field 2) fields are extracted as alarm metadata but play no part in that decision.
 
-### Read / write (4)
+### Alarm state changes (6)
 
-- `NodeValueRead($client, NodeId $nodeId, DataValue $dataValue)`
-- `NodeValueWritten($client, NodeId $nodeId, mixed $value, $statusCode)`
+Further `Alarm*` events derived from the same `EventNotification` fields, dispatched alongside the notifications above.
+
+- `AlarmSeverityChanged($client, int $subscriptionId, int $clientHandle, ?string $sourceName = null, int $severity = 0)` — fires whenever a severity field is present
+- `LimitAlarmExceeded($client, int $subscriptionId, int $clientHandle, ?string $sourceName = null, ?string $limitState = null, ?int $severity = null)` — EventType is a limit alarm type
+- `OffNormalAlarmTriggered($client, int $subscriptionId, int $clientHandle, ?string $sourceName = null, ?int $severity = null)` — EventType is an off-normal alarm type
+- `AlarmAcknowledged($client, int $subscriptionId, int $clientHandle, ?string $sourceName = null)`
+- `AlarmConfirmed($client, int $subscriptionId, int $clientHandle, ?string $sourceName = null)`
+- `AlarmShelved($client, int $subscriptionId, int $clientHandle, ?string $sourceName = null)`
+
+### Read / write (5)
+
+- `NodeValueRead($client, NodeId $nodeId, int $attributeId, DataValue $dataValue)`
+- `NodeValueWritten($client, NodeId $nodeId, mixed $value, BuiltinType $type, int $statusCode)`
+- `NodeValueWriteFailed($client, NodeId $nodeId, int $statusCode)` — write returned a bad status code
 - `WriteTypeDetecting($client, NodeId $nodeId)` — before the read-before-write probe
 - `WriteTypeDetected($client, NodeId $nodeId, BuiltinType $detectedType, bool $fromCache)`
 
 ### Browse (1)
 
-- `NodeBrowsed($client, NodeId $nodeId, ReferenceDescription[] $references)`
+- `NodeBrowsed($client, NodeId $nodeId, BrowseDirection $direction, int $resultCount)` — `$resultCount` is the number of references returned, not the references themselves
 
-### Cache (3)
+### Type discovery (1)
 
-- `CacheHit($client, string $cacheKey, mixed $value)`
-- `CacheMiss($client, string $cacheKey)`
-- `CacheStored($client, string $cacheKey, mixed $value, int $ttl)`
+- `DataTypesDiscovered($client, ?int $namespaceIndex, int $count)` — server data types registered/discovered (`$count` of types; `$namespaceIndex` is null when scanning all namespaces)
 
-### Retry (2)
+### Cache (2)
 
-- `RetryAttempt($client, int $attempt, int $maxAttempts, Throwable $cause)`
-- `ConnectionRecovered($client, $endpointUrl, int $attemptsUsed)`
+- `CacheHit($client, string $key)`
+- `CacheMiss($client, string $key)`
+
+### Retry / reconnect (3)
+
+- `RetryAttempt($client, int $attempt, int $maxRetries, Throwable $exception)`
+- `RetryExhausted($client, int $attempts, Throwable $exception)` — all automatic retries failed
+- `ClientReconnecting($client, string $endpointUrl)` — a reconnection attempt is starting
 
 ### Trust store (5)
 
-- `ServerCertificateTrusted($client, $thumbprint, $endpointUrl)`
-- `ServerCertificateRejected($client, $thumbprint, $endpointUrl, string $reason)`
-- `ServerCertificateAdded($client, $thumbprint, $endpointUrl)`
-- `ServerCertificateRotated($client, $oldThumbprint, $newThumbprint, $endpointUrl)`
-- `ServerCertificateRemoved($client, $thumbprint, $endpointUrl)`
+- `ServerCertificateTrusted($client, string $fingerprint, ?string $subject = null)` — passed trust store validation
+- `ServerCertificateRejected($client, string $fingerprint, ?string $reason = null, ?string $subject = null)`
+- `ServerCertificateAutoAccepted($client, string $fingerprint, ?string $subject = null)` — TOFU auto-accept saved to trust store
+- `ServerCertificateManuallyTrusted($client, string $fingerprint, ?string $subject = null)` — manual add via `trustCertificate()`
+- `ServerCertificateRemoved($client, string $fingerprint)`
 
 ### History update (4 — v4.4)
 
-- `HistoryDataUpdated($client, NodeId $nodeId, PerformUpdateType $type, int $valueCount, int[] $operationResults)`
+- `HistoryDataUpdated($client, NodeId $nodeId, PerformUpdateType $operation, int $valueCount, int[] $operationResults)`
 - `HistoryDataDeleted($client, NodeId $nodeId, string $kind, int $statusCode, int[] $operationResults)` — `kind` is `'rawModified'` or `'atTime'`
-- `HistoryEventUpdated($client, NodeId $nodeId, PerformUpdateType $type, int $eventCount, int[] $operationResults)`
+- `HistoryEventUpdated($client, NodeId $nodeId, PerformUpdateType $operation, int $eventCount, int[] $operationResults)`
 - `HistoryEventDeleted($client, NodeId $nodeId, int $eventCount, int[] $operationResults)`
 
 ### Aggregate (1 — v4.4)
 
 - `AggregateComputed($client, AggregateFunction $function, int $rawInputCount, int $intervalCount, ?NodeId $nodeId)`
 
-### File transfer (several — v4.4)
+### File transfer (4 — v4.4)
 
 - `FileOpened($client, NodeId $fileNodeId, int $fileHandle, int $mode)`
 - `FileClosed($client, NodeId $fileNodeId, int $fileHandle)`
-- `FileRead($client, $fileHandle, int $bytesRead)`
-- `FileWritten($client, $fileHandle, int $bytesWritten)`
-- + directory operations
+- `FileBytesRead($client, NodeId $fileNodeId, int $fileHandle, int $bytesRead, int $requestedLength)`
+- `FileBytesWritten($client, NodeId $fileNodeId, int $fileHandle, int $bytesWritten)`
 
 ## Common patterns
 
@@ -124,7 +143,16 @@ class AuditListener {
     }
 
     public function onAlarm(AlarmActivated $e): void {
-        $this->log->warning('Alarm activated', ['fields' => $e->eventFields]);
+        $this->log->warning('Alarm activated', [
+            'source' => $e->sourceName,
+            'severity' => $e->severity,
+            'message' => $e->message,
+        ]);
+    }
+
+    // To read raw alarm fields, listen for AlarmEventReceived instead — it exposes Variant[] $eventFields.
+    public function onAlarmEvent(AlarmEventReceived $e): void {
+        $this->log->warning('Alarm event', ['fields' => $e->eventFields]);
     }
 }
 ```

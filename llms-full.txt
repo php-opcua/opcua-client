@@ -549,10 +549,10 @@ echo $response->sequenceNumber;
 echo $response->moreNotifications;
 
 foreach ($response->notifications as $notif) {
-    if ($notif['type'] === 'DataChange') {
-        echo $notif['dataValue']->getValue();
-    } elseif ($notif['type'] === 'Event') {
-        foreach ($notif['eventFields'] as $field) {
+    if ($notif instanceof DataChangeNotification) {
+        echo $notif->dataValue->getValue();
+    } elseif ($notif instanceof EventNotification) {
+        foreach ($notif->eventFields as $field) {
             echo $field->value;
         }
     }

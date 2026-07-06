@@ -54,7 +54,7 @@ All of this with zero external dependencies beyond `ext-openssl`, and full suppo
 
 This library is integration-tested against **[UA-.NETStandard](https://github.com/OPCFoundation/UA-.NETStandard)** — the **reference implementation** maintained by the OPC Foundation, the organization that defines the OPC UA specification.
 
-1300+ tests (1040+ unit, 250+ integration) run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec — with 99%+ unit test code coverage. Unit tests run on **Linux, macOS, and Windows** across PHP 8.2–8.5. NodeManagement integration tests run against an additional `open62541` server (UA-.NETStandard does not implement that service set) — see [testing docs](docs/testing/integration.md).
+1700+ tests (1440+ unit, 290+ integration) run via [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) against 8 server instances covering every security policy, authentication method, data type, method call, subscription, event, alarm, and historical read defined by the spec — with 99%+ unit test code coverage. Unit tests run on **Linux, macOS, and Windows** across PHP 8.2–8.5. NodeManagement integration tests run against an additional `open62541` server (UA-.NETStandard does not implement that service set) — see [testing docs](docs/testing/integration.md).
 
 **This library is already used in production with real industrial equipment** in factory automation and process control environments.
 
@@ -185,7 +185,7 @@ $client->createMonitoredItems($sub->subscriptionId, [
 
 $response = $client->publish();
 foreach ($response->notifications as $notif) {
-    echo $notif['dataValue']->getValue() . "\n";
+    echo $notif->dataValue->getValue() . "\n";
 }
 ```
 
@@ -490,7 +490,7 @@ Each Registrar automatically loads its NodeSet dependencies. Use `only: true` to
 - **Industrial-ready** — server certificate trust management, alarm event deduction, subscription recovery, auto-retry — built for certified industrial deployments.
 - **Batteries included** — browse, read, write, call, subscriptions, events, history, path resolution, batching, retry, CLI tool.
 - **Cross-platform** — tested on Linux, macOS, and Windows via CI. No FFI, no COM. Uses `DIRECTORY_SEPARATOR` and platform-aware defaults throughout.
-- **Thoroughly tested** — 1300+ tests (1040+ unit, 250+ integration), 99%+ unit test code coverage across PHP 8.2, 8.3, 8.4, and 8.5 on all three platforms.
+- **Thoroughly tested** — 1700+ tests (1440+ unit, 290+ integration), 99%+ unit test code coverage across PHP 8.2, 8.3, 8.4, and 8.5 on all three platforms.
 - **Typed everywhere** — all service responses return `public readonly` DTOs, not arrays.
 - **Session persistence** — keep OPC UA connections alive across PHP requests via [`opcua-session-manager`](https://github.com/php-opcua/opcua-session-manager).
 - **Laravel-ready** — drop-in via [`opcua-laravel-client`](https://github.com/php-opcua/laravel-opcua).
@@ -545,15 +545,19 @@ Full documentation is available in [`docs/`](docs/index.md). Highlights:
 
 ## Testing
 
-1300+ tests with **99%+ code coverage**. Unit tests cover encoding, crypto, protocol services, and error paths. Integration tests run against [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) — a Docker-based OPC UA environment built on the OPC Foundation's UA-.NETStandard reference implementation, with multiple security configs, custom types, and real-world scenarios.
+1700+ tests with **99%+ code coverage**. Unit tests cover encoding, crypto, protocol services, and error paths. Integration tests run against [uanetstandard-test-suite](https://github.com/php-opcua/uanetstandard-test-suite) — a Docker-based OPC UA environment built on the OPC Foundation's UA-.NETStandard reference implementation, with multiple security configs, custom types, and real-world scenarios.
 
 ```bash
-./vendor/bin/pest                                          # everything
-./vendor/bin/pest tests/Unit/                              # unit only
-./vendor/bin/pest tests/Integration/ --group=integration   # integration only
+composer test                # everything
+composer test:unit           # unit only
+composer test:integration    # integration only (requires the test servers)
+composer phpstan             # static analysis — PHPStan level 9
+composer format:check        # code style
 ```
 
-CI runs on PHP 8.2, 8.3, 8.4, and 8.5 via GitHub Actions.
+CI runs on PHP 8.2, 8.3, 8.4, and 8.5 via GitHub Actions, in three phases:
+format check and PHPStan in parallel, then unit tests (Linux, macOS,
+Windows), then integration tests against the Docker test servers.
 
 ## Alternatives & Comparison
 

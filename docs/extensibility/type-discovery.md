@@ -114,7 +114,11 @@ To amortise:
 
 The cached representation goes through the v4.3.0 cache codec — see
 [Security · Cache path hardening](../security/cache-path-hardening.md)
-and [Observability · Caching](../observability/caching.md).
+and [Observability · Caching](../observability/caching.md). Since
+v4.5.0 each cached entry is a `DiscoveredType` value object
+(`encodingId` + `definition`); entries written by older versions are
+discarded on first read and the discovery runs again — no manual flush
+needed.
 
 ## Inspecting what was discovered
 
