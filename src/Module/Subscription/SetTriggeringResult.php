@@ -11,7 +11,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see SubscriptionModule::setTriggering()
  */
-readonly class SetTriggeringResult implements WireSerializable
+final readonly class SetTriggeringResult implements WireSerializable
 {
     /**
      * @param int[] $addResults Status codes for each link addition.

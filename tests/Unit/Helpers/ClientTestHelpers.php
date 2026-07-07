@@ -654,6 +654,7 @@ if (! function_exists('createClientWithoutConnect')) {
         setClientProperty($client, 'trustPolicy', null);
         setClientProperty($client, 'autoAcceptEnabled', false);
         setClientProperty($client, 'autoAcceptForce', false);
+        setClientProperty($client, 'verifyApplicationUri', true);
         setClientProperty($client, 'cache', null);
         setClientProperty($client, 'cacheInitialized', false);
         $codecRegistry = new PhpOpcua\Client\Wire\WireTypeRegistry();

@@ -433,7 +433,7 @@ $monitored = $client->createMonitoredItems($sub->subscriptionId)
 // 3. Poll for notifications
 $response = $client->publish();
 foreach ($response->notifications as $notif) {
-    echo "Handle {$notif['clientHandle']}: {$notif['dataValue']->getValue()}\n";
+    echo "Handle {$notif->clientHandle}: {$notif->dataValue->getValue()}\n";
 }
 
 // 4. Clean up

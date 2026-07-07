@@ -10,7 +10,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Represents an OPC UA ReferenceDescription returned from a Browse operation.
  */
-readonly class ReferenceDescription implements WireSerializable
+final readonly class ReferenceDescription implements WireSerializable
 {
     /**
      * @param NodeId $referenceTypeId
@@ -132,6 +132,11 @@ readonly class ReferenceDescription implements WireSerializable
             }
         }
 
+        $typeDefinition = $data['typeDef'] ?? null;
+        if ($typeDefinition !== null && ! $typeDefinition instanceof NodeId) {
+            throw new EncodingException('ReferenceDescription wire payload: field "typeDef" must be a decoded NodeId instance or null.');
+        }
+
         return new self(
             $data['refType'],
             $data['isForward'] ?? false,
@@ -139,7 +144,7 @@ readonly class ReferenceDescription implements WireSerializable
             $data['browseName'],
             $data['displayName'],
             $data['nodeClass'],
-            $data['typeDef'] ?? null,
+            $typeDefinition,
         );
     }
 

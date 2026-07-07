@@ -73,23 +73,24 @@ node by its class and parent reference:
 ```php
 use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\NodeClass;
+use PhpOpcua\Client\Types\NodeId;
+use PhpOpcua\Client\Types\QualifiedName;
+use PhpOpcua\Client\Types\Variant;
 
 $results = $client->addNodes([
     [
-        'parentNodeId'     => 'i=85',                    // Objects folder
-        'referenceTypeId'  => 'i=35',                    // Organizes
-        'requestedNewNodeId' => 'ns=1;s=Counter',        // optional — server may assign
-        'browseName'       => '1:Counter',
-        'nodeClass'        => NodeClass::Variable,
-        'attributes' => [
-            'displayName' => 'Counter',
-            'description' => 'Boot-counter incremented by AddNodes',
-            'dataType'    => 'i=6',                      // Int32
-            'value'       => 0,
-            'valueRank'   => -1,                         // scalar
-            'accessLevel' => 3,                          // CurrentRead | CurrentWrite
-        ],
-        'typeDefinition' => 'i=63',                      // BaseDataVariableType
+        'parentNodeId'       => 'i=85',                  // Objects folder
+        'referenceTypeId'    => 'i=35',                  // Organizes
+        'requestedNewNodeId' => 'ns=1;s=Counter',
+        'browseName'         => new QualifiedName(1, 'Counter'),
+        'nodeClass'          => NodeClass::Variable,
+        'typeDefinition'     => 'i=63',                  // BaseDataVariableType
+        'displayName'        => 'Counter',
+        'description'        => 'Boot-counter incremented by AddNodes',
+        'dataType'           => NodeId::numeric(0, 6),   // Int32
+        'value'              => new Variant(BuiltinType::Int32, 0),
+        'valueRank'          => -1,                      // scalar
+        'accessLevel'        => 3,                       // CurrentRead | CurrentWrite
     ],
 ]);
 

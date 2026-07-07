@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpOpcua\Client\Module;
 
 use PhpOpcua\Client\Kernel\ClientKernelInterface;
+use PhpOpcua\Client\OpcUaClientInterface;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Wire\WireTypeRegistry;
 
@@ -26,7 +27,7 @@ abstract class ServiceModule
      * The Client instance. Used for cross-module calls (e.g., ServerInfoModule
      * calling $this->client->readMulti() which is provided by ReadWriteModule).
      *
-     * @var object
+     * @var ModuleHostInterface&OpcUaClientInterface
      */
     protected object $client;
 
@@ -39,7 +40,7 @@ abstract class ServiceModule
     }
 
     /**
-     * @param object $client
+     * @param ModuleHostInterface&OpcUaClientInterface $client
      */
     public function setClient(object $client): void
     {

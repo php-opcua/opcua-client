@@ -15,6 +15,7 @@ use PhpOpcua\Client\Client\ManagesSecureChannelTrait;
 use PhpOpcua\Client\Client\ManagesSessionTrait;
 use PhpOpcua\Client\Client\ManagesTrustStoreRuntimeTrait;
 use PhpOpcua\Client\Encoding\BinaryDecoder;
+use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\ModuleConflictException;
 use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Kernel\ClientKernelInterface;
@@ -66,7 +67,7 @@ use Psr\SimpleCache\CacheInterface;
  * @see ClientKernelInterface
  * @see ClientBuilder
  */
-class Client implements OpcUaClientInterface, ClientKernelInterface
+class Client implements OpcUaClientInterface, ClientKernelInterface, Module\ModuleHostInterface
 {
     use ManagesEventDispatchTrait;
     use ManagesCacheRuntimeTrait;
@@ -106,6 +107,10 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
     private ?string $userKeyPath;
 
     private ?string $serverCertDer = null;
+
+    private ?string $expectedServerApplicationUri = null;
+
+    private bool $verifyApplicationUri;
 
     private ?SecureChannel $secureChannel = null;
 
@@ -206,9 +211,10 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
      * @param array<string, class-string<\BackedEnum>> $enumMappings Enum mappings.
      * @param ?ModuleRegistry $moduleRegistry Module registry.
      * @param ?ClientTransportInterface $transport Custom wire transport. Defaults to {@see TcpTransport} when null.
+     * @param bool $verifyApplicationUri Verify that the server certificate's SAN ApplicationUri matches the endpoint's ApplicationDescription (secure connections only).
      *
      * @throws Exception\ConfigurationException If the endpoint URL is invalid.
-     * @throws Exception\ConnectionException If the TCP connection or handshake fails.
+     * @throws ConnectionException If the TCP connection or handshake fails.
      * @throws ServiceException If a protocol-level error occurs.
      */
     public function __construct(
@@ -241,6 +247,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
         array $enumMappings,
         ?ModuleRegistry $moduleRegistry = null,
         ?ClientTransportInterface $transport = null,
+        bool $verifyApplicationUri = true,
     ) {
         $this->securityPolicy = $securityPolicy;
         $this->securityMode = $securityMode;
@@ -270,6 +277,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
         $this->enumMappings = $enumMappings;
         $this->moduleRegistry = $moduleRegistry ?? new ModuleRegistry();
         $this->transport = $transport ?? new TcpTransport();
+        $this->verifyApplicationUri = $verifyApplicationUri;
 
         $this->performConnect($endpointUrl);
     }
@@ -339,7 +347,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
     /**
      * Check whether a module class is loaded.
      *
-     * @param string $moduleClass The fully-qualified module class name.
+     * @param class-string<Module\ServiceModule> $moduleClass The fully-qualified module class name.
      * @return bool
      */
     public function hasModule(string $moduleClass): bool
@@ -402,7 +410,15 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
      */
     public function getAuthToken(): NodeId
     {
-        return $this->authenticationToken;
+        return $this->authenticationToken ?? NodeId::numeric(0, 0);
+    }
+
+    /**
+     * Get the active session service, failing if none is established.
+     */
+    private function requireSession(): SessionService
+    {
+        return $this->session ?? throw new ConnectionException('No active session: call connect() first');
     }
 
     /**
@@ -939,7 +955,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface
     /**
      * @param int $subscriptionId
      * @param int $retransmitSequenceNumber
-     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array}
+     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array<int, mixed>}
      */
     public function republish(int $subscriptionId, int $retransmitSequenceNumber): array
     {

@@ -8,10 +8,12 @@ use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Event\SessionActivated;
 use PhpOpcua\Client\Event\SessionClosed;
 use PhpOpcua\Client\Event\SessionCreated;
+use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\OpcUaException;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Security\CertificateManager;
+use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Types\NodeId;
 
 /**
@@ -39,15 +41,16 @@ trait ManagesSessionTrait
      */
     private function createSession(string $endpointUrl): void
     {
+        $session = $this->requireSession();
         $requestId = $this->nextRequestId();
-        $request = $this->session->encodeCreateSessionRequest($requestId, $endpointUrl);
+        $request = $session->encodeCreateSessionRequest($requestId, $endpointUrl);
         $this->logger->debug('CreateSession request for {url}', $this->logContext(['url' => $endpointUrl]));
         $this->transport->send($request);
 
         $response = $this->transport->receive();
         $responseBody = $this->unwrapResponse($response);
         $decoder = $this->createDecoder($responseBody);
-        $sessionResult = $this->session->decodeCreateSessionResponse($decoder);
+        $sessionResult = $session->decodeCreateSessionResponse($decoder);
         $this->authenticationToken = $sessionResult['authenticationToken'];
         $this->logger->debug('CreateSession response: authToken={token}', $this->logContext(['token' => (string) $this->authenticationToken]));
         $this->dispatch(fn () => new SessionCreated($this, $endpointUrl, $this->authenticationToken));
@@ -56,7 +59,7 @@ trait ManagesSessionTrait
             $this->serverNonce = $sessionResult['serverNonce'];
         }
 
-        $eccKey = $this->session->getLastEccServerEphemeralKey();
+        $eccKey = $session->getLastEccServerEphemeralKey();
         if ($eccKey !== null) {
             $this->eccServerEphemeralKey = $eccKey;
         }
@@ -76,12 +79,15 @@ trait ManagesSessionTrait
      */
     private function activateSession(string $endpointUrl): void
     {
+        $session = $this->requireSession();
+        $authenticationToken = $this->authenticationToken
+            ?? throw new ConnectionException('Cannot activate session: createSession() has not run');
         $requestId = $this->nextRequestId();
         [$userCertDer, $userPrivateKey] = $this->loadUserCertificate();
 
-        $request = $this->session->encodeActivateSessionRequest(
+        $request = $session->encodeActivateSessionRequest(
             $requestId,
-            $this->authenticationToken,
+            $authenticationToken,
             $this->username,
             $this->password,
             $userCertDer,
@@ -95,7 +101,7 @@ trait ManagesSessionTrait
         $response = $this->transport->receive();
         $responseBody = $this->unwrapResponse($response);
         $decoder = $this->createDecoder($responseBody);
-        $this->session->decodeActivateSessionResponse($decoder);
+        $session->decodeActivateSessionResponse($decoder);
         $this->logger->debug('ActivateSession response received', $this->logContext());
         $this->dispatch(fn () => new SessionActivated($this, $endpointUrl));
     }
@@ -103,7 +109,7 @@ trait ManagesSessionTrait
     /**
      * Load the user certificate and private key for X509 identity token.
      *
-     * @return array{0: ?string, 1: mixed}
+     * @return array{0: ?string, 1: ?\OpenSSLAsymmetricKey}
      */
     private function loadUserCertificate(): array
     {
@@ -135,14 +141,15 @@ trait ManagesSessionTrait
         $this->dispatch(fn () => new SessionClosed($this));
 
         if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
-            $this->closeSessionSecure();
+            $this->closeSessionSecure($this->secureChannel);
 
             return;
         }
 
+        $session = $this->requireSession();
         $body = new BinaryEncoder();
-        $body->writeUInt32($this->session->getTokenId());
-        $body->writeUInt32($this->session->getNextSequenceNumber());
+        $body->writeUInt32($session->getTokenId());
+        $body->writeUInt32($session->getNextSequenceNumber());
         $requestId = $this->nextRequestId();
         $body->writeUInt32($requestId);
 
@@ -168,9 +175,10 @@ trait ManagesSessionTrait
     /**
      * Close the session when message-level security is active.
      *
+     * @param SecureChannel $secureChannel The active secure channel.
      * @return void
      */
-    private function closeSessionSecure(): void
+    private function closeSessionSecure(SecureChannel $secureChannel): void
     {
         $requestId = $this->nextRequestId();
 
@@ -178,7 +186,7 @@ trait ManagesSessionTrait
 
         $this->prepareCloseSessionMessage($innerBody, $requestId);
 
-        $message = $this->secureChannel->buildMessage($innerBody->getBuffer());
+        $message = $secureChannel->buildMessage($innerBody->getBuffer());
         $this->transport->send($message);
 
         try {
@@ -198,7 +206,7 @@ trait ManagesSessionTrait
     {
         $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::CLOSE_SESSION_REQUEST));
 
-        $innerBody->writeNodeId($this->authenticationToken);
+        $innerBody->writeNodeId($this->authenticationToken ?? NodeId::numeric(0, ServiceTypeId::NULL));
         $innerBody->writeDateTime(new \DateTimeImmutable());
         $innerBody->writeUInt32($requestId);
         $innerBody->writeUInt32(0);

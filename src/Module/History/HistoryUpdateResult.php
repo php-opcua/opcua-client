@@ -11,7 +11,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see https://reference.opcfoundation.org/Core/Part11/v105/docs/6.9
  */
-readonly class HistoryUpdateResult implements WireSerializable
+final readonly class HistoryUpdateResult implements WireSerializable
 {
     /**
      * @param int $statusCode Overall status code for the operation.

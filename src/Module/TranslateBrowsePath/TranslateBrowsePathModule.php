@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Module\TranslateBrowsePath;
 
+use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Module\ServiceModule;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
@@ -57,7 +58,7 @@ class TranslateBrowsePathModule extends ServiceModule
      * @return ($browsePaths is null ? \PhpOpcua\Client\Builder\BrowsePathsBuilder : BrowsePathResult[])
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws ServiceException If the server returns an error response.
      *
      * @see BrowsePathResult
@@ -68,13 +69,16 @@ class TranslateBrowsePathModule extends ServiceModule
             return new \PhpOpcua\Client\Builder\BrowsePathsBuilder($this->client);
         }
 
-        $this->kernel->resolveNodeIdArray($browsePaths, 'startingNodeId');
+        $browsePaths = array_map(
+            static fn (array $path): BrowsePath => BrowsePath::fromArray($path),
+            $browsePaths,
+        );
 
         return $this->kernel->executeWithRetry(function () use ($browsePaths) {
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->translateBrowsePathService->encodeTranslateRequest($requestId, $browsePaths, $this->kernel->getAuthToken());
+            $request = $this->translateBrowsePathService()->encodeTranslateRequest($requestId, $browsePaths, $this->kernel->getAuthToken());
             $this->kernel->log()->debug('TranslateBrowsePaths request: {count} path(s)', $this->kernel->logContext(['count' => count($browsePaths)]));
             $this->kernel->send($request);
 
@@ -82,7 +86,7 @@ class TranslateBrowsePathModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->translateBrowsePathService->decodeTranslateResponse($decoder);
+            $results = $this->translateBrowsePathService()->decodeTranslateResponse($decoder);
             $this->kernel->log()->debug('TranslateBrowsePaths response: {count} result(s)', $this->kernel->logContext(['count' => count($results)]));
 
             return $results;
@@ -99,7 +103,7 @@ class TranslateBrowsePathModule extends ServiceModule
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
      * @throws ServiceException If the path cannot be resolved, yields no targets, or the server returns a bad status code.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      */
     public function resolveNodeId(string $path, NodeId|string|null $startingNodeId = null, bool $useCache = true): NodeId
     {
@@ -169,5 +173,10 @@ class TranslateBrowsePathModule extends ServiceModule
         }
 
         return new QualifiedName(0, $segment);
+    }
+
+    private function translateBrowsePathService(): TranslateBrowsePathService
+    {
+        return $this->translateBrowsePathService ?? throw new ConnectionException('TranslateBrowsePath module not booted: call connect() first');
     }
 }

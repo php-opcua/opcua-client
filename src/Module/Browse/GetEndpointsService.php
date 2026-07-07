@@ -71,7 +71,7 @@ class GetEndpointsService extends AbstractProtocolService
     {
         $endpointUrl = $decoder->readString() ?? '';
 
-        $decoder->readString();
+        $applicationUri = $decoder->readString();
         $decoder->readString();
         $decoder->readLocalizedText();
         $decoder->readUInt32();
@@ -109,6 +109,7 @@ class GetEndpointsService extends AbstractProtocolService
             userIdentityTokens: $userIdentityTokens,
             transportProfileUri: $transportProfileUri,
             securityLevel: $securityLevel,
+            applicationUri: $applicationUri,
         );
     }
 }

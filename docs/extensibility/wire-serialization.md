@@ -195,12 +195,14 @@ hardening](../security/cache-path-hardening.md).
 ## Built-in DTO coverage
 
 Every shipping module's result DTO implements `WireSerializable`. As
-of v4.3.x:
+of v4.5.x:
 
 `SubscriptionResult`, `MonitoredItemResult`, `MonitoredItemModifyResult`,
-`PublishResult`, `SetTriggeringResult`, `TransferResult`, `CallResult`,
+`PublishResult`, `DataChangeNotification`, `EventNotification`,
+`SetTriggeringResult`, `TransferResult`, `CallResult`,
 `BrowsePathResult`, `BrowsePathTarget`, `BrowseResultSet`,
-`AddNodesResult`, `BuildInfo`. Plus the core value types via
+`AddNodesResult`, `BuildInfo`, `CreateFileResult`, `HistoryUpdateResult`,
+`DiscoveredType`. Plus the core value types via
 `CoreWireTypes::register()`. Together, they cover everything
 `OpcUaClientInterface` returns.
 

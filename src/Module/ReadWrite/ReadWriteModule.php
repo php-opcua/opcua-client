@@ -11,6 +11,7 @@ use PhpOpcua\Client\Event\NodeValueWriteFailed;
 use PhpOpcua\Client\Event\NodeValueWritten;
 use PhpOpcua\Client\Event\WriteTypeDetected;
 use PhpOpcua\Client\Event\WriteTypeDetecting;
+use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\WriteTypeDetectionException;
 use PhpOpcua\Client\Module\ServiceModule;
 use PhpOpcua\Client\Protocol\SessionService;
@@ -113,10 +114,17 @@ class ReadWriteModule extends ServiceModule
             return new ReadMultiBuilder($this->client);
         }
 
-        $this->kernel->resolveNodeIdArray($readItems);
+        $resolved = [];
+        foreach ($readItems as $item) {
+            if (is_string($item['nodeId'])) {
+                $item['nodeId'] = NodeId::parse($item['nodeId']);
+            }
+            $resolved[] = $item;
+        }
+        $readItems = $resolved;
 
         $batchSize = $this->kernel->getEffectiveReadBatchSize();
-        if ($batchSize !== null && count($readItems) > $batchSize) {
+        if ($batchSize !== null && $batchSize > 0 && count($readItems) > $batchSize) {
             return $this->readMultiBatched($readItems, $batchSize);
         }
 
@@ -141,7 +149,7 @@ class ReadWriteModule extends ServiceModule
             $dataValue = new DataValue($variant);
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->writeService->encodeWriteRequest($requestId, $nodeId, $dataValue, $this->kernel->getAuthToken());
+            $request = $this->writeService()->encodeWriteRequest($requestId, $nodeId, $dataValue, $this->kernel->getAuthToken());
             $this->kernel->log()->debug('Write request for node {nodeId} (type={type})', $this->kernel->logContext([
                 'nodeId' => (string) $nodeId,
                 'type' => $type->name,
@@ -152,7 +160,7 @@ class ReadWriteModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->writeService->decodeWriteResponse($decoder);
+            $results = $this->writeService()->decodeWriteResponse($decoder);
             $statusCode = $results[0] ?? 0;
             $this->kernel->log()->debug('Write response for node {nodeId}: statusCode={status}', $this->kernel->logContext([
                 'nodeId' => (string) $nodeId,
@@ -179,10 +187,17 @@ class ReadWriteModule extends ServiceModule
             return new WriteMultiBuilder($this->client);
         }
 
-        $this->kernel->resolveNodeIdArray($writeItems);
+        $resolved = [];
+        foreach ($writeItems as $item) {
+            if (is_string($item['nodeId'])) {
+                $item['nodeId'] = NodeId::parse($item['nodeId']);
+            }
+            $resolved[] = $item;
+        }
+        $writeItems = $resolved;
 
         $batchSize = $this->kernel->getEffectiveWriteBatchSize();
-        if ($batchSize !== null && count($writeItems) > $batchSize) {
+        if ($batchSize !== null && $batchSize > 0 && count($writeItems) > $batchSize) {
             return $this->writeMultiBatched($writeItems, $batchSize);
         }
 
@@ -192,7 +207,7 @@ class ReadWriteModule extends ServiceModule
             $writeItems = $this->prepareWriteItems($writeItems);
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->writeService->encodeWriteMultiRequest($requestId, $writeItems, $this->kernel->getAuthToken());
+            $request = $this->writeService()->encodeWriteMultiRequest($requestId, $writeItems, $this->kernel->getAuthToken());
             $this->kernel->log()->debug('WriteMulti request: {count} item(s)', $this->kernel->logContext(['count' => count($writeItems)]));
             $this->kernel->send($request);
 
@@ -200,7 +215,7 @@ class ReadWriteModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->writeService->decodeWriteResponse($decoder);
+            $results = $this->writeService()->decodeWriteResponse($decoder);
             $this->kernel->log()->debug('WriteMulti response: {count} result(s)', $this->kernel->logContext(['count' => count($results)]));
 
             return $results;
@@ -222,7 +237,7 @@ class ReadWriteModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->callService->encodeCallRequest(
+            $request = $this->callService()->encodeCallRequest(
                 $requestId,
                 $objectId,
                 $methodId,
@@ -240,7 +255,7 @@ class ReadWriteModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $result = $this->callService->decodeCallResponse($decoder);
+            $result = $this->callService()->decodeCallResponse($decoder);
             $this->kernel->log()->debug('Call response: statusCode={status}', $this->kernel->logContext(['status' => $result->statusCode]));
 
             return $result;
@@ -260,7 +275,7 @@ class ReadWriteModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->readService->encodeReadMultiRequest($requestId, $items, $this->kernel->getAuthToken());
+            $request = $this->readService()->encodeReadMultiRequest($requestId, $items, $this->kernel->getAuthToken());
             $this->kernel->log()->debug('ReadMulti request: {count} item(s)', $this->kernel->logContext(['count' => count($items)]));
             $this->kernel->send($request);
 
@@ -268,7 +283,7 @@ class ReadWriteModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $results = $this->readService->decodeReadMultiResponse($decoder);
+            $results = $this->readService()->decodeReadMultiResponse($decoder);
             $this->kernel->log()->debug('ReadMulti response: {count} value(s)', $this->kernel->logContext(['count' => count($results)]));
 
             return $results;
@@ -281,7 +296,7 @@ class ReadWriteModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->readService->encodeReadRequest($requestId, $nodeId, $this->kernel->getAuthToken(), $attributeId);
+            $request = $this->readService()->encodeReadRequest($requestId, $nodeId, $this->kernel->getAuthToken(), $attributeId);
             $this->kernel->log()->debug('Read request for node {nodeId} (attributeId={attr})', $this->kernel->logContext([
                 'nodeId' => (string) $nodeId,
                 'attr' => $attributeId,
@@ -292,7 +307,7 @@ class ReadWriteModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            $dataValue = $this->readService->decodeReadResponse($decoder);
+            $dataValue = $this->readService()->decodeReadResponse($decoder);
             $this->kernel->log()->debug('Read response for node {nodeId}: statusCode={status}', $this->kernel->logContext([
                 'nodeId' => (string) $nodeId,
                 'status' => $dataValue->statusCode,
@@ -337,7 +352,7 @@ class ReadWriteModule extends ServiceModule
 
     /**
      * @param array<array{nodeId: NodeId, attributeId?: int}> $items
-     * @param int $batchSize
+     * @param int<1, max> $batchSize
      * @return DataValue[]
      */
     private function readMultiBatched(array $items, int $batchSize): array
@@ -355,7 +370,7 @@ class ReadWriteModule extends ServiceModule
 
     /**
      * @param array<array{nodeId: NodeId, value: mixed, type?: ?BuiltinType, attributeId?: int}> $items
-     * @param int $batchSize
+     * @param int<1, max> $batchSize
      * @return int[]
      */
     private function writeMultiBatched(array $items, int $batchSize): array
@@ -368,7 +383,7 @@ class ReadWriteModule extends ServiceModule
                 $writeItems = $this->prepareWriteItems($batch);
 
                 $requestId = $this->kernel->nextRequestId();
-                $request = $this->writeService->encodeWriteMultiRequest($requestId, $writeItems, $this->kernel->getAuthToken());
+                $request = $this->writeService()->encodeWriteMultiRequest($requestId, $writeItems, $this->kernel->getAuthToken());
                 $this->kernel->log()->debug('WriteMulti batch request: {count} item(s)', $this->kernel->logContext(['count' => count($writeItems)]));
                 $this->kernel->send($request);
 
@@ -376,7 +391,7 @@ class ReadWriteModule extends ServiceModule
                 $responseBody = $this->kernel->unwrapResponse($response);
                 $decoder = $this->kernel->createDecoder($responseBody);
 
-                $batchResult = $this->writeService->decodeWriteResponse($decoder);
+                $batchResult = $this->writeService()->decodeWriteResponse($decoder);
                 $this->kernel->log()->debug('WriteMulti batch response: {count} result(s)', $this->kernel->logContext(['count' => count($batchResult)]));
 
                 return $batchResult;
@@ -409,6 +424,9 @@ class ReadWriteModule extends ServiceModule
         return $writeItems;
     }
 
+    /**
+     * @param array<array{nodeId: NodeId, value: mixed, type?: ?BuiltinType, attributeId?: int}> $items
+     */
     private function prefetchWriteTypes(array $items): void
     {
         if (! $this->kernel->isAutoDetectWriteType()) {
@@ -505,5 +523,20 @@ class ReadWriteModule extends ServiceModule
         $this->kernel->dispatch(fn () => new WriteTypeDetected($this->client, $nodeId, $detectedType, $fromCache));
 
         return $detectedType;
+    }
+
+    private function readService(): ReadService
+    {
+        return $this->readService ?? throw new ConnectionException('ReadWrite module not booted: call connect() first');
+    }
+
+    private function writeService(): WriteService
+    {
+        return $this->writeService ?? throw new ConnectionException('ReadWrite module not booted: call connect() first');
+    }
+
+    private function callService(): CallService
+    {
+        return $this->callService ?? throw new ConnectionException('ReadWrite module not booted: call connect() first');
     }
 }

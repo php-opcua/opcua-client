@@ -39,6 +39,33 @@ OPC UA is used in industrial environments where security matters. This library i
 - Provide proper CA-signed certificates (don't rely on auto-generated self-signed certs)
 - Keep PHP and OpenSSL up to date
 
+### Trust on First Use (TOFU) and auto-accept
+
+With `autoAccept(true)` and an **empty** trust store, the client trusts the
+first certificate the server presents (trust-on-first-use). This means the
+**first** connection has no protection against an active
+man-in-the-middle: an attacker who intercepts that initial connection can have
+their certificate pinned instead of the server's. Every later connection is
+protected — a different certificate for the same fingerprint slot is rejected.
+
+If you can, pre-provision the server certificate into the trust store
+(`$trustStore->trust($certDer)`) instead of relying on TOFU, so even the first
+connection is authenticated.
+
+`autoAccept(true, force: true)` goes further and accepts **changed**
+certificates too, which effectively disables pinning. Use it only in
+development environments, never in production.
+
+### Server identity binding (ApplicationUri)
+
+For secure connections the client verifies that the SAN `ApplicationUri` in
+the server certificate matches the `ApplicationUri` declared by the endpoint
+during discovery — a certificate trusted for server A
+is no longer accepted when presented by server B. Some misconfigured servers
+ship certificates with inconsistent SAN extensions; if you need to connect to
+one of those, the check can be disabled with
+`$builder->verifyApplicationUri(false)` (prefer fixing the server certificate).
+
 ### Cache Path
 
 Since v4.3.0 the client never calls `unserialize()` on cache values. Cached entries are encoded via `Cache\CacheCodecInterface` (default `Cache\WireCacheCodec` — JSON gated by `Wire\WireTypeRegistry`); poisoned or unknown payloads are detected and discarded as cache misses. If your PSR-16 backend is writable by a less-trusted party (shared Redis, world-readable file cache, multi-tenant Memcached), this removes the object-injection surface that `unserialize()`-based storage would otherwise expose. See [docs/security/cache-path-hardening.md](docs/security/cache-path-hardening.md) for upgrade notes and codec customisation.

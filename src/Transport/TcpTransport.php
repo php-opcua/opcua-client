@@ -114,6 +114,9 @@ class TcpTransport implements ClientTransportInterface
         $header = $this->readExact(8);
 
         $size = unpack('V', $header, 4);
+        if ($size === false) {
+            throw new ProtocolException('Failed to parse message size header');
+        }
         $messageSize = $size[1];
 
         if ($messageSize < 8 || $messageSize > $this->receiveBufferSize) {
@@ -135,13 +138,18 @@ class TcpTransport implements ClientTransportInterface
      */
     private function readExact(int $length): string
     {
+        $socket = $this->socket;
+        if ($socket === null) {
+            throw new ConnectionException('Not connected');
+        }
+
         $data = '';
         $remaining = $length;
 
         while ($remaining > 0) {
-            $chunk = @fread($this->socket, $remaining);
+            $chunk = @fread($socket, $remaining);
             if ($chunk === false || $chunk === '') {
-                $meta = stream_get_meta_data($this->socket);
+                $meta = stream_get_meta_data($socket);
                 if ($meta['timed_out']) {
                     throw new ConnectionException('Read timeout');
                 }

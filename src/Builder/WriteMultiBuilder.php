@@ -54,6 +54,9 @@ class WriteMultiBuilder
      */
     public function value(mixed $value): self
     {
+        if ($this->currentNodeId === null) {
+            throw new \LogicException('Call node() before value()');
+        }
         $this->items[] = ['nodeId' => $this->currentNodeId, 'value' => $value, 'type' => null];
 
         return $this;
@@ -68,6 +71,9 @@ class WriteMultiBuilder
      */
     public function typed(mixed $value, BuiltinType $type): self
     {
+        if ($this->currentNodeId === null) {
+            throw new \LogicException('Call node() before typed()');
+        }
         $this->items[] = ['nodeId' => $this->currentNodeId, 'value' => $value, 'type' => $type];
 
         return $this;

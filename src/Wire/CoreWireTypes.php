@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\Wire;
 
+use PhpOpcua\Client\Module\TypeDiscovery\DiscoveredType;
 use PhpOpcua\Client\Types\BrowseDirection;
 use PhpOpcua\Client\Types\BrowseNode;
 use PhpOpcua\Client\Types\BuiltinType;
@@ -55,6 +56,7 @@ final class CoreWireTypes
         $registry->register(UserTokenPolicy::class);
         $registry->register(StructureDefinition::class);
         $registry->register(StructureField::class);
+        $registry->register(DiscoveredType::class);
     }
 
     /**

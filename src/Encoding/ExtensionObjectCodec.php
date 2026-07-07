@@ -13,7 +13,7 @@ interface ExtensionObjectCodec
      * Decodes an extension object body from a binary stream.
      *
      * @param BinaryDecoder $decoder
-     * @return object|array
+     * @return object|array<string, mixed>
      */
     public function decode(BinaryDecoder $decoder): object|array;
 

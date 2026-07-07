@@ -12,7 +12,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see StructureDefinition
  */
-readonly class StructureField implements WireSerializable
+final readonly class StructureField implements WireSerializable
 {
     /**
      * @param string $name The field name.

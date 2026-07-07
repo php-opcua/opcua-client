@@ -86,7 +86,7 @@ while ($running) {
 
     foreach ($publish->notifications as $notification) {
         // DataChangeReceived events have already been dispatched at this point,
-        // but you also get the raw notification array here.
+        // but you also get the typed notification objects here.
         handleNotification($notification);
     }
 
@@ -113,7 +113,9 @@ The `publish()` call returns a `PublishResult` carrying:
   the server still holds
 - `moreNotifications` — `true` if more data is queued server-side; call
   `publish()` again immediately
-- `notifications` — the array of decoded notification payloads
+- `notifications` — an array of `DataChangeNotification`
+  (`clientHandle`, `dataValue`) and `EventNotification` (`clientHandle`,
+  `eventFields`) value objects; distinguish them with `instanceof`
 
 The client also dispatches granular events (`DataChangeReceived`,
 `EventNotificationReceived`, alarm-typed events). Consumers who prefer

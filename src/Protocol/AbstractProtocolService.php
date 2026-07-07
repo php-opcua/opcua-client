@@ -6,6 +6,7 @@ namespace PhpOpcua\Client\Protocol;
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
+use PhpOpcua\Client\Exception\SecurityException;
 use PhpOpcua\Client\Types\NodeId;
 
 /**
@@ -49,7 +50,12 @@ abstract class AbstractProtocolService
      */
     protected function encodeRequestSecure(string $innerBodyBytes): string
     {
-        return $this->session->getSecureChannel()->buildMessage($innerBodyBytes);
+        $secureChannel = $this->session->getSecureChannel();
+        if ($secureChannel === null) {
+            throw new SecurityException('Secure channel not established');
+        }
+
+        return $secureChannel->buildMessage($innerBodyBytes);
     }
 
     /**

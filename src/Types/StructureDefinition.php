@@ -12,7 +12,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see StructureField
  */
-readonly class StructureDefinition implements WireSerializable
+final readonly class StructureDefinition implements WireSerializable
 {
     public const STRUCTURE = 0;
 
@@ -58,8 +58,13 @@ readonly class StructureDefinition implements WireSerializable
             throw new EncodingException('StructureDefinition wire payload: "defaultEncodingId" must be a decoded NodeId instance.');
         }
 
+        $rawFields = $data['fields'] ?? [];
+        if (! is_array($rawFields)) {
+            throw new EncodingException('StructureDefinition wire payload: "fields" must be an array.');
+        }
+
         $fields = [];
-        foreach ($data['fields'] ?? [] as $field) {
+        foreach ($rawFields as $field) {
             if (! $field instanceof StructureField) {
                 throw new EncodingException('StructureDefinition wire payload: "fields" must contain decoded StructureField instances.');
             }

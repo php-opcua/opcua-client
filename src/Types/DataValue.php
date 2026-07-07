@@ -10,7 +10,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Represents an OPC UA DataValue containing a value, status code, and timestamps.
  */
-readonly class DataValue implements WireSerializable
+final readonly class DataValue implements WireSerializable
 {
     /**
      * OPC UA built-in type of the value carried by the inner Variant.

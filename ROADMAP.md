@@ -4,9 +4,9 @@
 
 - [ ] A `composer generate-ide-helper` command (or `vendor/bin/opcua-ide-helper`) that auto-generates `_ide_helper_opcua.php` from the registered modules via reflection. The stub file contains PHPDoc `@method` annotations for the `Client` class, covering both built-in and custom module methods. The file is not loaded at runtime — it is only consumed by the IDE for autocomplete and static analysis. Custom modules are included when the generator is re-run after adding them to the builder. The generated file should be added to `.gitignore`.
 
-### PHPStan level 5
+### PHPStan static analysis
 
-- [ ] Static analysis with `phpstan/phpstan` as dev dependency, CI integration, and `composer analyse` script. Target level 5 first; raise in subsequent releases.
+- [X] Static analysis with `phpstan/phpstan` as a dev dependency, CI integration, and a `composer phpstan` script. Now passing at level 9 (`phpstan.neon`) with no baseline.
 
 ### Additional aggregate functions
 

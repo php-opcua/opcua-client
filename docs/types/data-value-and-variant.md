@@ -52,6 +52,23 @@ The `type` property and the matching `getType()` accessor (both added in v4.4.0)
   `$dv->value->value` if you need the raw `ExtensionObject`.
 - **Arrays** — array `Variant`s return PHP arrays directly.
 
+### Typed accessors (v4.5.0)
+
+When you need a guaranteed scalar instead of `mixed`, `Variant` offers
+two coercing accessors:
+
+<!-- @code-block language="php" label="typed accessors" -->
+```php
+$variant->asInt();     // int — accepts int, float, bool, numeric string
+$variant->asString();  // string — accepts string, int, float, Stringable
+```
+<!-- @endcode-block -->
+
+Both throw `EncodingException` when the underlying value cannot be
+coerced (e.g. `asInt()` on a non-numeric string or an object). They are
+what the file-transfer module uses internally to read method output
+arguments.
+
 ### Bad-status reads
 
 A `DataValue` with `BadNodeIdUnknown` or `BadAttributeIdInvalid` will

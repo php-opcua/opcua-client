@@ -126,7 +126,7 @@ trait ManagesTrustStoreRuntimeTrait
 
         throw new UntrustedCertificateException(
             $result->fingerprint,
-            $this->serverCertDer,
+            $this->serverCertDer ?? '',
             sprintf(
                 "Server certificate not trusted.\n  Fingerprint: %s\n  Subject: %s\n  Reason: %s",
                 $result->fingerprint,

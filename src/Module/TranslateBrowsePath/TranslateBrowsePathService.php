@@ -9,13 +9,12 @@ use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Protocol\AbstractProtocolService;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Types\NodeId;
-use PhpOpcua\Client\Types\QualifiedName;
 
 class TranslateBrowsePathService extends AbstractProtocolService
 {
     /**
      * @param int $requestId
-     * @param array<array{startingNodeId: NodeId, relativePath: array<array{referenceTypeId?: NodeId, isInverse?: bool, includeSubtypes?: bool, targetName: QualifiedName}>}> $browsePaths
+     * @param BrowsePath[] $browsePaths
      * @param NodeId $authToken
      * @return string
      */
@@ -62,7 +61,7 @@ class TranslateBrowsePathService extends AbstractProtocolService
     /**
      * @param BinaryEncoder $body
      * @param int $requestId
-     * @param array $browsePaths
+     * @param BrowsePath[] $browsePaths
      * @param NodeId $authToken
      */
     private function writeTranslateInnerBody(BinaryEncoder $body, int $requestId, array $browsePaths, NodeId $authToken): void
@@ -74,16 +73,15 @@ class TranslateBrowsePathService extends AbstractProtocolService
         $body->writeInt32(count($browsePaths));
 
         foreach ($browsePaths as $path) {
-            $body->writeNodeId($path['startingNodeId']);
+            $body->writeNodeId($path->startingNodeId);
 
-            $elements = $path['relativePath'];
-            $body->writeInt32(count($elements));
+            $body->writeInt32(count($path->relativePath));
 
-            foreach ($elements as $element) {
-                $body->writeNodeId($element['referenceTypeId'] ?? NodeId::numeric(0, ServiceTypeId::HIERARCHICAL_REFERENCES));
-                $body->writeBoolean($element['isInverse'] ?? false);
-                $body->writeBoolean($element['includeSubtypes'] ?? true);
-                $body->writeQualifiedName($element['targetName']);
+            foreach ($path->relativePath as $element) {
+                $body->writeNodeId($element->referenceTypeId ?? NodeId::numeric(0, ServiceTypeId::HIERARCHICAL_REFERENCES));
+                $body->writeBoolean($element->isInverse);
+                $body->writeBoolean($element->includeSubtypes);
+                $body->writeQualifiedName($element->targetName);
             }
         }
     }

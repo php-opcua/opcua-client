@@ -66,9 +66,13 @@ echo $status === 0 ? "OK\n" : sprintf("Failed: 0x%08X\n", $status);
 ## R5 — Resolve a human path then read
 
 ```php
-$nodeId = $client->resolveNodeId('/Objects/MyPLC/Sensors/Temperature');
-if ($nodeId === null) {
-    throw new RuntimeException('Node not found');
+use PhpOpcua\Client\Exception\ServiceException;
+
+// resolveNodeId() returns a non-nullable NodeId; it THROWS on failure (never returns null)
+try {
+    $nodeId = $client->resolveNodeId('/Objects/MyPLC/Sensors/Temperature');
+} catch (ServiceException $e) {
+    throw new RuntimeException('Node not found', 0, $e);
 }
 $dv = $client->read($nodeId);
 echo "{$dv->getValue()} @ {$dv->sourceTimestamp->format('H:i:s.v')}\n";
@@ -80,10 +84,10 @@ echo "{$dv->getValue()} @ {$dv->sourceTimestamp->format('H:i:s.v')}\n";
 use PhpOpcua\Client\Types\Variant;
 use PhpOpcua\Client\Types\BuiltinType;
 
-$result = $client->callMethod(
+$result = $client->call(
     objectId: 'ns=2;s=MyMachine',
     methodId: 'ns=2;s=MyMachine/StartProcess',
-    inputs: [
+    inputArguments: [
         new Variant(BuiltinType::String, 'recipe-001'),
         new Variant(BuiltinType::Int32, 42),
     ],
@@ -93,13 +97,15 @@ if ($result->statusCode !== 0) {
     throw new RuntimeException(sprintf('Method call failed: 0x%08X', $result->statusCode));
 }
 
-[$jobId, $estimatedSeconds] = array_map(fn ($v) => $v->getValue(), $result->outputArguments);
+[$jobId, $estimatedSeconds] = array_map(fn ($v) => $v->value, $result->outputArguments);
 echo "Job $jobId queued, ETA {$estimatedSeconds}s\n";
 ```
 
 ## R7 — Subscribe + publish loop
 
 ```php
+use PhpOpcua\Client\Module\Subscription\DataChangeNotification;
+
 $sub = $client->createSubscription(publishingInterval: 500.0);
 
 $items = $client->createMonitoredItems($sub->subscriptionId)
@@ -112,18 +118,22 @@ pcntl_signal(SIGINT, function () use (&$running) { $running = false; });
 
 while ($running) {
     $response = $client->publish();
+    // $notifications is array<int, DataChangeNotification|EventNotification> — discriminate with instanceof
     foreach ($response->notifications as $notif) {
-        $itemId = $notif['monitoredItemId'];
-        $value = $notif['dataValue']->getValue();
-        $ts = $notif['dataValue']->sourceTimestamp->format('H:i:s.v');
-        echo "[$ts] item $itemId = $value\n";
+        if (! $notif instanceof DataChangeNotification) {
+            continue;                                               // skip EventNotification etc.
+        }
+        $handle = $notif->clientHandle;
+        $value = $notif->dataValue->getValue();
+        $ts = $notif->dataValue->sourceTimestamp?->format('H:i:s.v') ?? 'n/a';
+        echo "[$ts] handle $handle = $value\n";
     }
     if (!$response->moreNotifications) {
         usleep(50_000);
     }
 }
 
-$client->deleteSubscriptions([$sub->subscriptionId]);
+$client->deleteSubscription($sub->subscriptionId);
 $client->disconnect();
 ```
 
@@ -139,7 +149,7 @@ $client = ClientBuilder::create()
     ->setClientCertificate('/var/lib/myapp/client.pem', '/var/lib/myapp/client.key')
     ->setUserCredentials('operator', getenv('PLC_PASSWORD'))
     ->setTimeout(15.0)
-    ->setMaxRetries(3)
+    ->setAutoRetry(3)
     ->connect('opc.tcp://192.168.1.100:4840');
 ```
 
@@ -153,7 +163,7 @@ $values = $client->historyReadRaw(
     'ns=2;s=Sensors/Temp',
     startTime: $start,
     endTime: $end,
-    maxValues: 10_000,
+    numValuesPerNode: 10_000,
 );
 
 foreach ($values as $dv) {
@@ -170,14 +180,15 @@ use PhpOpcua\Client\Module\Aggregate\AggregateFunction;
 
 $intervals = $client->historyAggregate(
     'ns=2;s=Sensors/Temp',
-    start: new DateTimeImmutable('-1 hour'),
-    end: new DateTimeImmutable(),
-    intervalMs: 60_000,                                         // 60 s buckets
+    startTime: new DateTimeImmutable('-1 hour'),
+    endTime: new DateTimeImmutable(),
+    processingIntervalMs: 60_000,                               // 60 s buckets
     function: AggregateFunction::Average,
 );
 
-foreach ($intervals as $bucket) {
-    echo "[{$bucket->startTime->format('H:i')}] {$bucket->dataValue->getValue()}\n";
+// historyAggregate() returns DataValue[] — one DataValue per interval
+foreach ($intervals as $dv) {
+    echo "[{$dv->sourceTimestamp?->format('H:i') ?? 'n/a'}] {$dv->getValue()}\n";
 }
 ```
 
@@ -186,6 +197,7 @@ foreach ($intervals as $bucket) {
 ```php
 use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\DataValue;
+use PhpOpcua\Client\Types\Variant;
 
 $values = [
     new DataValue(new Variant(BuiltinType::Double, 22.1), sourceTimestamp: new DateTimeImmutable('-30 minutes')),
@@ -193,9 +205,10 @@ $values = [
     new DataValue(new Variant(BuiltinType::Double, 22.5), sourceTimestamp: new DateTimeImmutable('-10 minutes')),
 ];
 
-$result = $client->historyInsertData('ns=2;s=Sensors/Temp', $values);
+// historyInsertData() returns int[] — one per-entry status code
+$results = $client->historyInsertData('ns=2;s=Sensors/Temp', $values);
 
-foreach ($result->operationResults as $i => $status) {
+foreach ($results as $i => $status) {
     if ($status !== 0) {
         echo sprintf("Insert %d failed: 0x%08X\n", $i, $status);
     }
@@ -210,9 +223,9 @@ $endpoints = $client->getEndpoints('opc.tcp://10.0.0.5:4840');
 foreach ($endpoints as $ep) {
     echo "{$ep->endpointUrl}\n";
     echo "  policy: {$ep->securityPolicyUri}\n";
-    echo "  mode:   {$ep->securityMode->name}\n";
+    echo "  mode:   {$ep->securityMode}\n";                       // int: 1=None 2=Sign 3=SignAndEncrypt
     foreach ($ep->userIdentityTokens as $tok) {
-        echo "  auth:   {$tok->tokenType->name} (id={$tok->policyId})\n";
+        echo "  auth:   {$tok->tokenType} (id={$tok->policyId})\n"; // tokenType int: 0=Anonymous 1=UserName 2=Certificate 3=IssuedToken
     }
     echo "\n";
 }
@@ -246,7 +259,11 @@ $provider->listener(function (NodeValueWritten $e) {
     error_log("OPC UA write: {$e->nodeId} = " . var_export($e->value, true));
 });
 $provider->listener(function (AlarmActivated $e) {
-    error_log("ALARM activated on item {$e->monitoredItemId}");
+    error_log(
+        "ALARM activated on handle {$e->clientHandle}"
+        . ($e->sourceName !== null ? " ({$e->sourceName})" : '')
+        . ($e->message !== null ? ": {$e->message}" : '')
+    );
 });
 
 $client = ClientBuilder::create()
@@ -260,20 +277,27 @@ $client = ClientBuilder::create()
 namespace App\OpcUa;
 
 use PhpOpcua\Client\Module\ServiceModule;
-use PhpOpcua\Client\Kernel\ClientKernelInterface;
-use PhpOpcua\Client\Protocol\SessionService;
 
 final class PingModule extends ServiceModule
 {
-    public function name(): string { return 'ping'; }
-    public function requires(): array { return []; }
-
-    public function register(ClientKernelInterface $kernel, SessionService $session): array
+    public function requires(): array
     {
-        return [
-            'ping' => fn (): bool => $kernel->ensureConnected()  // returns true if alive
-                ? true : false,
-        ];
+        return [];
+    }
+
+    public function register(): void
+    {
+        // inject the method onto the Client via the inherited $this->client
+        $this->client->registerMethod('ping', $this->ping(...));
+    }
+
+    private function ping(): bool
+    {
+        // ensureConnected() returns void and throws if the channel/session is down;
+        // reaching the return means the client is alive
+        $this->kernel->ensureConnected();
+
+        return true;
     }
 }
 
@@ -298,14 +322,14 @@ use PhpOpcua\Client\Types\Variant;
 class MyServiceTest extends TestCase {
     public function test_alerts_when_temperature_too_high(): void {
         $client = MockClient::create()
-            ->onRead('ns=2;s=Temp', new DataValue(new Variant(BuiltinType::Double, 95.0)));
+            ->onRead('ns=2;s=Temp', fn (): DataValue => new DataValue(new Variant(BuiltinType::Double, 95.0)));
 
         $service = new ThermalMonitor($client);
         $alerts = $service->scan();
 
         $this->assertCount(1, $alerts);
         $this->assertSame('Temperature critical', $alerts[0]->message);
-        $this->assertCount(1, $client->getReadCalls());
+        $this->assertCount(1, $client->getCallsFor('read'));
     }
 }
 ```

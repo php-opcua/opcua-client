@@ -127,13 +127,13 @@ low-friction:
   reflecting the registered modules. Useful for autocomplete and
   static analysis on `__call()` methods like the ones `AggregateModule`
   exposes. Self-contained, no protocol work.
-- **PHPStan level 5** — add `phpstan/phpstan` as a dev dependency,
-  wire `composer analyse`, and bring the codebase to level 5.
-  Iterative, scoped per directory; bisect-friendly PRs.
+- **PHPStan level 10** — the codebase already passes level 9
+  (`composer phpstan`, no baseline, no ignores). Level 10 treats
+  implicit `mixed` strictly; the open problem is typing the dynamic
+  method dispatch behind `Client::__call()`. Design-sensitive but
+  well-scoped.
 - **Documentation** — every page in `docs/` is open to improvement.
-  Spotted a stale claim? Open a PR. The
-  `allucinations.md` at the repo root records past doc-vs-source
-  drift; the audit pipeline is documented there.
+  Spotted a stale claim? Open a PR.
 
 ## Conventions you'll meet
 
@@ -145,6 +145,8 @@ When you open the codebase:
   carry the intent; only public-facing PHPDoc blocks describe
   contracts.
 - **Pest PHP** for tests, with target coverage ≥ 99.5 %.
+- **PHPStan level 9** — `composer phpstan` must pass with no baseline
+  entries and no `@phpstan-ignore` comments.
 - **Public API contracts** live on `OpcUaClientInterface` and on
   module method signatures — changing them is a breaking change.
 - **Custom modules** register methods on the `Client` (not on the

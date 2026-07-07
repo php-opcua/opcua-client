@@ -10,7 +10,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Represents an OPC UA Variant, a union type that can hold any built-in data type value.
  */
-readonly class Variant implements WireSerializable
+final readonly class Variant implements WireSerializable
 {
     /**
      * @param BuiltinType $type
@@ -62,6 +62,43 @@ readonly class Variant implements WireSerializable
     public function isMultiDimensional(): bool
     {
         return $this->dimensions !== null && count($this->dimensions) > 1;
+    }
+
+    /**
+     * The variant value coerced to int. Fails when the value is not numeric.
+     *
+     * @throws EncodingException
+     */
+    public function asInt(): int
+    {
+        if (is_int($this->value)) {
+            return $this->value;
+        }
+        if (is_float($this->value) || is_bool($this->value) || (is_string($this->value) && is_numeric($this->value))) {
+            return (int) $this->value;
+        }
+
+        throw new EncodingException("Variant value of type {$this->type->name} cannot be read as int");
+    }
+
+    /**
+     * The variant value coerced to string. Fails when the value is not stringable.
+     *
+     * @throws EncodingException
+     */
+    public function asString(): string
+    {
+        if (is_string($this->value)) {
+            return $this->value;
+        }
+        if (is_int($this->value) || is_float($this->value)) {
+            return (string) $this->value;
+        }
+        if ($this->value instanceof \Stringable) {
+            return (string) $this->value;
+        }
+
+        throw new EncodingException("Variant value of type {$this->type->name} cannot be read as string");
     }
 
     /**

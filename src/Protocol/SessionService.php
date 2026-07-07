@@ -7,6 +7,7 @@ namespace PhpOpcua\Client\Protocol;
 use OpenSSLAsymmetricKey;
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
+use PhpOpcua\Client\Exception\SecurityException;
 use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Security\MessageSecurity;
 use PhpOpcua\Client\Security\SecureChannel;
@@ -23,6 +24,8 @@ class SessionService
     private ?string $lastEccServerEphemeralKey = null;
 
     private ?string $currentEccServerEphemeralKey = null;
+
+    private ?string $lastClientNonce = null;
 
     private string $certificatePolicyId = 'certificate';
 
@@ -115,6 +118,11 @@ class SessionService
         return $this->secureChannel;
     }
 
+    private function requireSecureChannel(): SecureChannel
+    {
+        return $this->secureChannel ?? throw new SecurityException('Secure channel not established');
+    }
+
     /**
      * @param int $requestId
      * @param string $endpointUrl
@@ -170,9 +178,13 @@ class SessionService
         }
 
         $decoder->readString();
-        $decoder->readByteString();
+        $serverSignature = $decoder->readByteString();
 
         $decoder->readUInt32();
+
+        if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
+            $this->verifyServerSignature($serverCertificate, $serverSignature);
+        }
 
         $eccServerEphemeralKey = $this->readEccServerEphemeralKey($decoder);
 
@@ -388,11 +400,52 @@ class SessionService
                     $extBodyLen = $dec->readInt32();
                     $publicKey = $dec->readByteString();
                     $signature = $dec->readByteString();
+                    $this->verifyEccEphemeralKeySignature($publicKey, $signature);
                     $this->lastEccServerEphemeralKey = $publicKey;
                 }
             } else {
                 $this->skipVariantValue($dec, $variantEncoding);
             }
+        }
+    }
+
+    /**
+     * @param ?string $publicKey
+     * @param ?string $signature
+     *
+     * @throws ServiceException If the signature does not verify.
+     */
+    private function verifyEccEphemeralKeySignature(?string $publicKey, ?string $signature): void
+    {
+        if ($this->secureChannel === null || ! $this->secureChannel->isSecurityActive()) {
+            return;
+        }
+
+        if ($publicKey === null || $publicKey === '') {
+            return;
+        }
+
+        $serverCertDer = $this->secureChannel->getServerCertDer();
+        if ($serverCertDer === null) {
+            throw new ServiceException('Cannot verify the ECDH ephemeral key signature: server certificate unavailable');
+        }
+
+        if ($signature === null || $signature === '') {
+            throw new ServiceException('ECDH ephemeral key is missing the server signature');
+        }
+
+        $policy = $this->secureChannel->getPolicy();
+        $messageSecurity = $this->secureChannel->getMessageSecurity();
+
+        if ($policy->isEcc()) {
+            $coordinateSize = (int) ($policy->getEphemeralKeyLength() / 2);
+            $signature = $messageSecurity->ecdsaRawToDer($signature, $coordinateSize);
+        }
+
+        $serverLeafCert = $this->extractLeafCertificate($serverCertDer);
+        $ok = $messageSecurity->asymmetricVerify($publicKey, $signature, $serverLeafCert, $policy);
+        if (! $ok) {
+            throw new ServiceException('ECDH ephemeral key server signature verification failed');
         }
     }
 
@@ -590,9 +643,11 @@ class SessionService
             $innerBody->writeByte(0);
         }
 
-        $applicationUri = $this->secureChannel->getCertificateManager()->getApplicationUri(
-            $this->secureChannel->getClientCertDer(),
-        ) ?? 'urn:opcua-client:client';
+        $secureChannel = $this->requireSecureChannel();
+        $clientCertDer = $secureChannel->getClientCertDer();
+        $applicationUri = $clientCertDer !== null
+            ? ($secureChannel->getCertificateManager()->getApplicationUri($clientCertDer) ?? 'urn:opcua-client:client')
+            : 'urn:opcua-client:client';
         $innerBody->writeString($applicationUri);
         $innerBody->writeString(null);
         $innerBody->writeLocalizedText(new LocalizedText(null, 'opcua-client'));
@@ -606,15 +661,15 @@ class SessionService
         $innerBody->writeString('opcua-client-session');
 
         $nonce = random_bytes(32);
+        $this->lastClientNonce = $nonce;
         $innerBody->writeByteString($nonce);
 
-        $clientCertDer = $this->secureChannel->getClientCertDer();
         $innerBody->writeByteString($clientCertDer);
 
         $innerBody->writeDouble(120000.0);
         $innerBody->writeUInt32(0);
 
-        return $this->secureChannel->buildMessage($innerBody->getBuffer());
+        return $secureChannel->buildMessage($innerBody->getBuffer());
     }
 
     /**
@@ -677,7 +732,43 @@ class SessionService
             $innerBody->writeByteString(null);
         }
 
-        return $this->secureChannel->buildMessage($innerBody->getBuffer());
+        return $this->requireSecureChannel()->buildMessage($innerBody->getBuffer());
+    }
+
+    /**
+     * @param ?string $serverCertDer
+     * @param ?string $serverSignature
+     *
+     * @throws ServiceException If the signature is missing or does not verify.
+     */
+    private function verifyServerSignature(?string $serverCertDer, ?string $serverSignature): void
+    {
+        $secureChannel = $this->requireSecureChannel();
+
+        if ($serverCertDer === null || $serverCertDer === '' || $serverSignature === null || $serverSignature === '') {
+            throw new ServiceException('CreateSessionResponse is missing the server signature required on a secure channel');
+        }
+
+        $clientCertDer = $secureChannel->getClientCertDer();
+        $clientNonce = $this->lastClientNonce;
+        if ($clientCertDer === null || $clientNonce === null) {
+            throw new ServiceException('Cannot verify the CreateSessionResponse server signature: client certificate or nonce unavailable');
+        }
+
+        $policy = $secureChannel->getPolicy();
+        $messageSecurity = $secureChannel->getMessageSecurity();
+        $dataToVerify = $clientCertDer . $clientNonce;
+
+        if ($policy->isEcc()) {
+            $coordinateSize = (int) ($policy->getEphemeralKeyLength() / 2);
+            $serverSignature = $messageSecurity->ecdsaRawToDer($serverSignature, $coordinateSize);
+        }
+
+        $serverLeafCert = $this->extractLeafCertificate($serverCertDer);
+        $ok = $messageSecurity->asymmetricVerify($dataToVerify, $serverSignature, $serverLeafCert, $policy);
+        if (! $ok) {
+            throw new ServiceException('CreateSessionResponse server signature verification failed');
+        }
     }
 
     /**
@@ -686,10 +777,11 @@ class SessionService
      */
     private function writeClientSignature(BinaryEncoder $encoder, ?string $createSessionNonce = null): void
     {
-        $serverCertDer = $this->secureChannel->getServerCertDer();
-        $serverNonce = $createSessionNonce ?? $this->secureChannel->getServerNonce();
-        $clientPrivateKey = $this->secureChannel->getClientPrivateKey();
-        $policy = $this->secureChannel->getPolicy();
+        $secureChannel = $this->requireSecureChannel();
+        $serverCertDer = $secureChannel->getServerCertDer();
+        $serverNonce = $createSessionNonce ?? $secureChannel->getServerNonce();
+        $clientPrivateKey = $secureChannel->getClientPrivateKey();
+        $policy = $secureChannel->getPolicy();
 
         if ($serverCertDer === null || $serverNonce === null || $clientPrivateKey === null) {
             $encoder->writeByteString(null);
@@ -700,7 +792,7 @@ class SessionService
 
         $serverLeafCert = $this->extractLeafCertificate($serverCertDer);
         $dataToSign = $serverLeafCert . $serverNonce;
-        $signature = $this->secureChannel->getMessageSecurity()->asymmetricSign(
+        $signature = $secureChannel->getMessageSecurity()->asymmetricSign(
             $dataToSign,
             $clientPrivateKey,
             $policy,
@@ -708,7 +800,7 @@ class SessionService
 
         if ($policy->isEcc()) {
             $coordinateSize = $policy->getEphemeralKeyLength() / 2;
-            $signature = $this->secureChannel->getMessageSecurity()->ecdsaDerToRaw($signature, $coordinateSize);
+            $signature = $secureChannel->getMessageSecurity()->ecdsaDerToRaw($signature, $coordinateSize);
         }
 
         $encoder->writeString($policy->getAsymmetricSignatureUri());
@@ -817,11 +909,18 @@ class SessionService
      */
     private function buildEccEncryptedSecret(string $password, string $receiverNonce, SecurityPolicy $policy): string
     {
-        $ms = $this->secureChannel->getMessageSecurity();
-        $clientPrivateKey = $this->secureChannel->getClientPrivateKey();
-        $clientCertDer = $this->secureChannel->getClientCertDer();
+        $secureChannel = $this->requireSecureChannel();
+        $ms = $secureChannel->getMessageSecurity();
+        $clientPrivateKey = $secureChannel->getClientPrivateKey();
+        if ($clientPrivateKey === null) {
+            throw new SecurityException('Client private key required to sign the ECC encrypted secret');
+        }
+        $clientCertDer = $secureChannel->getClientCertDer();
         $curveName = $policy->getEcdhCurveName();
         $algorithm = $policy->getKeyDerivationAlgorithm();
+        if ($algorithm === '') {
+            throw new SecurityException("Security policy {$policy->name} has no key derivation algorithm");
+        }
         $coordinateSize = $policy->getEphemeralKeyLength() / 2;
         $signatureSize = $coordinateSize * 2;
 
@@ -859,6 +958,9 @@ class SessionService
 
         $cipher = $policy->getSymmetricEncryptionAlgorithm();
         $encryptedData = openssl_encrypt($dataToEncrypt, $cipher, $encKey, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $iv);
+        if ($encryptedData === false) {
+            throw new SecurityException('Failed to encrypt ECC user token secret');
+        }
 
         $headerLen = strlen($senderNonce) + strlen($eccReceiverNonce) + 8;
 
@@ -954,6 +1056,7 @@ class SessionService
         $body->writeString('opcua-client-session');
 
         $nonce = random_bytes(32);
+        $this->lastClientNonce = $nonce;
         $body->writeByteString($nonce);
 
         $body->writeByteString(null);

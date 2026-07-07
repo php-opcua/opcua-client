@@ -12,7 +12,6 @@ use PhpOpcua\Client\Types\ExtensionObject;
 use PhpOpcua\Client\Types\LocalizedText;
 use PhpOpcua\Client\Types\NodeClass;
 use PhpOpcua\Client\Types\NodeId;
-use PhpOpcua\Client\Types\QualifiedName;
 
 /**
  * OPC UA NodeManagement Service Set: AddNodes, DeleteNodes, AddReferences, DeleteReferences.
@@ -40,33 +39,7 @@ class NodeManagementService extends AbstractProtocolService
 
     /**
      * @param int $requestId
-     * @param array<array{
-     *     parentNodeId: NodeId,
-     *     referenceTypeId: NodeId,
-     *     requestedNewNodeId: NodeId,
-     *     browseName: QualifiedName,
-     *     nodeClass: NodeClass,
-     *     typeDefinition: NodeId,
-     *     displayName?: ?string,
-     *     description?: ?string,
-     *     writeMask?: int,
-     *     userWriteMask?: int,
-     *     value?: mixed,
-     *     dataType?: ?NodeId,
-     *     valueRank?: int,
-     *     arrayDimensions?: int[],
-     *     accessLevel?: int,
-     *     userAccessLevel?: int,
-     *     minimumSamplingInterval?: float,
-     *     historizing?: bool,
-     *     executable?: bool,
-     *     userExecutable?: bool,
-     *     isAbstract?: bool,
-     *     symmetric?: bool,
-     *     inverseName?: ?string,
-     *     containsNoLoops?: bool,
-     *     eventNotifier?: int,
-     * }> $nodesToAdd
+     * @param AddNodeItem[] $nodesToAdd
      * @param NodeId $authToken
      * @return string
      */
@@ -78,15 +51,15 @@ class NodeManagementService extends AbstractProtocolService
 
         $body->writeInt32(count($nodesToAdd));
         foreach ($nodesToAdd as $item) {
-            $body->writeExpandedNodeId($item['parentNodeId']);
-            $body->writeNodeId($item['referenceTypeId']);
-            $body->writeExpandedNodeId($item['requestedNewNodeId']);
-            $body->writeQualifiedName($item['browseName']);
-            $body->writeUInt32($item['nodeClass']->value);
+            $body->writeExpandedNodeId($item->parentNodeId);
+            $body->writeNodeId($item->referenceTypeId);
+            $body->writeExpandedNodeId($item->requestedNewNodeId);
+            $body->writeQualifiedName($item->browseName);
+            $body->writeUInt32($item->nodeClass->value);
 
             $this->writeNodeAttributes($body, $item);
 
-            $body->writeExpandedNodeId($item['typeDefinition']);
+            $body->writeExpandedNodeId($item->typeDefinition);
         }
 
         return $this->encodeRequestAuto($requestId, $body->getBuffer());
@@ -237,12 +210,12 @@ class NodeManagementService extends AbstractProtocolService
      * Encode the node attributes as an ExtensionObject based on the node class.
      *
      * @param BinaryEncoder $body
-     * @param array $item
+     * @param AddNodeItem $item
      */
-    private function writeNodeAttributes(BinaryEncoder $body, array $item): void
+    private function writeNodeAttributes(BinaryEncoder $body, AddNodeItem $item): void
     {
         $attrBody = new BinaryEncoder();
-        $nodeClass = $item['nodeClass'];
+        $nodeClass = $item->nodeClass;
 
         match ($nodeClass) {
             NodeClass::Object => $this->writeObjectAttributes($attrBody, $item),
@@ -278,136 +251,134 @@ class NodeManagementService extends AbstractProtocolService
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param AddNodeItem $item
      */
-    private function writeCommonAttributes(BinaryEncoder $e, array $item, int $specifiedAttributes): void
+    private function writeCommonAttributes(BinaryEncoder $e, AddNodeItem $item, int $specifiedAttributes): void
     {
         $e->writeUInt32($specifiedAttributes);
-        $e->writeLocalizedText(new LocalizedText(null, $item['displayName'] ?? $item['browseName']->name));
-        $e->writeLocalizedText(new LocalizedText(null, $item['description'] ?? null));
-        $e->writeUInt32($item['writeMask'] ?? 0);
-        $e->writeUInt32($item['userWriteMask'] ?? 0);
+        $e->writeLocalizedText(new LocalizedText(null, $item->displayName ?? $item->browseName->name));
+        $e->writeLocalizedText(new LocalizedText(null, $item->description));
+        $e->writeUInt32($item->writeMask);
+        $e->writeUInt32($item->userWriteMask);
     }
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param AddNodeItem $item
      */
-    private function writeObjectAttributes(BinaryEncoder $e, array $item): void
+    private function writeObjectAttributes(BinaryEncoder $e, AddNodeItem $item): void
     {
         $this->writeCommonAttributes($e, $item, 0x1F);
-        $e->writeByte($item['eventNotifier'] ?? 0);
+        $e->writeByte($item->eventNotifier);
     }
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param AddNodeItem $item
      */
-    private function writeVariableAttributes(BinaryEncoder $e, array $item): void
+    private function writeVariableAttributes(BinaryEncoder $e, AddNodeItem $item): void
     {
         $this->writeCommonAttributes($e, $item, 0x0FFF);
 
-        if (isset($item['value'])) {
-            $e->writeVariant($item['value']);
+        if ($item->value !== null) {
+            $e->writeVariant($item->value);
         } else {
             $e->writeByte(0);
         }
 
-        $e->writeNodeId($item['dataType'] ?? NodeId::numeric(0, 24));
+        $e->writeNodeId($item->dataType ?? NodeId::numeric(0, 24));
 
-        $e->writeInt32($item['valueRank'] ?? -1);
+        $e->writeInt32($item->valueRank);
 
-        $dims = $item['arrayDimensions'] ?? [];
-        $e->writeInt32(count($dims));
-        foreach ($dims as $dim) {
+        $e->writeInt32(count($item->arrayDimensions));
+        foreach ($item->arrayDimensions as $dim) {
             $e->writeUInt32($dim);
         }
 
-        $e->writeByte($item['accessLevel'] ?? 1);
-        $e->writeByte($item['userAccessLevel'] ?? 1);
+        $e->writeByte($item->accessLevel);
+        $e->writeByte($item->userAccessLevel);
 
-        $e->writeDouble($item['minimumSamplingInterval'] ?? 0.0);
+        $e->writeDouble($item->minimumSamplingInterval);
 
-        $e->writeBoolean($item['historizing'] ?? false);
+        $e->writeBoolean($item->historizing);
     }
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param AddNodeItem $item
      */
-    private function writeMethodAttributes(BinaryEncoder $e, array $item): void
+    private function writeMethodAttributes(BinaryEncoder $e, AddNodeItem $item): void
     {
         $this->writeCommonAttributes($e, $item, 0x3F);
-        $e->writeBoolean($item['executable'] ?? true);
-        $e->writeBoolean($item['userExecutable'] ?? true);
+        $e->writeBoolean($item->executable);
+        $e->writeBoolean($item->userExecutable);
     }
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param AddNodeItem $item
      */
-    private function writeObjectTypeAttributes(BinaryEncoder $e, array $item): void
+    private function writeObjectTypeAttributes(BinaryEncoder $e, AddNodeItem $item): void
     {
         $this->writeCommonAttributes($e, $item, 0x1F);
-        $e->writeBoolean($item['isAbstract'] ?? false);
+        $e->writeBoolean($item->isAbstract);
     }
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param AddNodeItem $item
      */
-    private function writeVariableTypeAttributes(BinaryEncoder $e, array $item): void
+    private function writeVariableTypeAttributes(BinaryEncoder $e, AddNodeItem $item): void
     {
         $this->writeCommonAttributes($e, $item, 0x07FF);
 
-        if (isset($item['value'])) {
-            $e->writeVariant($item['value']);
+        if ($item->value !== null) {
+            $e->writeVariant($item->value);
         } else {
             $e->writeByte(0);
         }
 
-        $e->writeNodeId($item['dataType'] ?? NodeId::numeric(0, 24));
-        $e->writeInt32($item['valueRank'] ?? -1);
+        $e->writeNodeId($item->dataType ?? NodeId::numeric(0, 24));
+        $e->writeInt32($item->valueRank);
 
-        $dims = $item['arrayDimensions'] ?? [];
-        $e->writeInt32(count($dims));
-        foreach ($dims as $dim) {
+        $e->writeInt32(count($item->arrayDimensions));
+        foreach ($item->arrayDimensions as $dim) {
             $e->writeUInt32($dim);
         }
 
-        $e->writeBoolean($item['isAbstract'] ?? false);
+        $e->writeBoolean($item->isAbstract);
     }
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param AddNodeItem $item
      */
-    private function writeReferenceTypeAttributes(BinaryEncoder $e, array $item): void
+    private function writeReferenceTypeAttributes(BinaryEncoder $e, AddNodeItem $item): void
     {
         $this->writeCommonAttributes($e, $item, 0x7F);
-        $e->writeBoolean($item['isAbstract'] ?? false);
-        $e->writeBoolean($item['symmetric'] ?? false);
-        $e->writeLocalizedText(new LocalizedText(null, $item['inverseName'] ?? null));
+        $e->writeBoolean($item->isAbstract);
+        $e->writeBoolean($item->symmetric);
+        $e->writeLocalizedText(new LocalizedText(null, $item->inverseName));
     }
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param AddNodeItem $item
      */
-    private function writeDataTypeAttributes(BinaryEncoder $e, array $item): void
+    private function writeDataTypeAttributes(BinaryEncoder $e, AddNodeItem $item): void
     {
         $this->writeCommonAttributes($e, $item, 0x1F);
-        $e->writeBoolean($item['isAbstract'] ?? false);
+        $e->writeBoolean($item->isAbstract);
     }
 
     /**
      * @param BinaryEncoder $e
-     * @param array $item
+     * @param AddNodeItem $item
      */
-    private function writeViewAttributes(BinaryEncoder $e, array $item): void
+    private function writeViewAttributes(BinaryEncoder $e, AddNodeItem $item): void
     {
         $this->writeCommonAttributes($e, $item, 0x3F);
-        $e->writeBoolean($item['containsNoLoops'] ?? false);
-        $e->writeByte($item['eventNotifier'] ?? 0);
+        $e->writeBoolean($item->containsNoLoops);
+        $e->writeByte($item->eventNotifier);
     }
 }

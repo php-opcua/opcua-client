@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use PhpOpcua\Client\Exception\EncodingException;
 use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\DataValue;
+use PhpOpcua\Client\Types\ExtensionObject;
 use PhpOpcua\Client\Types\LocalizedText;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\QualifiedName;
@@ -184,7 +185,12 @@ class BinaryEncoder
         $this->writeUInt32((int) hexdec($parts[0]));
         $this->writeUInt16((int) hexdec($parts[1]));
         $this->writeUInt16((int) hexdec($parts[2]));
-        $this->writeRawBytes(hex2bin($parts[3] . $parts[4]));
+
+        $tail = hex2bin($parts[3] . $parts[4]);
+        if ($tail === false) {
+            throw new EncodingException("Invalid GUID format: {$guid}");
+        }
+        $this->writeRawBytes($tail);
     }
 
     /**
@@ -223,7 +229,11 @@ class BinaryEncoder
             case 0x05:
                 $this->writeByte(0x05);
                 $this->writeUInt16($nodeId->getNamespaceIndex());
-                $this->writeByteString(hex2bin((string) $identifier));
+                $opaque = hex2bin((string) $identifier);
+                if ($opaque === false) {
+                    throw new EncodingException("Invalid opaque NodeId identifier: {$identifier}");
+                }
+                $this->writeByteString($opaque);
                 break;
         }
     }
@@ -298,38 +308,87 @@ class BinaryEncoder
     public function writeVariantValue(BuiltinType $type, mixed $value): void
     {
         match ($type) {
-            BuiltinType::Boolean => $this->writeBoolean((bool) $value),
-            BuiltinType::SByte => $this->writeSByte((int) $value),
-            BuiltinType::Byte => $this->writeByte((int) $value),
-            BuiltinType::Int16 => $this->writeInt16((int) $value),
-            BuiltinType::UInt16 => $this->writeUInt16((int) $value),
-            BuiltinType::Int32 => $this->writeInt32((int) $value),
-            BuiltinType::UInt32 => $this->writeUInt32((int) $value),
-            BuiltinType::Int64 => $this->writeInt64((int) $value),
-            BuiltinType::UInt64 => $this->writeUInt64((int) $value),
-            BuiltinType::Float => $this->writeFloat((float) $value),
-            BuiltinType::Double => $this->writeDouble((float) $value),
-            BuiltinType::String => $this->writeString($value),
-            BuiltinType::DateTime => $this->writeDateTime($value),
-            BuiltinType::Guid => $this->writeGuid((string) $value),
-            BuiltinType::ByteString => $this->writeByteString($value),
-            BuiltinType::XmlElement => $this->writeString($value),
-            BuiltinType::NodeId => $this->writeNodeId($value),
-            BuiltinType::ExpandedNodeId => $this->writeExpandedNodeId($value),
-            BuiltinType::StatusCode => $this->writeUInt32((int) $value),
-            BuiltinType::QualifiedName => $this->writeQualifiedName($value),
-            BuiltinType::LocalizedText => $this->writeLocalizedText($value),
-            BuiltinType::ExtensionObject => $this->writeExtensionObject($value),
-            BuiltinType::DataValue => $this->writeDataValue($value),
-            BuiltinType::Variant => $this->writeVariant($value),
+            BuiltinType::Boolean => $this->writeBoolean((bool) self::toScalar($type, $value)),
+            BuiltinType::SByte => $this->writeSByte((int) self::toScalar($type, $value)),
+            BuiltinType::Byte => $this->writeByte((int) self::toScalar($type, $value)),
+            BuiltinType::Int16 => $this->writeInt16((int) self::toScalar($type, $value)),
+            BuiltinType::UInt16 => $this->writeUInt16((int) self::toScalar($type, $value)),
+            BuiltinType::Int32 => $this->writeInt32((int) self::toScalar($type, $value)),
+            BuiltinType::UInt32 => $this->writeUInt32((int) self::toScalar($type, $value)),
+            BuiltinType::Int64 => $this->writeInt64((int) self::toScalar($type, $value)),
+            BuiltinType::UInt64 => $this->writeUInt64((int) self::toScalar($type, $value)),
+            BuiltinType::Float => $this->writeFloat((float) self::toScalar($type, $value)),
+            BuiltinType::Double => $this->writeDouble((float) self::toScalar($type, $value)),
+            BuiltinType::String => $this->writeString(self::toNullableString($type, $value)),
+            BuiltinType::DateTime => $this->writeDateTime(self::toInstanceOrNull($type, $value, DateTimeImmutable::class)),
+            BuiltinType::Guid => $this->writeGuid((string) self::toScalar($type, $value)),
+            BuiltinType::ByteString => $this->writeByteString(self::toNullableString($type, $value)),
+            BuiltinType::XmlElement => $this->writeString(self::toNullableString($type, $value)),
+            BuiltinType::NodeId => $this->writeNodeId(self::toInstance($type, $value, NodeId::class)),
+            BuiltinType::ExpandedNodeId => $this->writeExpandedNodeId(self::toInstance($type, $value, NodeId::class)),
+            BuiltinType::StatusCode => $this->writeUInt32((int) self::toScalar($type, $value)),
+            BuiltinType::QualifiedName => $this->writeQualifiedName(self::toInstance($type, $value, QualifiedName::class)),
+            BuiltinType::LocalizedText => $this->writeLocalizedText(self::toInstance($type, $value, LocalizedText::class)),
+            BuiltinType::ExtensionObject => $this->writeExtensionObject(self::toInstance($type, $value, ExtensionObject::class)),
+            BuiltinType::DataValue => $this->writeDataValue(self::toInstance($type, $value, DataValue::class)),
+            BuiltinType::Variant => $this->writeVariant(self::toInstance($type, $value, Variant::class)),
             BuiltinType::DiagnosticInfo => throw new EncodingException('DiagnosticInfo encoding not supported'),
         };
     }
 
     /**
-     * @param \PhpOpcua\Client\Types\ExtensionObject $value
+     * Validate that a variant value is a scalar before casting it to the wire type.
      */
-    public function writeExtensionObject(\PhpOpcua\Client\Types\ExtensionObject $value): void
+    private static function toScalar(BuiltinType $type, mixed $value): bool|int|float|string
+    {
+        if (! is_scalar($value)) {
+            throw new EncodingException("Variant value for {$type->name} must be a scalar, " . get_debug_type($value) . ' given');
+        }
+
+        return $value;
+    }
+
+    private static function toNullableString(BuiltinType $type, mixed $value): ?string
+    {
+        if ($value !== null && ! is_string($value)) {
+            throw new EncodingException("Variant value for {$type->name} must be a string or null, " . get_debug_type($value) . ' given');
+        }
+
+        return $value;
+    }
+
+    /**
+     * @template T of object
+     * @param class-string<T> $class
+     * @return T
+     */
+    private static function toInstance(BuiltinType $type, mixed $value, string $class): object
+    {
+        if (! $value instanceof $class) {
+            throw new EncodingException("Variant value for {$type->name} must be a {$class} instance, " . get_debug_type($value) . ' given');
+        }
+
+        return $value;
+    }
+
+    /**
+     * @template T of object
+     * @param class-string<T> $class
+     * @return ?T
+     */
+    private static function toInstanceOrNull(BuiltinType $type, mixed $value, string $class): ?object
+    {
+        if ($value !== null && ! $value instanceof $class) {
+            throw new EncodingException("Variant value for {$type->name} must be a {$class} instance or null, " . get_debug_type($value) . ' given');
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param ExtensionObject $value
+     */
+    public function writeExtensionObject(ExtensionObject $value): void
     {
         $this->writeNodeId($value->typeId);
         $this->writeByte($value->encoding);
@@ -348,8 +407,9 @@ class BinaryEncoder
         $mask = $dv->getEncodingMask();
         $this->writeByte($mask);
 
-        if ($mask & 0x01) {
-            $this->writeVariant($dv->getVariant());
+        $variant = $dv->getVariant();
+        if (($mask & 0x01) !== 0 && $variant !== null) {
+            $this->writeVariant($variant);
         }
         if ($mask & 0x02) {
             $this->writeUInt32($dv->getStatusCode());

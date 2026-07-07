@@ -130,6 +130,12 @@ They do not appear on `OpcUaClientInterface`, so static analysers
 won't see them — your application will. Use `$client->hasMethod()` /
 `$client->hasModule()` to introspect at runtime.
 
+Since v4.5.0 the registration contract has a name:
+`ModuleHostInterface` declares `registerMethod()`, `Client` implements
+it, and inside a module `$this->client` is typed as
+`ModuleHostInterface&OpcUaClientInterface` — `registerMethod()` plus
+the whole public client API for cross-module calls.
+
 ## The kernel
 
 `ClientKernelInterface` is the surface a module sees. It exposes the

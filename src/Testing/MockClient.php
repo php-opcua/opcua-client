@@ -71,13 +71,10 @@ class MockClient implements OpcUaClientInterface
     /** @var ?callable */
     private $endpointsHandler = null;
 
-    /** @var array<array{method: string, args: array}> */
+    /** @var array<array{method: string, args: array<int, mixed>}> */
     private array $calls = [];
 
     private ConnectionState $state = ConnectionState::Disconnected;
-
-    /** @phpstan-ignore property.onlyWritten */
-    private ?string $endpointUrl = null;
 
     private float $timeout = 5.0;
 
@@ -193,7 +190,7 @@ class MockClient implements OpcUaClientInterface
     }
 
     /**
-     * @return array<array{method: string, args: array}>
+     * @return array<array{method: string, args: array<int, mixed>}>
      */
     public function getCalls(): array
     {
@@ -202,7 +199,7 @@ class MockClient implements OpcUaClientInterface
 
     /**
      * @param string $method
-     * @return array<array{method: string, args: array}>
+     * @return array<array{method: string, args: array<int, mixed>}>
      */
     public function getCallsFor(string $method): array
     {
@@ -233,7 +230,6 @@ class MockClient implements OpcUaClientInterface
     public function connect(string $endpointUrl): void
     {
         $this->record('connect', [$endpointUrl]);
-        $this->endpointUrl = $endpointUrl;
         $this->state = ConnectionState::Connected;
     }
 
@@ -253,7 +249,6 @@ class MockClient implements OpcUaClientInterface
     {
         $this->record('disconnect', []);
         $this->state = ConnectionState::Disconnected;
-        $this->endpointUrl = null;
     }
 
     /**
@@ -1214,6 +1209,9 @@ class MockClient implements OpcUaClientInterface
         return $this;
     }
 
+    /**
+     * @param array<int, mixed> $args
+     */
     private function record(string $method, array $args): void
     {
         $this->calls[] = ['method' => $method, 'args' => $args];

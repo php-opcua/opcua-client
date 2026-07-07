@@ -11,13 +11,13 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see SubscriptionModule::publish()
  */
-readonly class PublishResult implements WireSerializable
+final readonly class PublishResult implements WireSerializable
 {
     /**
      * @param int $subscriptionId
      * @param int $sequenceNumber
      * @param bool $moreNotifications
-     * @param array $notifications
+     * @param array<int, DataChangeNotification|EventNotification> $notifications
      * @param int[] $availableSequenceNumbers
      */
     public function __construct(
@@ -30,7 +30,7 @@ readonly class PublishResult implements WireSerializable
     }
 
     /**
-     * @return array{subId: int, seq: int, more: bool, notif: array, avail: int[]}
+     * @return array{subId: int, seq: int, more: bool, notif: array<int, DataChangeNotification|EventNotification>, avail: int[]}
      */
     public function jsonSerialize(): array
     {
@@ -44,16 +44,25 @@ readonly class PublishResult implements WireSerializable
     }
 
     /**
-     * @param array{subId?: int, seq?: int, more?: bool, notif?: array, avail?: int[]} $data
+     * @param array{subId?: int, seq?: int, more?: bool, notif?: array<int, mixed>, avail?: int[]} $data
      * @return static
+     * @throws \PhpOpcua\Client\Exception\EncodingException
      */
     public static function fromWireArray(array $data): static
     {
+        $notifications = [];
+        foreach ($data['notif'] ?? [] as $notification) {
+            if (! $notification instanceof DataChangeNotification && ! $notification instanceof EventNotification) {
+                throw new \PhpOpcua\Client\Exception\EncodingException('PublishResult wire payload: "notif" must contain decoded notification instances.');
+            }
+            $notifications[] = $notification;
+        }
+
         return new self(
             $data['subId'] ?? 0,
             $data['seq'] ?? 0,
             $data['more'] ?? false,
-            $data['notif'] ?? [],
+            $notifications,
             $data['avail'] ?? [],
         );
     }

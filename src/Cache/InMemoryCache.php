@@ -8,8 +8,6 @@ use Psr\SimpleCache\CacheInterface;
 
 /**
  * In-memory PSR-16 cache implementation. Data is lost when the PHP process ends.
- *
- * @implements CacheInterface<mixed>
  */
 class InMemoryCache implements CacheInterface
 {
@@ -96,6 +94,8 @@ class InMemoryCache implements CacheInterface
 
     /**
      * {@inheritDoc}
+     *
+     * @param iterable<string, mixed> $values
      */
     public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
     {

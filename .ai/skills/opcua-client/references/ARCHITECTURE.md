@@ -1,6 +1,6 @@
 # Architecture reference
 
-How `opcua-client` v4.4.0 is wired internally. Read this when:
+How `opcua-client` is wired internally (current source: v4.5.0). Read this when:
 
 - Designing a custom module
 - Debugging unexpected method dispatch
@@ -20,9 +20,12 @@ How `opcua-client` v4.4.0 is wired internally. Read this when:
 ┌───────────────────────▼───────────────────────────────────┐
 │ Client (src/Client.php)                                   │
 │   Proxy. Implements OpcUaClientInterface.                 │
-│   Composes Manages*Traits (Connection, SecureChannel,    │
-│   Session, Handshake, Batching, Cache, Reading, Writing,  │
-│   Browsing, Calling, Subscription, etc.)                  │
+│   Composes 8 Client/Manages* traits (EventDispatch, Cache,│
+│   Batching, TrustStore, Connection, Handshake,            │
+│   SecureChannel, Session). read/write/browse/call/        │
+│   subscribe are NOT traits: they are ServiceModule        │
+│   methods registered into $methodHandlers, reached via    │
+│   thin wrappers or __call().                              │
 │   Implements ClientKernelInterface directly via the traits│
 │   __call() dispatches custom module methods               │
 └───────────────────────┬───────────────────────────────────┘
@@ -33,11 +36,11 @@ How `opcua-client` v4.4.0 is wired internally. Read this when:
                    dispatch, logContext, getCacheCodec, ...)
                         │
 ┌───────────────────────▼───────────────────────────────────┐
-│ ModuleRegistry (src/Kernel/ModuleRegistry.php)            │
-│   Lifecycle: register → boot → reset                      │
+│ ModuleRegistry (src/Module/ModuleRegistry.php)            │
+│   Lifecycle: add → bootAll (register → boot) → resetAll   │
 │   Topological dependency sort (requires(): class-string[])│
-│   Method conflict detection (ModuleConflictException)     │
-│   Missing dependency detection                            │
+│   Missing/circular dependency detection                   │
+│     (MissingModuleDependencyException)                    │
 └───────────────────────┬───────────────────────────────────┘
                         │
 ┌───────────────────────▼───────────────────────────────────┐
@@ -66,13 +69,13 @@ How `opcua-client` v4.4.0 is wired internally. Read this when:
 
 - **`PhpOpcua\Client\ClientBuilder`** (implements `ClientBuilderInterface`)
   - `ClientBuilder::create(): self` static factory
-  - Config via traits in `src/ClientBuilder/`: cache, events, timeout, trust store, batching, modules, certificates, credentials, transport
+  - Config via traits in `src/ClientBuilder/`: auto-retry, batching, browse depth, cache, event dispatcher, read/write config, timeout, trust store. Module, transport, certificate, and credential config (`addModule()`, `replaceModule()`, `setTransport()`, `setUserCredentials()`, `setClientCertificate()`, `setUserCertificate()`) are defined directly on `ClientBuilder` itself, not in dedicated traits
   - `addModule(ServiceModule)` / `replaceModule(class-string, ServiceModule)` — extension points
   - `connect(string $endpointUrl): Client` — terminal method
 
 ### Connected client
 
-- **`PhpOpcua\Client\Client`** (implements `OpcUaClientInterface` and `ClientKernelInterface`)
+- **`PhpOpcua\Client\Client`** (implements `OpcUaClientInterface`, `ClientKernelInterface`, and `Module\ModuleHostInterface`)
   - Proxy: delegates `read()` / `write()` / `browse()` / etc. to the registered module that owns that method
   - `__call($name, $args)` dispatches custom module methods
   - `hasMethod(string): bool` / `hasModule(class-string): bool` / `getRegisteredMethods(): string[]` / `getLoadedModules(): class-string[]` for introspection
@@ -80,41 +83,42 @@ How `opcua-client` v4.4.0 is wired internally. Read this when:
 ### Kernel (modules' contract on the client)
 
 - **`PhpOpcua\Client\Kernel\ClientKernelInterface`** — what every `ServiceModule` is allowed to call on the client:
-  - `executeWithRetry(callable $op, ?int $maxAttempts = null)` — auto-reconnect wrapper
+  - `executeWithRetry(Closure $operation): mixed` — auto-reconnect wrapper (the retry budget comes from the configured `autoRetry`, not a parameter)
   - `ensureConnected(): void` — guards
   - `send(string $data): void` / `receive(): string` — wire-level I/O via the transport
-  - `createDecoder(string $payload): BinaryDecoder` / encoder counterparts
-  - `dispatch(callable $eventFactory): void` — PSR-14 event lazy dispatch (zero overhead when `NullEventDispatcher`)
-  - `logContext(array $extra = []): array` — PSR-3 structured context
+  - `createDecoder(string $data): BinaryDecoder`
+  - `dispatch(object $event): void` — PSR-14 lazy event dispatch; accepts an event object or a `Closure` that lazily creates one (zero overhead when the dispatcher is `NullEventDispatcher`)
+  - `logContext(array $context = []): array` — PSR-3 structured context
   - `getCacheCodec(): CacheCodecInterface` — PSR-16 cache encode/decode (default `WireCacheCodec`, JSON gated by Wire allowlist)
-  - `getSessionService(): SessionService` — kernel-level session bookkeeping
-  - `getSecureChannelId()` / `getServerNonce()` / `getServerCertDer()` — secure channel state
-  - `getLogger()` / `getDispatcher()` / `getModuleRegistry()` — accessors
+  - `log(): LoggerInterface` — primary logging surface
+  - `getLogger(): LoggerInterface` / `getEventDispatcher(): EventDispatcherInterface` — accessors
 
 - **No separate concrete kernel class exists** — the kernel surface is implemented directly by `Client` via composed traits. This is deliberate: modules depend on the interface, not on `Client`.
 
-- **`PhpOpcua\Client\Kernel\ModuleRegistry`** — module lifecycle manager
-  - `register(ServiceModule): void`
-  - `bootAll(Client, ClientKernelInterface, SessionService): void`
+- The kernel does **not** expose the `SessionService` — modules receive it as a parameter to `boot(SessionService $session): void` (called by `ModuleRegistry::bootAll()`). Secure-channel state is likewise not on the kernel surface; it is held privately in `ManagesSecureChannelTrait`.
+
+- **`PhpOpcua\Client\Module\ModuleRegistry`** — module lifecycle manager
+  - `add(ServiceModule $module): void` — register a module instance
+  - `replace(string $originalClass, ServiceModule $replacement): void` — swap a registered module
+  - `bootAll(ClientKernelInterface $kernel, object $client, SessionService $session): void` — the `$client` param is typed `object` (PHPDoc `ModuleHostInterface&OpcUaClientInterface`); per module it calls `setKernel()`, `setClient()`, `register()`, then `boot($session)`
   - Topologically sorts by `requires(): class-string[]`
-  - Throws `ModuleConflictException` / `MissingModuleDependencyException`
+  - Throws `MissingModuleDependencyException` for missing or circular dependencies; method-name conflicts (`ModuleConflictException`) are detected by `Client::registerMethod()`, not the registry
 
 ### Modules
 
 - **`PhpOpcua\Client\Module\ServiceModule`** (abstract) — base class for every module. Subclasses override:
-  - `name(): string` — module identifier
   - `requires(): array` — list of other ServiceModule class-strings this depends on
-  - `register(ClientKernelInterface $kernel, SessionService $session): array` — returns `['methodName' => callable]` map
-  - `boot(): void` — hook for post-registration init
+  - `register(): void` — register methods imperatively, e.g. `$this->client->registerMethod('read', $this->read(...))`. The kernel is available as `$this->kernel` (injected via `setKernel(ClientKernelInterface $kernel)`) and the host as `$this->client` (`ModuleHostInterface&OpcUaClientInterface`)
+  - `boot(SessionService $session): void` — create protocol services after the secure channel and session are established
   - `reset(): void` — clear state on reconnect
-  - `registerWireTypes(WireTypeRegistry): void` — register DTOs for IPC / cache
+  - `registerWireTypes(WireTypeRegistry $registry): void` — register DTOs for IPC / cache
 
 10 built-in modules under `src/Module/*`:
 
 | Module | DTOs | v4.4.0 status |
 | --- | --- | --- |
 | `ReadWrite` | `CallResult` | unchanged |
-| `Browse` | `BrowseResultSet`, `ReferenceDescription` | unchanged |
+| `Browse` | `BrowseResultSet` (carries `Types\ReferenceDescription[]`) | unchanged |
 | `Subscription` | `SubscriptionResult`, `MonitoredItemResult`, `PublishResult`, `TransferResult` | unchanged |
 | `History` | + `HistoryUpdateResult` | **expanded** — 9 new HistoryUpdate methods |
 | `Aggregate` | `AggregateFunction` (enum), `AggregateOptions`, `Interval` | **new in v4.4.0** |
@@ -146,9 +150,9 @@ Under `src/Types/`:
 - `NodeId` — public readonly `namespaceIndex`, `identifier` (`int|string`), `type` (`'numeric'|'string'|'guid'|'opaque'`). Factories: `numeric()`, `string()`, `guid()`, `opaque()`. Parser: `NodeId::parse('ns=2;s=Temp')`. `toString()` returns canonical form.
 - `Variant` — public readonly `type` (`BuiltinType`), `value`, `dimensions` (`?int[]`).
 - `DataValue` — public readonly `statusCode`, `sourceTimestamp`, `serverTimestamp`, `type` (`?BuiltinType` derived from the inner Variant). Methods: `getValue()` (unwraps + auto-decodes registered ExtensionObjects), `getType()` (symmetric with `getValue()`, returns the inner Variant's `BuiltinType`), `getVariant()` (deprecated). Factories `ofInt32()`, `ofDouble()`, etc.
-- `ExtensionObject` — public readonly `typeId`, `encoding` (`Binary|Xml`), `body`, `value` (decoded). `isDecoded()` / `isRaw()`.
+- `ExtensionObject` — public readonly `typeId` (`NodeId`), `encoding` (`int`: 0x01 = binary, 0x02 = XML, 0x00 = no body), `body` (`?string`), `value` (`mixed`, decoded). `isDecoded()` / `isRaw()`.
 - `BuiltinType` — enum of 25 OPC UA built-in types (Boolean, SByte, …, Variant, DiagnosticInfo).
-- `NodeClass`, `BrowseDirection`, `AttributeId` — typed enums.
+- `NodeClass`, `BrowseDirection` — typed (int-backed) enums; `AttributeId` — class of integer constants (e.g. `AttributeId::Value` = 13).
 - `ReferenceDescription`, `BrowseNode` — browse results.
 - `EndpointDescription`, `UserTokenPolicy` — discovery results.
 - `LocalizedText`, `QualifiedName`, `StatusCode` — primitives.
@@ -158,7 +162,7 @@ Under `src/Types/`:
 - **`src/Wire/`** — JSON-safe IPC serialization
   - `WireSerializable` interface (every cache/IPC-eligible DTO implements it)
   - `WireTypeRegistry` — encoder/decoder + `__t` discriminator allowlist (security gate: no `unserialize()`, no gadget chain by construction)
-  - `CoreWireTypes::register()` — registers built-in types (NodeId, Variant, DataValue, ExtensionObject, BrowseNode, ReferenceDescription, EndpointDescription, UserTokenPolicy, BuiltinType, NodeClass, BrowseDirection, ConnectionState)
+  - `CoreWireTypes::register()` — registers built-in types (NodeId, QualifiedName, DataValue, Variant, BrowseNode, ReferenceDescription, EndpointDescription, LocalizedText, ExtensionObject, UserTokenPolicy, BuiltinType, NodeClass, BrowseDirection, ConnectionState)
 
 - **`src/Cache/`**
   - `CacheCodecInterface` — encode/decode contract for PSR-16 cache values
@@ -166,7 +170,7 @@ Under `src/Types/`:
   - `InMemoryCache` / `FileCache` — PSR-16 drivers
 
 - **`src/Security/`**
-  - `SecurityPolicy` enum (10 cases: 6 RSA + 4 ECC)
+  - `SecurityPolicy` enum (10 cases: `None` + 5 RSA-family `Basic128Rsa15`, `Basic256`, `Basic256Sha256`, `Aes128Sha256RsaOaep`, `Aes256Sha256RsaPss` + 4 ECC)
   - `SecurityMode` enum (None / Sign / SignAndEncrypt)
   - `SecureChannel`, `MessageSecurity`, `CertificateManager` — internal crypto + handshake
 
@@ -180,7 +184,7 @@ Under `src/Types/`:
   - `SessionService` — kernel-level session bookkeeping (channel/token IDs, sequence numbers, request IDs)
   - `MessageHeader`, `HelloMessage`, `AcknowledgeMessage`, `SecureChannelRequest`, `SecureChannelResponse`
 
-- **`src/Event/`** — 57 PSR-14 event classes + `NullEventDispatcher`. See `references/EVENTS.md`.
+- **`src/Event/`** — 56 PSR-14 event classes + `NullEventDispatcher` (57 files total). See `references/EVENTS.md`.
 
 - **`src/Testing/`** — `MockClient`: in-memory `OpcUaClientInterface` impl (no TCP). Handler registration, call tracking. See `references/TESTING.md`.
 
@@ -196,16 +200,16 @@ Under `src/Types/`:
 
 Take `$client->read('i=2259')`:
 
-1. `Client::read()` is provided by `ReadWriteModule::register()` (returned a callable mapped to `'read'`)
-2. The callable internally:
+1. `Client::read()` is dispatched via `Client::__call()`, which looks up the `'read'` handler that `ReadWriteModule::register()` registered by calling `$this->client->registerMethod('read', $this->read(...))` (`register()` returns void; it imperatively stores the first-class callable, it does not return a method map)
+2. The handler internally:
    - Coerces the string to `NodeId`
    - Builds a `ReadRequest` via `ReadService::encodeReadRequest()`
    - Calls `$kernel->executeWithRetry(fn () => ...)` — auto-reconnect wrapper
-   - Inside: `$kernel->send($request)` → transport POSTs to wire
+   - Inside: `$kernel->send($request)` → transport writes to wire
    - `$kernel->receive()` → returns response bytes
-   - `ReadService::decodeReadResponse()` → `DataValue[]`
+   - `ReadService::decodeReadResponse()` → a single `DataValue` (it internally calls `decodeReadMultiResponse(): DataValue[]` and returns `$results[0] ?? new DataValue()`)
    - Dispatches `NodeValueRead` event via `$kernel->dispatch()`
-   - Returns the first `DataValue`
+   - Returns the `DataValue`
 3. `Client::read()` returns the `DataValue` to the caller
 
 The kernel surface is intentionally minimal — modules can `send()` / `receive()` but never touch the socket, never see the secure channel directly. This makes alternative transports (HTTPS, reverse-connect) drop-in: the kernel call sites are identical regardless of wire.

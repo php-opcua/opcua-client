@@ -73,7 +73,7 @@ class FileTransferModule extends ServiceModule
         $result = $this->client->call($fileNode, $methodNode, [new Variant(BuiltinType::Byte, $modeByte)]);
         $this->assertGood($result, 'Open');
 
-        $fileHandle = (int) $result->outputArguments[0]->value;
+        $fileHandle = $result->outputArguments[0]->asInt();
 
         $this->kernel->dispatch(fn () => new FileOpened($this->client, $fileNode, $fileHandle, $modeByte));
 
@@ -121,7 +121,8 @@ class FileTransferModule extends ServiceModule
         ]);
         $this->assertGood($result, 'Read');
 
-        $data = (string) ($result->outputArguments[0]->value ?? '');
+        $dataVariant = $result->outputArguments[0] ?? null;
+        $data = $dataVariant !== null && $dataVariant->value !== null ? $dataVariant->asString() : '';
 
         $this->kernel->dispatch(fn () => new FileBytesRead(
             $this->client,
@@ -180,7 +181,7 @@ class FileTransferModule extends ServiceModule
         $result = $this->client->call($fileNode, $methodNode, [new Variant(BuiltinType::UInt32, $fileHandle)]);
         $this->assertGood($result, 'GetPosition');
 
-        return (int) $result->outputArguments[0]->value;
+        return $result->outputArguments[0]->asInt();
     }
 
     /**
@@ -264,7 +265,8 @@ class FileTransferModule extends ServiceModule
                 StatusCode::BadUnexpectedError,
             );
         }
-        $handle = (int) ($result->outputArguments[1]->value ?? 0);
+        $handleVariant = $result->outputArguments[1] ?? null;
+        $handle = $handleVariant !== null && $handleVariant->value !== null ? $handleVariant->asInt() : 0;
 
         return new CreateFileResult($newNodeId, $handle);
     }

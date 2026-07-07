@@ -9,7 +9,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Represents an OPC UA LocalizedText, containing a locale identifier and a text string.
  */
-readonly class LocalizedText implements WireSerializable
+final readonly class LocalizedText implements WireSerializable
 {
     /**
      * @param ?string $locale

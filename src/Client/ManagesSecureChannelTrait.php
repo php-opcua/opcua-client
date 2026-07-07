@@ -17,7 +17,6 @@ use PhpOpcua\Client\Protocol\SecureChannelResponse;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Security\CertificateManager;
-use PhpOpcua\Client\Security\MessageSecurity;
 use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
@@ -75,7 +74,7 @@ trait ManagesSecureChannelTrait
         );
         $this->session->setUserTokenEncryptionContext(
             $this->serverCertDer,
-            $this->secureChannel->getMessageSecurity() ?? new MessageSecurity(new CertificateManager()),
+            $this->secureChannel->getMessageSecurity(),
         );
 
         $this->initServices($this->session);
@@ -124,7 +123,7 @@ trait ManagesSecureChannelTrait
         );
         $this->session->setUserTokenEncryptionContext(
             $this->serverCertDer,
-            $this->secureChannel?->getMessageSecurity() ?? new MessageSecurity(new CertificateManager()),
+            $this->secureChannel->getMessageSecurity(),
         );
 
         $this->initServices($this->session);
@@ -179,7 +178,7 @@ trait ManagesSecureChannelTrait
         );
         $this->session->setUserTokenEncryptionContext(
             $this->serverCertDer,
-            $this->secureChannel?->getMessageSecurity() ?? new MessageSecurity(new CertificateManager()),
+            $this->secureChannel->getMessageSecurity(),
         );
 
         $this->initServices($this->session);
@@ -188,7 +187,7 @@ trait ManagesSecureChannelTrait
     /**
      * Load the client certificate and private key for secure channel setup.
      *
-     * @return array{0: ?string, 1: mixed}
+     * @return array{0: ?string, 1: ?\OpenSSLAsymmetricKey}
      *
      * @throws ConfigurationException If the certificate file cannot be read.
      */
@@ -255,7 +254,7 @@ trait ManagesSecureChannelTrait
         }
 
         if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
-            $this->closeSecureChannelSecure();
+            $this->closeSecureChannelSecure($this->secureChannel);
 
             return;
         }
@@ -280,9 +279,10 @@ trait ManagesSecureChannelTrait
     /**
      * Close the secure channel when message-level security is active.
      *
+     * @param SecureChannel $secureChannel The active secure channel.
      * @return void
      */
-    private function closeSecureChannelSecure(): void
+    private function closeSecureChannelSecure(SecureChannel $secureChannel): void
     {
         $requestId = $this->nextRequestId();
 
@@ -298,7 +298,7 @@ trait ManagesSecureChannelTrait
         $innerBody->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
         $innerBody->writeByte(0);
 
-        $message = $this->secureChannel->buildMessage($innerBody->getBuffer(), 'CLO');
+        $message = $secureChannel->buildMessage($innerBody->getBuffer(), 'CLO');
         $this->transport->send($message);
     }
 

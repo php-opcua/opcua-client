@@ -1,6 +1,6 @@
 # Types reference
 
-OPC UA primitives as PHP classes. All public readonly. All under `PhpOpcua\Client\Types\`.
+OPC UA primitives as PHP classes, all under `PhpOpcua\Client\Types\`. The wire value objects (NodeId, Variant, DataValue, ExtensionObject, LocalizedText, QualifiedName, EndpointDescription, ReferenceDescription, StructureDefinition, StructureField, UserTokenPolicy) are `final readonly` with public readonly properties. `StatusCode` is a plain class of int constants plus static helpers (`isGood`/`isBad`/`isUncertain`/`getName`/`withDataValueInfoBits`); `AttributeId` is a plain class of int constants only; BuiltinType, NodeClass, BrowseDirection, and ConnectionState are enums; and BrowseNode is `final` but mutable (children are added via `addChild()`).
 
 ## NodeId
 
@@ -13,7 +13,7 @@ use PhpOpcua\Client\Types\NodeId;
 NodeId::numeric($namespaceIndex, $intId);        // i=123, ns=2;i=42
 NodeId::string($namespaceIndex, $stringId);      // s=MyNode, ns=2;s=Sensors/Temp
 NodeId::guid($namespaceIndex, $guidString);      // g=550e8400-e29b-41d4-a716-446655440000
-NodeId::opaque($namespaceIndex, $rawBytes);      // b=<base64-or-raw>
+NodeId::opaque($namespaceIndex, $hexIdentifier); // b=<hex string>, decoded via hex2bin() on the wire
 
 // Properties (public readonly):
 $nodeId->namespaceIndex;                          // int
@@ -98,7 +98,7 @@ use PhpOpcua\Client\Types\ExtensionObject;
 
 // Public readonly:
 $eo->typeId;                                       // NodeId
-$eo->encoding;                                     // 'binary' | 'xml' | 'none'
+$eo->encoding;                                     // int — 0x01 = binary, 0x02 = XML, 0x00 = no body
 $eo->body;                                         // raw bytes / XML string / null
 $eo->value;                                        // decoded PHP value (if codec registered) — else null
 
@@ -107,7 +107,7 @@ $eo->isDecoded();                                  // value is populated (codec 
 $eo->isRaw();                                      // body is populated but no codec — read it manually
 ```
 
-When a codec for `$eo->typeId` is registered (either by `discoverDataTypes()` or manually via `$client->getRepository()->register()`), `DataValue::getValue()` returns `$eo->value` directly instead of the `ExtensionObject` wrapper.
+When a codec for `$eo->typeId` is registered (either by `discoverDataTypes()` or manually via `$client->getExtensionObjectRepository()->register($typeId, $codec)`, where `$codec` is an `ExtensionObjectCodec` instance or its fully-qualified class-string), `DataValue::getValue()` returns `$eo->value` directly instead of the `ExtensionObject` wrapper.
 
 ## BuiltinType
 
@@ -149,13 +149,13 @@ BuiltinType::DiagnosticInfo; // = 25
 | --- | --- | --- |
 | `NodeClass` | enum | `Object`, `Variable`, `Method`, `ObjectType`, `VariableType`, `ReferenceType`, `DataType`, `View` |
 | `BrowseDirection` | enum | `Forward`, `Inverse`, `Both` |
-| `AttributeId` | enum | `NodeId`, `NodeClass`, `BrowseName`, `DisplayName`, `Description`, `WriteMask`, `UserWriteMask`, `IsAbstract`, `Symmetric`, `InverseName`, `ContainsNoLoops`, `EventNotifier`, `Value`, `DataType`, `ValueRank`, `ArrayDimensions`, `AccessLevel`, `UserAccessLevel`, `MinimumSamplingInterval`, `Historizing`, `Executable`, `UserExecutable`, `DataTypeDefinition`, etc. |
+| `AttributeId` | class of int consts | `NodeId` (=1), `NodeClass`, `BrowseName`, `DisplayName`, `Description`, `WriteMask`, `UserWriteMask`, `IsAbstract`, `Symmetric`, `InverseName`, `ContainsNoLoops`, `EventNotifier`, `Value` (=13), `DataType`, `ValueRank`, `ArrayDimensions`, `AccessLevel`, `UserAccessLevel`, `MinimumSamplingInterval`, `Historizing`, `Executable`, `UserExecutable`, `DataTypeDefinition`. Plain int constants used directly, e.g. `read('i=2259', AttributeId::Value)`. |
 | `ReferenceDescription` | browse result | `referenceTypeId`, `isForward`, `nodeId`, `browseName`, `displayName`, `nodeClass`, `typeDefinition` |
-| `BrowseNode` | tree node | `reference` (ReferenceDescription); methods `getChildren()`, `hasChildren()` |
+| `BrowseNode` | tree node (mutable) | `reference` (ReferenceDescription); methods `getReference()`, `getChildren()`, `hasChildren()`, `addChild()` |
 | `EndpointDescription` | discovery result | `endpointUrl`, `serverCertificate`, `securityMode`, `securityPolicyUri`, `userIdentityTokens`, `transportProfileUri`, `securityLevel` |
-| `UserTokenPolicy` | discovery result | `policyId`, `tokenType` (`Anonymous|UserName|Certificate|IssuedToken`), `issuedTokenType`, `issuerEndpointUrl`, `securityPolicyUri` |
+| `UserTokenPolicy` | discovery result | `policyId`, `tokenType` (int: 0=Anonymous, 1=UserName, 2=Certificate, 3=IssuedToken), `issuedTokenType`, `issuerEndpointUrl`, `securityPolicyUri` |
 | `LocalizedText` | i18n string | `locale`, `text`. `__toString()` returns text. |
-| `QualifiedName` | namespaced name | `namespaceIndex`, `name`. `__toString()` returns `'ns:name'`. |
+| `QualifiedName` | namespaced name | `namespaceIndex`, `name`. `__toString()` returns `'namespaceIndex:name'` (e.g. `2:Temperature`), or just `'name'` when `namespaceIndex` is 0. |
 | `StatusCode` | static helpers | `StatusCode::isGood($code)`, `isUncertain($code)`, `isBad($code)`, `withDataValueInfoBits()` |
 | `ConnectionState` | enum | `Disconnected`, `Connected`, `Broken` |
 
@@ -168,7 +168,7 @@ OPC UA status codes are 32-bit unsigned integers. Severity bits (top 2 bits):
 - `0x80000000-0xBFFFFFFF` — Bad (severity 2) — value NOT reliable
 - `0xC0000000-0xFFFFFFFF` — reserved
 
-Don't compare against `=== 0` — many "Good" reads have additional info bits set (e.g. `GoodWithOverflowBit = 0x00A90000`). Always use the predicates:
+Don't compare against `=== 0` — many "Good" reads have additional info bits set (e.g. `StatusCode::InfoTypeDataValue = 0x00000400` is OR'd in alongside DataValue info bits). Always use the predicates:
 
 ```php
 use PhpOpcua\Client\Types\StatusCode;
@@ -178,14 +178,14 @@ if (StatusCode::isUncertain($dv->statusCode)) { /* log + maybe accept */ }
 if (StatusCode::isBad($dv->statusCode)) { /* discard */ }
 ```
 
-Common codes you'll see:
-- `0x00000000` — `Good`
-- `0x80020000` — `BadInternalError`
-- `0x80AB0000` — `BadInvalidArgument`
-- `0x80050000` — `BadInvalidArgument` (older variant)
-- `0x80130000` — `BadCertificateInvalid`
-- `0x800E0000` — `BadServerHalted`
-- `0x802E0000` — `BadNodeIdUnknown`
-- `0x803F0000` — `BadAttributeIdInvalid`
-- `0x80350000` — `BadIndexRangeInvalid`
-- `0x80560000` — `BadOutOfService`
+Common codes you'll see (these are the `StatusCode` constants defined in the library; use `StatusCode::getName($code)` for display):
+- `0x00000000` — `StatusCode::Good`
+- `0x80020000` — `StatusCode::BadInternalError`
+- `0x80050000` — `StatusCode::BadCommunicationError`
+- `0x80340000` — `StatusCode::BadNodeIdUnknown`
+- `0x80350000` — `StatusCode::BadAttributeIdInvalid`
+- `0x80360000` — `StatusCode::BadIndexRangeInvalid`
+- `0x80740000` — `StatusCode::BadTypeMismatch`
+- `0x80AB0000` — `StatusCode::BadInvalidArgument`
+- `0x801F0000` — `StatusCode::BadUserAccessDenied`
+- `0x80250000` — `StatusCode::BadSessionIdInvalid`

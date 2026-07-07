@@ -114,7 +114,7 @@ servers:
 - uses: php-opcua/extra-test-suite@v1.2.0
   with:
     services: node-management
-- run: vendor/bin/pest --group=integration
+- run: composer test:integration
 ```
 <!-- @endcode-block -->
 
@@ -125,8 +125,8 @@ The Pest convention:
 
 <!-- @code-block language="bash" label="terminal — run only integration" -->
 ```bash
-vendor/bin/pest --group=integration         # only integration
-vendor/bin/pest --exclude-group=integration # everything else
+composer test:integration   # only integration (pest --group=integration)
+composer test:unit          # everything else (pest --exclude-group=integration)
 ```
 <!-- @endcode-block -->
 

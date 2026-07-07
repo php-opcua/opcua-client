@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
+use PhpOpcua\Client\Module\NodeManagement\AddNodeItem;
 use PhpOpcua\Client\Module\NodeManagement\AddNodesResult;
 use PhpOpcua\Client\Module\NodeManagement\NodeManagementService;
 use PhpOpcua\Client\Protocol\SessionService;
@@ -18,14 +19,14 @@ describe('NodeManagementService encoding', function () {
         $service = new NodeManagementService($session);
 
         $bytes = $service->encodeAddNodesRequest(1, [
-            [
+            AddNodeItem::fromArray([
                 'parentNodeId' => NodeId::numeric(0, 85),
                 'referenceTypeId' => NodeId::numeric(0, 35),
                 'requestedNewNodeId' => NodeId::numeric(2, 1001),
                 'browseName' => new QualifiedName(2, 'TestObject'),
                 'nodeClass' => NodeClass::Object,
                 'typeDefinition' => NodeId::numeric(0, 58),
-            ],
+            ]),
         ], NodeId::numeric(0, 0));
 
         expect(strlen($bytes))->toBeGreaterThan(40);
@@ -37,7 +38,7 @@ describe('NodeManagementService encoding', function () {
         $service = new NodeManagementService($session);
 
         $bytes = $service->encodeAddNodesRequest(1, [
-            [
+            AddNodeItem::fromArray([
                 'parentNodeId' => NodeId::numeric(2, 1001),
                 'referenceTypeId' => NodeId::numeric(0, 47),
                 'requestedNewNodeId' => NodeId::numeric(2, 1002),
@@ -46,7 +47,7 @@ describe('NodeManagementService encoding', function () {
                 'typeDefinition' => NodeId::numeric(0, 63),
                 'dataType' => NodeId::numeric(0, 11),
                 'accessLevel' => 3,
-            ],
+            ]),
         ], NodeId::numeric(0, 0));
 
         expect(strlen($bytes))->toBeGreaterThan(60);
@@ -58,7 +59,7 @@ describe('NodeManagementService encoding', function () {
         $service = new NodeManagementService($session);
 
         $bytes = $service->encodeAddNodesRequest(1, [
-            [
+            AddNodeItem::fromArray([
                 'parentNodeId' => NodeId::numeric(2, 1001),
                 'referenceTypeId' => NodeId::numeric(0, 47),
                 'requestedNewNodeId' => NodeId::numeric(2, 2001),
@@ -67,7 +68,7 @@ describe('NodeManagementService encoding', function () {
                 'typeDefinition' => NodeId::numeric(0, 0),
                 'executable' => true,
                 'userExecutable' => true,
-            ],
+            ]),
         ], NodeId::numeric(0, 0));
 
         expect(strlen($bytes))->toBeGreaterThan(40);
@@ -139,14 +140,14 @@ describe('NodeManagementService encoding', function () {
 
         foreach ($nodeClasses as $nodeClass) {
             $bytes = $service->encodeAddNodesRequest(1, [
-                [
+                AddNodeItem::fromArray([
                     'parentNodeId' => NodeId::numeric(0, 85),
                     'referenceTypeId' => NodeId::numeric(0, 35),
                     'requestedNewNodeId' => NodeId::numeric(2, 9999),
                     'browseName' => new QualifiedName(2, 'Test'),
                     'nodeClass' => $nodeClass,
                     'typeDefinition' => NodeId::numeric(0, 0),
-                ],
+                ]),
             ], NodeId::numeric(0, 0));
 
             expect(strlen($bytes))->toBeGreaterThan(40);

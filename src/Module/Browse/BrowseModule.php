@@ -6,8 +6,8 @@ namespace PhpOpcua\Client\Module\Browse;
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Event\NodeBrowsed;
+use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Module\ServiceModule;
-use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\BrowseDirection;
 use PhpOpcua\Client\Types\BrowseNode;
@@ -70,7 +70,7 @@ class BrowseModule extends ServiceModule
      * @param bool $useCache Whether to use cached results.
      * @return EndpointDescription[]
      *
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function getEndpoints(string $endpointUrl, bool $useCache = true): array
@@ -83,8 +83,8 @@ class BrowseModule extends ServiceModule
                 $this->kernel->ensureConnected();
 
                 $requestId = $this->kernel->nextRequestId();
-                $authToken = $this->kernel->getAuthToken() ?? NodeId::numeric(0, ServiceTypeId::NULL);
-                $request = $this->getEndpointsService->encodeGetEndpointsRequest($requestId, $endpointUrl, $authToken);
+                $authToken = $this->kernel->getAuthToken();
+                $request = $this->getEndpointsService()->encodeGetEndpointsRequest($requestId, $endpointUrl, $authToken);
                 $this->kernel->log()->debug('GetEndpoints request for {url}', $this->kernel->logContext(['url' => $endpointUrl]));
                 $this->kernel->send($request);
 
@@ -92,7 +92,7 @@ class BrowseModule extends ServiceModule
                 $responseBody = $this->kernel->unwrapResponse($response);
                 $decoder = $this->kernel->createDecoder($responseBody);
 
-                $endpoints = $this->getEndpointsService->decodeGetEndpointsResponse($decoder);
+                $endpoints = $this->getEndpointsService()->decodeGetEndpointsResponse($decoder);
                 $this->kernel->log()->debug('GetEndpoints response: {count} endpoint(s)', $this->kernel->logContext(['count' => count($endpoints)]));
 
                 return $endpoints;
@@ -113,7 +113,7 @@ class BrowseModule extends ServiceModule
      * @return ReferenceDescription[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function browse(NodeId|string $nodeId, BrowseDirection $direction = BrowseDirection::Forward, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = [], bool $useCache = true): array
@@ -127,7 +127,7 @@ class BrowseModule extends ServiceModule
             fn () => $this->kernel->executeWithRetry(function () use ($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask) {
                 $decoder = $this->getBinaryDecoder($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask);
 
-                return $this->browseService->decodeBrowseResponse($decoder);
+                return $this->browseService()->decodeBrowseResponse($decoder);
             }),
             $useCache,
         );
@@ -148,7 +148,7 @@ class BrowseModule extends ServiceModule
      * @return BrowseResultSet
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function browseWithContinuation(NodeId|string $nodeId, BrowseDirection $direction = BrowseDirection::Forward, ?NodeId $referenceTypeId = null, bool $includeSubtypes = true, array $nodeClasses = []): BrowseResultSet
@@ -159,7 +159,7 @@ class BrowseModule extends ServiceModule
         return $this->kernel->executeWithRetry(function () use ($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask) {
             $decoder = $this->getBinaryDecoder($nodeId, $direction, $referenceTypeId, $includeSubtypes, $nodeClassMask);
 
-            return $this->browseService->decodeBrowseResponseWithContinuation($decoder);
+            return $this->browseService()->decodeBrowseResponseWithContinuation($decoder);
         });
     }
 
@@ -169,7 +169,7 @@ class BrowseModule extends ServiceModule
      * @param string $continuationPoint The opaque continuation point from a previous browse.
      * @return BrowseResultSet
      *
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function browseNext(string $continuationPoint): BrowseResultSet
@@ -178,7 +178,7 @@ class BrowseModule extends ServiceModule
             $this->kernel->ensureConnected();
 
             $requestId = $this->kernel->nextRequestId();
-            $request = $this->browseService->encodeBrowseNextRequest($requestId, $continuationPoint, $this->kernel->getAuthToken());
+            $request = $this->browseService()->encodeBrowseNextRequest($requestId, $continuationPoint, $this->kernel->getAuthToken());
             $this->kernel->log()->debug('BrowseNext request (continuationPoint present)', $this->kernel->logContext());
             $this->kernel->send($request);
 
@@ -187,7 +187,7 @@ class BrowseModule extends ServiceModule
             $responseBody = $this->kernel->unwrapResponse($response);
             $decoder = $this->kernel->createDecoder($responseBody);
 
-            return $this->browseService->decodeBrowseNextResponse($decoder);
+            return $this->browseService()->decodeBrowseNextResponse($decoder);
         });
     }
 
@@ -203,7 +203,7 @@ class BrowseModule extends ServiceModule
      * @return ReferenceDescription[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function browseAll(
@@ -247,7 +247,7 @@ class BrowseModule extends ServiceModule
      * @return BrowseNode[]
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
-     * @throws \PhpOpcua\Client\Exception\ConnectionException If the connection is lost during the request.
+     * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
      */
     public function browseRecursive(
@@ -284,7 +284,7 @@ class BrowseModule extends ServiceModule
         $this->kernel->ensureConnected();
 
         $requestId = $this->kernel->nextRequestId();
-        $request = $this->browseService->encodeBrowseRequest(
+        $request = $this->browseService()->encodeBrowseRequest(
             $requestId,
             $nodeId,
             $this->kernel->getAuthToken(),
@@ -379,5 +379,15 @@ class BrowseModule extends ServiceModule
         }
 
         return $mask;
+    }
+
+    private function browseService(): BrowseService
+    {
+        return $this->browseService ?? throw new ConnectionException('Browse module not booted: call connect() first');
+    }
+
+    private function getEndpointsService(): GetEndpointsService
+    {
+        return $this->getEndpointsService ?? throw new ConnectionException('Browse module not booted: call connect() first');
     }
 }

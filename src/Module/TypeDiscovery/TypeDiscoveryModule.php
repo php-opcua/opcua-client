@@ -20,6 +20,7 @@ use PhpOpcua\Client\Types\ExtensionObject;
 use PhpOpcua\Client\Types\NodeClass;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\StatusCode;
+use PhpOpcua\Client\Wire\WireTypeRegistry;
 use Throwable;
 
 /**
@@ -42,6 +43,11 @@ class TypeDiscoveryModule extends ServiceModule
     {
         $this->client->registerMethod('discoverDataTypes', $this->discoverDataTypes(...));
         $this->client->registerMethod('registerTypeCodec', $this->registerTypeCodec(...));
+    }
+
+    public function registerWireTypes(WireTypeRegistry $registry): void
+    {
+        $registry->register(DiscoveredType::class);
     }
 
     /**
@@ -78,17 +84,30 @@ class TypeDiscoveryModule extends ServiceModule
         }
 
         if ($cached !== null && is_array($cached)) {
-            $registered = 0;
+            $entries = [];
             foreach ($cached as $entry) {
-                if ($this->kernel->getExtensionObjectRepository()->has($entry['encodingId'])) {
-                    continue;
+                if (! $entry instanceof DiscoveredType) {
+                    // Stale or foreign cache payload: discard and rediscover.
+                    $cache?->delete($cacheKey);
+                    $entries = null;
+                    break;
                 }
-                $this->kernel->getExtensionObjectRepository()->register($entry['encodingId'], new DynamicCodec($entry['definition']));
-                $registered++;
+                $entries[] = $entry;
             }
-            $this->kernel->log()->info('Restored {count} data type(s) from cache', $this->kernel->logContext(['count' => $registered]));
 
-            return $registered;
+            if ($entries !== null) {
+                $registered = 0;
+                foreach ($entries as $entry) {
+                    if ($this->kernel->getExtensionObjectRepository()->has($entry->encodingId)) {
+                        continue;
+                    }
+                    $this->kernel->getExtensionObjectRepository()->register($entry->encodingId, new DynamicCodec($entry->definition));
+                    $registered++;
+                }
+                $this->kernel->log()->info('Restored {count} data type(s) from cache', $this->kernel->logContext(['count' => $registered]));
+
+                return $registered;
+            }
         }
 
         $tree = $this->client->browseRecursive(
@@ -131,7 +150,7 @@ class TypeDiscoveryModule extends ServiceModule
      * @param \PhpOpcua\Client\Types\BrowseNode[] $nodes The browse tree nodes.
      * @param ?int $namespaceIndex Filter by namespace index, or null for all.
      * @param int $registered Counter for registered types (passed by reference).
-     * @param array<array{encodingId: NodeId, definition: \PhpOpcua\Client\Types\StructureDefinition}> $discoveredEntries Accumulated entries (passed by reference).
+     * @param DiscoveredType[] $discoveredEntries Accumulated entries (passed by reference).
      * @return void
      */
     private function discoverFromTree(array $nodes, ?int $namespaceIndex, int &$registered, array &$discoveredEntries): void
@@ -162,9 +181,9 @@ class TypeDiscoveryModule extends ServiceModule
      * Discover a single data type by its NodeId.
      *
      * @param NodeId $dataTypeNodeId The data type NodeId.
-     * @return ?array{encodingId: NodeId, definition: \PhpOpcua\Client\Types\StructureDefinition}
+     * @return ?DiscoveredType
      */
-    private function discoverSingleDataType(NodeId $dataTypeNodeId): ?array
+    private function discoverSingleDataType(NodeId $dataTypeNodeId): ?DiscoveredType
     {
         $encodingId = $this->findBinaryEncodingId($dataTypeNodeId);
         if ($encodingId === null) {
@@ -194,7 +213,7 @@ class TypeDiscoveryModule extends ServiceModule
 
         $this->kernel->getExtensionObjectRepository()->register($encodingId, new DynamicCodec($definition));
 
-        return ['encodingId' => $encodingId, 'definition' => $definition];
+        return new DiscoveredType($encodingId, $definition);
     }
 
     /**

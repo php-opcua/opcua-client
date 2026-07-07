@@ -58,22 +58,30 @@ workflow pulls the pre-built image from GHCR on the PHP 8.5 integration leg.
 
 ```bash
 # All tests
-./vendor/bin/pest
+composer test
 
 # Unit tests only
-./vendor/bin/pest tests/Unit/
+composer test:unit
 
 # Integration tests only (requires both uanetstandard-test-suite and extra-test-suite running)
-./vendor/bin/pest tests/Integration/ --group=integration
+composer test:integration
 
 # A specific test file
 ./vendor/bin/pest tests/Unit/ClientBatchingTest.php
+
+# Static analysis (PHPStan level 9)
+composer phpstan
+
+# Code style
+composer format:check
 
 # With coverage report
 php -d pcov.enabled=1 ./vendor/bin/pest --coverage
 ```
 
-All tests must pass before submitting a pull request.
+All tests, PHPStan, and the style check must pass before submitting a
+pull request — CI runs them as three phases (format + PHPStan, unit,
+integration).
 
 ## Project Structure
 

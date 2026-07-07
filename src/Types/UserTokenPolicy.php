@@ -9,7 +9,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Represents an OPC UA UserTokenPolicy describing an accepted user identity token type.
  */
-readonly class UserTokenPolicy implements WireSerializable
+final readonly class UserTokenPolicy implements WireSerializable
 {
     /**
      * @param ?string $policyId

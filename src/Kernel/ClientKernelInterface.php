@@ -21,7 +21,11 @@ use Psr\SimpleCache\CacheInterface;
  */
 interface ClientKernelInterface
 {
-    /** @template T @param Closure(): T $operation @return T */
+    /**
+     * @template T
+     * @param Closure(): T $operation
+     * @return T
+     */
     public function executeWithRetry(Closure $operation): mixed;
 
     public function ensureConnected(): void;
@@ -40,15 +44,29 @@ interface ClientKernelInterface
 
     public function resolveNodeId(NodeId|string $nodeId): NodeId;
 
+    /** @param array<int, array<string, mixed>> $items */
     public function resolveNodeIdArray(array &$items, string $key = 'nodeId'): void;
 
     public function log(): LoggerInterface;
 
-    /** @param array<string, mixed> $context @return array<string, mixed> */
+    /**
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>
+     */
     public function logContext(array $context = []): array;
 
     public function dispatch(object $event): void;
 
+    /**
+     * Fetch a value from cache or compute it via the fetcher callable.
+     *
+     * The cache round-trip invariant guarantees that a hit returns a value
+     * produced by an earlier run of the same fetcher (see WireCacheCodec).
+     *
+     * @template T
+     * @param callable(): T $fetcher
+     * @return T
+     */
     public function cachedFetch(string $key, callable $fetcher, bool $useCache): mixed;
 
     public function buildCacheKey(string $type, NodeId $nodeId, string $paramsSuffix = ''): string;

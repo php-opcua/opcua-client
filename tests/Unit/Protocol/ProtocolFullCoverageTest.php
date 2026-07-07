@@ -14,6 +14,7 @@ use PhpOpcua\Client\Module\ReadWrite\ReadService;
 use PhpOpcua\Client\Module\ReadWrite\WriteService;
 use PhpOpcua\Client\Module\Subscription\MonitoredItemService;
 use PhpOpcua\Client\Module\Subscription\PublishService;
+use PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePath;
 use PhpOpcua\Client\Module\TranslateBrowsePath\TranslateBrowsePathService;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Protocol\SessionService;
@@ -484,7 +485,7 @@ describe('TranslateBrowsePathService secure encoding', function () {
 
         $bytes = $service->encodeTranslateRequest(
             1,
-            [['startingNodeId' => NodeId::numeric(0, 85), 'relativePath' => [['targetName' => new QualifiedName(0, 'Server')]]]],
+            [BrowsePath::fromArray(['startingNodeId' => NodeId::numeric(0, 85), 'relativePath' => [['targetName' => new QualifiedName(0, 'Server')]]])],
             NodeId::numeric(0, 0),
         );
 

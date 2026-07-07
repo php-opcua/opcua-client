@@ -16,6 +16,8 @@ use PhpOpcua\Client\Event\RetryExhausted;
 use PhpOpcua\Client\Exception\ConfigurationException;
 use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\OpcUaException;
+use PhpOpcua\Client\Exception\UntrustedCertificateException;
+use PhpOpcua\Client\Security\CertificateManager;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\Client\Types\ConnectionState;
@@ -36,12 +38,17 @@ trait ManagesConnectionTrait
      */
     public function reconnect(): void
     {
-        $this->dispatch(fn () => new ClientReconnecting($this, $this->lastEndpointUrl));
-        $this->logger->info('Reconnecting to {endpoint}', $this->logContext(['endpoint' => $this->lastEndpointUrl]));
+        $endpointUrl = $this->lastEndpointUrl;
+        if ($endpointUrl === null) {
+            throw new ConnectionException('Cannot reconnect: no previous connection');
+        }
+
+        $this->dispatch(fn () => new ClientReconnecting($this, $endpointUrl));
+        $this->logger->info('Reconnecting to {endpoint}', $this->logContext(['endpoint' => $endpointUrl]));
         $this->transport->close();
         $this->resetConnectionState();
 
-        $this->performConnect($this->lastEndpointUrl);
+        $this->performConnect($endpointUrl);
     }
 
     /**
@@ -113,7 +120,6 @@ trait ManagesConnectionTrait
         throw match ($this->connectionState) {
             ConnectionState::Disconnected => new ConnectionException('Not connected: call connect() first'),
             ConnectionState::Broken => new ConnectionException('Connection lost: call reconnect() or connect() to re-establish'),
-            default => new ConnectionException('No explicit exception for state: ' . $this->connectionState->name),
         };
     }
 
@@ -192,6 +198,7 @@ trait ManagesConnectionTrait
 
         if ($isSecure) {
             $this->validateServerCertificate();
+            $this->validateServerApplicationUri();
         }
 
         $this->dispatch(fn () => new ClientConnecting($this, $endpointUrl));
@@ -227,6 +234,39 @@ trait ManagesConnectionTrait
         $this->discoverServerOperationLimits();
         $this->logger->info('Connected to {endpoint}', $this->logContext(['endpoint' => $endpointUrl]));
         $this->dispatch(fn () => new ClientConnected($this, $endpointUrl));
+    }
+
+    /**
+     * @return void
+     * @throws UntrustedCertificateException If the URIs do not match.
+     */
+    private function validateServerApplicationUri(): void
+    {
+        if (! $this->verifyApplicationUri
+            || $this->serverCertDer === null
+            || $this->expectedServerApplicationUri === null
+            || $this->expectedServerApplicationUri === ''
+        ) {
+            return;
+        }
+
+        $certUri = (new CertificateManager())->getApplicationUri($this->serverCertDer);
+        if ($certUri === null) {
+            $this->logger->warning('Server certificate has no SAN ApplicationUri, skipping endpoint binding check', $this->logContext());
+
+            return;
+        }
+
+        if (! hash_equals($this->expectedServerApplicationUri, $certUri)) {
+            $fingerprint = implode(':', str_split(sha1($this->serverCertDer), 2));
+            throw new UntrustedCertificateException(
+                $fingerprint,
+                $this->serverCertDer,
+                "Server certificate ApplicationUri ({$certUri}) does not match endpoint ({$this->expectedServerApplicationUri})",
+            );
+        }
+
+        $this->logger->debug('Server certificate ApplicationUri matches endpoint ({uri})', $this->logContext(['uri' => $certUri]));
     }
 
     /**

@@ -9,7 +9,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
 /**
  * Holds the result of a TranslateBrowsePathsToNodeIds operation for a single browse path.
  */
-readonly class BrowsePathResult implements WireSerializable
+final readonly class BrowsePathResult implements WireSerializable
 {
     /**
      * @param int $statusCode

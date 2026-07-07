@@ -39,6 +39,7 @@ enum SecurityPolicy: string
         };
     }
 
+    /** @return int<0, max> */
     public function getSymmetricKeyLength(): int
     {
         return match ($this) {
@@ -48,6 +49,7 @@ enum SecurityPolicy: string
         };
     }
 
+    /** @return int<0, max> */
     public function getSymmetricBlockSize(): int
     {
         return match ($this) {
@@ -102,11 +104,13 @@ enum SecurityPolicy: string
         };
     }
 
+    /** @return int<0, max> */
     public function getDerivedKeyLength(): int
     {
         return $this->getSymmetricKeyLength();
     }
 
+    /** @return int<0, max> */
     public function getDerivedSignatureKeyLength(): int
     {
         return match ($this) {
@@ -117,6 +121,7 @@ enum SecurityPolicy: string
         };
     }
 
+    /** @return ''|'sha1'|'sha256'|'sha384' */
     public function getKeyDerivationAlgorithm(): string
     {
         return match ($this) {

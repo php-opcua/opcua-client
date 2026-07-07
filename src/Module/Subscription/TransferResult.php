@@ -11,7 +11,7 @@ use PhpOpcua\Client\Wire\WireSerializable;
  *
  * @see SubscriptionModule::transferSubscriptions()
  */
-readonly class TransferResult implements WireSerializable
+final readonly class TransferResult implements WireSerializable
 {
     /**
      * @param int $statusCode

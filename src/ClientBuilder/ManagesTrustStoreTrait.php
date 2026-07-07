@@ -99,4 +99,20 @@ trait ManagesTrustStoreTrait
 
         return $this;
     }
+
+    /**
+     * @var bool
+     */
+    private bool $verifyApplicationUri = true;
+
+    /**
+     * @param bool $enabled
+     * @return self
+     */
+    public function verifyApplicationUri(bool $enabled = true): self
+    {
+        $this->verifyApplicationUri = $enabled;
+
+        return $this;
+    }
 }

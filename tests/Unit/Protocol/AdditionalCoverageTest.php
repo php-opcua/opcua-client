@@ -103,7 +103,7 @@ describe('PublishService decode with diagnostics and results', function () {
         $result = $service->decodePublishResponse($decoder);
         expect($result->subscriptionId)->toBe(1);
         expect($result->notifications)->toHaveCount(1);
-        expect($result->notifications[0]['dataValue']->getValue())->toBe(99);
+        expect($result->notifications[0]->dataValue->getValue())->toBe(99);
     });
 
     it('decodes a PublishResponse where body consumed less than bodyLength', function () {
@@ -146,7 +146,7 @@ describe('PublishService decode with diagnostics and results', function () {
         $decoder = new BinaryDecoder($encoder->getBuffer());
         $result = $service->decodePublishResponse($decoder);
         expect($result->notifications)->toHaveCount(1);
-        expect($result->notifications[0]['dataValue']->getValue())->toBe(55);
+        expect($result->notifications[0]->dataValue->getValue())->toBe(55);
     });
 });
 

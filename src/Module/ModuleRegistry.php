@@ -6,6 +6,7 @@ namespace PhpOpcua\Client\Module;
 
 use PhpOpcua\Client\Exception\MissingModuleDependencyException;
 use PhpOpcua\Client\Kernel\ClientKernelInterface;
+use PhpOpcua\Client\OpcUaClientInterface;
 use PhpOpcua\Client\Protocol\SessionService;
 
 /**
@@ -83,7 +84,7 @@ class ModuleRegistry
      * 4. boot() — module creates its protocol services
      *
      * @param ClientKernelInterface $kernel
-     * @param object $client
+     * @param ModuleHostInterface&OpcUaClientInterface $client
      * @param SessionService $session
      * @return void
      *
