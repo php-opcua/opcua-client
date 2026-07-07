@@ -182,12 +182,7 @@ class SessionService
 
         $decoder->readUInt32();
 
-        if ($this->secureChannel !== null
-            && $this->secureChannel->isSecurityActive()
-            && $serverCertificate !== null
-            && $serverSignature !== null
-            && $serverSignature !== ''
-        ) {
+        if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
             $this->verifyServerSignature($serverCertificate, $serverSignature);
         }
 
@@ -426,9 +421,13 @@ class SessionService
             return;
         }
 
-        $serverCertDer = $this->secureChannel->getServerCertDer();
-        if ($publicKey === null || $publicKey === '' || $serverCertDer === null) {
+        if ($publicKey === null || $publicKey === '') {
             return;
+        }
+
+        $serverCertDer = $this->secureChannel->getServerCertDer();
+        if ($serverCertDer === null) {
+            throw new ServiceException('Cannot verify the ECDH ephemeral key signature: server certificate unavailable');
         }
 
         if ($signature === null || $signature === '') {
@@ -737,18 +736,23 @@ class SessionService
     }
 
     /**
-     * @param string $serverCertDer
-     * @param string $serverSignature
+     * @param ?string $serverCertDer
+     * @param ?string $serverSignature
      *
-     * @throws ServiceException If the signature does not verify.
+     * @throws ServiceException If the signature is missing or does not verify.
      */
-    private function verifyServerSignature(string $serverCertDer, string $serverSignature): void
+    private function verifyServerSignature(?string $serverCertDer, ?string $serverSignature): void
     {
         $secureChannel = $this->requireSecureChannel();
+
+        if ($serverCertDer === null || $serverCertDer === '' || $serverSignature === null || $serverSignature === '') {
+            throw new ServiceException('CreateSessionResponse is missing the server signature required on a secure channel');
+        }
+
         $clientCertDer = $secureChannel->getClientCertDer();
         $clientNonce = $this->lastClientNonce;
         if ($clientCertDer === null || $clientNonce === null) {
-            return;
+            throw new ServiceException('Cannot verify the CreateSessionResponse server signature: client certificate or nonce unavailable');
         }
 
         $policy = $secureChannel->getPolicy();

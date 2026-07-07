@@ -572,12 +572,12 @@ class SecureChannel
     /**
      * @param string $plainData Verified plaintext starting with the sequence header.
      *
-     * @throws SecurityException If the sequence number does not increase.
+     * @throws SecurityException If the sequence header is missing or the sequence number does not increase.
      */
     private function validateIncomingSequenceNumber(string $plainData): void
     {
         if (strlen($plainData) < 4) {
-            return;
+            throw new SecurityException('MSG response too short to contain a sequence header');
         }
 
         $unpacked = unpack('V', substr($plainData, 0, 4));

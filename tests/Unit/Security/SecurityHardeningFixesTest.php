@@ -35,13 +35,15 @@ function shfMakeSecureChannel(array $client, array $server): SecureChannel
     return $channel;
 }
 
-function shfVerifyServerSignature(SecureChannel $channel, string $clientNonce, string $serverCertDer, string $signature): void
+function shfVerifyServerSignature(SecureChannel $channel, ?string $clientNonce, ?string $serverCertDer, ?string $signature): void
 {
     $session = new SessionService(1, 1, $channel);
 
     $ref = new ReflectionClass($session);
-    $nonceProp = $ref->getProperty('lastClientNonce');
-    $nonceProp->setValue($session, $clientNonce);
+    if ($clientNonce !== null) {
+        $nonceProp = $ref->getProperty('lastClientNonce');
+        $nonceProp->setValue($session, $clientNonce);
+    }
 
     $method = $ref->getMethod('verifyServerSignature');
     $method->invoke($session, $serverCertDer, $signature);
@@ -100,6 +102,59 @@ describe('SessionService::verifyServerSignature (FIX 1)', function () {
 
         shfVerifyServerSignature($channel, $clientNonce, $server['certDer'], $signature);
     })->throws(ServiceException::class, 'server signature verification failed');
+
+    it('rejects a missing server signature when security is active', function () {
+        $cm = new CertificateManager();
+        $client = $cm->generateSelfSignedCertificate('urn:test:client');
+        $server = $cm->generateSelfSignedCertificate('urn:test:server');
+        $channel = shfMakeSecureChannel($client, $server);
+
+        shfVerifyServerSignature($channel, random_bytes(32), $server['certDer'], null);
+    })->throws(ServiceException::class, 'missing the server signature');
+
+    it('rejects an empty server signature when security is active', function () {
+        $cm = new CertificateManager();
+        $client = $cm->generateSelfSignedCertificate('urn:test:client');
+        $server = $cm->generateSelfSignedCertificate('urn:test:server');
+        $channel = shfMakeSecureChannel($client, $server);
+
+        shfVerifyServerSignature($channel, random_bytes(32), $server['certDer'], '');
+    })->throws(ServiceException::class, 'missing the server signature');
+
+    it('rejects a missing server certificate when security is active', function () {
+        $cm = new CertificateManager();
+        $client = $cm->generateSelfSignedCertificate('urn:test:client');
+        $server = $cm->generateSelfSignedCertificate('urn:test:server');
+        $channel = shfMakeSecureChannel($client, $server);
+
+        shfVerifyServerSignature($channel, random_bytes(32), null, 'some-signature');
+    })->throws(ServiceException::class, 'missing the server signature');
+
+    it('fails closed when the client nonce is unavailable', function () {
+        $cm = new CertificateManager();
+        $client = $cm->generateSelfSignedCertificate('urn:test:client');
+        $server = $cm->generateSelfSignedCertificate('urn:test:server');
+        $channel = shfMakeSecureChannel($client, $server);
+
+        shfVerifyServerSignature($channel, null, $server['certDer'], 'some-signature');
+    })->throws(ServiceException::class, 'client certificate or nonce unavailable');
+
+    it('fails closed on ECDH ephemeral key when the server certificate is unavailable', function () {
+        $cm = new CertificateManager();
+        $client = $cm->generateSelfSignedCertificate('urn:test:client');
+        $channel = new SecureChannel(
+            SecurityPolicy::Basic256Sha256,
+            SecurityMode::SignAndEncrypt,
+            $client['certDer'],
+            $client['privateKey'],
+            null,
+        );
+        $session = new SessionService(1, 1, $channel);
+
+        $ref = new ReflectionClass($session);
+        $method = $ref->getMethod('verifyEccEphemeralKeySignature');
+        $method->invoke($session, 'ephemeral-public-key', 'signature');
+    })->throws(ServiceException::class, 'server certificate unavailable');
 });
 
 function shfValidateAppUri(string $certDer, ?string $expectedUri, bool $verify = true): void
@@ -243,6 +298,23 @@ describe('SecureChannel incoming message validation (M2)', function () {
         $channel = new SecureChannel(SecurityPolicy::Basic256Sha256, SecurityMode::Sign);
         shfSequenceCheck($channel, 0xFFFFFBFF);
         shfSequenceCheck($channel, 5);
+        expect(true)->toBeTrue();
+    });
+
+    it('rejects a verified plaintext too short to contain a sequence header', function () {
+        $channel = new SecureChannel(SecurityPolicy::Basic256Sha256, SecurityMode::Sign);
+
+        $ref = new ReflectionClass($channel);
+        $method = $ref->getMethod('validateIncomingSequenceNumber');
+        $method->invoke($channel, "\x01\x02\x03");
+    })->throws(SecurityException::class, 'too short to contain a sequence header');
+
+    it('restarts the sequence counter on a new channel instance', function () {
+        $old = new SecureChannel(SecurityPolicy::Basic256Sha256, SecurityMode::Sign);
+        shfSequenceCheck($old, 500000);
+
+        $fresh = new SecureChannel(SecurityPolicy::Basic256Sha256, SecurityMode::Sign);
+        shfSequenceCheck($fresh, 1);
         expect(true)->toBeTrue();
     });
 });

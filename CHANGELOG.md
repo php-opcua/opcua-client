@@ -17,11 +17,17 @@ Brainpool P256r1/P384r1).
   policies the raw `r||s` wire signature is converted to DER before
   verification. A failed verification aborts the session with
   `ServiceException`. Previously the signature was read and discarded.
+  The check fails closed: with security active, a CreateSessionResponse
+  whose `serverSignature` or `serverCertificate` is missing/empty — or a
+  client-side state where the certificate or nonce needed for verification
+  is unavailable — throws `ServiceException` instead of skipping the check.
 - **ECDH ephemeral key signature is now verified** (ECC profiles): the
   `EphemeralKeyType.signature` returned in the AdditionalParameters of
   CreateSession/ActivateSession responses is verified over the raw public key
   bytes against the server certificate before the key is accepted for nonce
-  derivation. A missing or invalid signature aborts with `ServiceException`.
+  derivation. A missing or invalid signature aborts with `ServiceException`,
+  as does an unavailable server certificate while security is active
+  (fail closed).
 - **Server certificate is bound to the endpoint's ApplicationUri**: on secure
   connections the SAN `ApplicationUri` of the server certificate must match
   the `ApplicationUri` declared in the endpoint's ApplicationDescription
@@ -36,6 +42,11 @@ Brainpool P256r1/P384r1).
   sequence number of every verified message must be strictly increasing
   (anti-replay, OPC UA Part 6 §6.7.2.4), allowing the documented wrap-around
   below 1024 past the policy threshold. Violations throw `SecurityException`.
+  The check fails closed: a verified plaintext too short to contain the
+  sequence header throws `SecurityException` instead of being skipped. The
+  anti-replay counter is per channel — it restarts only because every
+  `connect()` constructs a fresh `SecureChannel`, and would correctly keep
+  increasing across a token renewal on the same instance.
 - **Trust store decisions no longer rely on SHA-1 alone**:
   `FileTrustStore::isTrusted()` keeps the SHA-1 fingerprint for file naming
   (wire thumbprint compatibility) but compares the stored DER against the
