@@ -87,6 +87,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          # Full history: the SonarQube scanner needs it for blame data and
+          # new-code detection.
+          fetch-depth: 0
 
       - name: Setup PHP ${{ matrix.php-version }}
         uses: shivammathur/setup-php@v2
@@ -117,6 +121,12 @@ jobs:
           files: coverage/clover.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+
+      - name: SonarQube scan
+        if: matrix.php-version == '8.5'
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}

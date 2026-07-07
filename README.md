@@ -24,10 +24,13 @@
 </p>
 
 <p align="center">
+  <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=alert_status" alt="Quality Gate Status"></a>
   <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=reliability_rating" alt="Reliability Rating"></a>
   <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=security_rating" alt="Security Rating"></a>
   <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=sqale_rating" alt="Maintainability Rating"></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=coverage" alt="Coverage"></a>
   <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=vulnerabilities" alt="Vulnerabilities"></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=code_smells" alt="Code Smells"></a>
   <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=duplicated_lines_density" alt="Duplicated Lines (%)"></a>
 </p>
 
