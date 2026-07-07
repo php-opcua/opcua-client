@@ -23,6 +23,14 @@
   <img src="https://custom-icon-badges.demolab.com/badge/Windows-✓-2ea44f?style=flat-square&logo=windows11&logoColor=white" alt="Windows">
 </p>
 
+<p align="center">
+  <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=reliability_rating" alt="Reliability Rating"></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=security_rating" alt="Security Rating"></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=sqale_rating" alt="Maintainability Rating"></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=vulnerabilities" alt="Vulnerabilities"></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=php-opcua_opcua-client"><img src="https://sonarcloud.io/api/project_badges/measure?project=php-opcua_opcua-client&metric=duplicated_lines_density" alt="Duplicated Lines (%)"></a>
+</p>
+
 ---
 
 Connect your PHP application directly to industrial PLCs, SCADA systems, sensors, historians, and IoT devices using the [OPC UA](https://opcfoundation.org/about/opc-technologies/opc-ua/) standard — without any C/C++ extensions, HTTP gateways, or middleware in between.

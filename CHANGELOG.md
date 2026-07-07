@@ -128,6 +128,12 @@ Brainpool P256r1/P384r1).
   no session is active, instead of `null` (its declared return type was
   already `NodeId`).
 - Removed the unused private `SecureChannel::asymmetricSignAndEncrypt()`.
+- **`Cache\SimpleCacheTrait`** — the PSR-16 members duplicated verbatim
+  between `FileCache` and `InMemoryCache` (`getMultiple()`, `setMultiple()`,
+  `deleteMultiple()`, `has()`, `getDefaultTtl()`, `resolveTtl()` and the
+  `$defaultTtl` property) now live in a shared trait used by both classes.
+  Behavior-preserving; the storage-specific `get`/`set`/`delete`/`clear`
+  implementations are unchanged.
 
 ### CI
 
@@ -136,6 +142,10 @@ Brainpool P256r1/P384r1).
   PHP 8.2–8.5), then integration tests. The PHP 8.5 integration leg runs the
   full suite and produces the coverage report; the other legs run the
   integration group only.
+- **SonarCloud analysis** enabled for the repository
+  (`.sonarcloud.properties`); the README shows the SonarCloud badges
+  (reliability, security, maintainability, vulnerabilities, duplicated
+  lines) next to the existing tests/coverage ones.
 
 ### Tests
 

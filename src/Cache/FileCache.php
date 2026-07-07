@@ -13,9 +13,9 @@ use Psr\SimpleCache\CacheInterface;
  */
 class FileCache implements CacheInterface
 {
-    private string $directory;
+    use SimpleCacheTrait;
 
-    private int $defaultTtl;
+    private string $directory;
 
     /**
      * @param string $directory Path to the cache directory. Created if it does not exist.
@@ -110,63 +110,6 @@ class FileCache implements CacheInterface
     }
 
     /**
-     * {@inheritDoc}
-     */
-    public function getMultiple(iterable $keys, mixed $default = null): iterable
-    {
-        $results = [];
-        foreach ($keys as $key) {
-            $results[$key] = $this->get($key, $default);
-        }
-
-        return $results;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @param iterable<string, mixed> $values
-     */
-    public function setMultiple(iterable $values, null|int|\DateInterval $ttl = null): bool
-    {
-        foreach ($values as $key => $value) {
-            $this->set($key, $value, $ttl);
-        }
-
-        return true;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function deleteMultiple(iterable $keys): bool
-    {
-        foreach ($keys as $key) {
-            $this->delete($key);
-        }
-
-        return true;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function has(string $key): bool
-    {
-        return $this->get($key) !== null;
-    }
-
-    /**
-     * Returns the default time-to-live in seconds.
-     *
-     * @return int
-     */
-    public function getDefaultTtl(): int
-    {
-        return $this->defaultTtl;
-    }
-
-    /**
      * @param string $path
      * @return ?array{v: mixed, e: ?int}
      */
@@ -207,24 +150,5 @@ class FileCache implements CacheInterface
     private function path(string $key): string
     {
         return $this->directory . DIRECTORY_SEPARATOR . sha1($key) . '.cache';
-    }
-
-    /**
-     * Resolves a TTL value to an integer number of seconds.
-     *
-     * @param null|int|\DateInterval $ttl
-     * @return int
-     */
-    private function resolveTtl(null|int|\DateInterval $ttl): int
-    {
-        if ($ttl === null) {
-            return $this->defaultTtl;
-        }
-
-        if ($ttl instanceof \DateInterval) {
-            return (int) (new \DateTimeImmutable('@0'))->add($ttl)->getTimestamp();
-        }
-
-        return $ttl;
     }
 }
