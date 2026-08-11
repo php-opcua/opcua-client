@@ -367,8 +367,9 @@ class NodeManagementService extends AbstractProtocolService
      */
     private function writeDataTypeAttributes(BinaryEncoder $e, AddNodeItem $item): void
     {
-        $this->writeCommonAttributes($e, $item, 0x1F);
-        $e->writeBoolean($item->isAbstract);
+        // DataTypeAttributes share the ObjectTypeAttributes wire layout
+        // (specifiedAttributes 0x1F + isAbstract).
+        $this->writeObjectTypeAttributes($e, $item);
     }
 
     /**

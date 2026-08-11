@@ -480,7 +480,7 @@ describe('MessageSecurity error handling', function () {
     it('loadEcPublicKeyFromBytes throws for unsupported curve', function () {
         $fakeKey = "\x04" . str_repeat("\x01", 64);
         expect(fn () => $this->ms->loadEcPublicKeyFromBytes($fakeKey, 'secp521r1'))
-            ->toThrow(PhpOpcua\Client\Exception\SecurityException::class, 'Unsupported curve: secp521r1');
+            ->toThrow(PhpOpcua\Client\Exception\SecurityException::class, 'Unsupported EC curve: secp521r1');
     });
 
 });

@@ -12,6 +12,7 @@ use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\OpcUaException;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
+use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Security\CertificateManager;
 use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Types\NodeId;
@@ -21,6 +22,14 @@ use PhpOpcua\Client\Types\NodeId;
  */
 trait ManagesSessionTrait
 {
+    /**
+     * Get the active session service, failing if none is established.
+     */
+    private function requireSession(): SessionService
+    {
+        return $this->session ?? throw new ConnectionException('No active session: call connect() first');
+    }
+
     /**
      * Create and activate an OPC UA session.
      *
@@ -64,10 +73,10 @@ trait ManagesSessionTrait
             $this->eccServerEphemeralKey = $eccKey;
         }
 
-        if (isset($sessionResult['serverCertificate'])) {
-            if ($this->secureChannel !== null && $this->secureChannel->getServerCertDer() === null) {
-                $this->secureChannel->setServerCertDer($sessionResult['serverCertificate']);
-            }
+        if (isset($sessionResult['serverCertificate'])
+            && $this->secureChannel !== null
+            && $this->secureChannel->getServerCertDer() === null) {
+            $this->secureChannel->setServerCertDer($sessionResult['serverCertificate']);
         }
     }
 

@@ -235,6 +235,8 @@ class BinaryEncoder
                 }
                 $this->writeByteString($opaque);
                 break;
+            default:
+                throw new EncodingException("Unsupported NodeId encoding byte: {$encodingByte}");
         }
     }
 
@@ -336,13 +338,18 @@ class BinaryEncoder
         };
     }
 
+    private static function variantTypeMismatch(BuiltinType $type, string $expected, mixed $value): EncodingException
+    {
+        return new EncodingException("Variant value for {$type->name} must be {$expected}, " . get_debug_type($value) . ' given');
+    }
+
     /**
      * Validate that a variant value is a scalar before casting it to the wire type.
      */
     private static function toScalar(BuiltinType $type, mixed $value): bool|int|float|string
     {
         if (! is_scalar($value)) {
-            throw new EncodingException("Variant value for {$type->name} must be a scalar, " . get_debug_type($value) . ' given');
+            throw self::variantTypeMismatch($type, 'a scalar', $value);
         }
 
         return $value;
@@ -351,7 +358,7 @@ class BinaryEncoder
     private static function toNullableString(BuiltinType $type, mixed $value): ?string
     {
         if ($value !== null && ! is_string($value)) {
-            throw new EncodingException("Variant value for {$type->name} must be a string or null, " . get_debug_type($value) . ' given');
+            throw self::variantTypeMismatch($type, 'a string or null', $value);
         }
 
         return $value;
@@ -365,7 +372,7 @@ class BinaryEncoder
     private static function toInstance(BuiltinType $type, mixed $value, string $class): object
     {
         if (! $value instanceof $class) {
-            throw new EncodingException("Variant value for {$type->name} must be a {$class} instance, " . get_debug_type($value) . ' given');
+            throw self::variantTypeMismatch($type, "a {$class} instance", $value);
         }
 
         return $value;
@@ -379,7 +386,7 @@ class BinaryEncoder
     private static function toInstanceOrNull(BuiltinType $type, mixed $value, string $class): ?object
     {
         if ($value !== null && ! $value instanceof $class) {
-            throw new EncodingException("Variant value for {$type->name} must be a {$class} instance or null, " . get_debug_type($value) . ' given');
+            throw self::variantTypeMismatch($type, "a {$class} instance or null", $value);
         }
 
         return $value;

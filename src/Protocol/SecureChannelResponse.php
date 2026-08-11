@@ -39,7 +39,7 @@ class SecureChannelResponse
 
         $decoder->readInt64();
         $decoder->readUInt32();
-        $statusCode = $decoder->readUInt32();
+        $decoder->readUInt32();
         $decoder->readByte();
         $decoder->readInt32();
         $decoder->readNodeId();

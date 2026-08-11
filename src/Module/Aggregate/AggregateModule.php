@@ -102,9 +102,12 @@ class AggregateModule extends ServiceModule
         AggregateFunction $function,
         ?AggregateOptions $options = null,
     ): array {
-        $resolved = $nodeId instanceof NodeId
-            ? $nodeId
-            : (isset($this->kernel) ? $this->kernel->resolveNodeId($nodeId) : null);
+        $resolved = null;
+        if ($nodeId instanceof NodeId) {
+            $resolved = $nodeId;
+        } elseif (isset($this->kernel)) {
+            $resolved = $this->kernel->resolveNodeId($nodeId);
+        }
         $raw = $this->client->historyReadRaw($nodeId, $startTime, $endTime, 0, true);
 
         return $this->doAggregate($resolved, $raw, $startTime, $endTime, $processingIntervalMs, $function, $options);

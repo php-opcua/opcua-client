@@ -95,25 +95,9 @@ class BrowseService extends AbstractProtocolService
      */
     public function decodeBrowseNextResponse(BinaryDecoder $decoder): BrowseResultSet
     {
-        $this->readResponseMetadata($decoder);
-
-        $resultCount = $decoder->readInt32();
-        $references = [];
-        $continuationPoint = null;
-
-        for ($i = 0; $i < $resultCount; $i++) {
-            $decoder->readUInt32();
-            $continuationPoint = $decoder->readByteString();
-
-            $refCount = $decoder->readInt32();
-            for ($j = 0; $j < $refCount; $j++) {
-                $references[] = $decoder->readReferenceDescription();
-            }
-        }
-
-        $decoder->skipDiagnosticInfoArray();
-
-        return new BrowseResultSet($references, $continuationPoint);
+        // BrowseNextResponse carries the same BrowseResult[] payload as
+        // BrowseResponse.
+        return $this->decodeBrowseResponseWithContinuation($decoder);
     }
 
     /**

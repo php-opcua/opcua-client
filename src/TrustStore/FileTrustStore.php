@@ -152,10 +152,8 @@ class FileTrustStore implements TrustStoreInterface
             }
         }
 
-        if ($policy === TrustPolicy::Full && $caCertPem !== null) {
-            if (! $this->verifyCaChain($certDer, $caCertPem)) {
-                return new TrustResult(false, $fingerprint, 'Certificate chain verification failed', $info['subject'], $info['notBefore'], $info['notAfter']);
-            }
+        if ($policy === TrustPolicy::Full && $caCertPem !== null && ! $this->verifyCaChain($certDer, $caCertPem)) {
+            return new TrustResult(false, $fingerprint, 'Certificate chain verification failed', $info['subject'], $info['notBefore'], $info['notAfter']);
         }
 
         return new TrustResult(true, $fingerprint, null, $info['subject'], $info['notBefore'], $info['notAfter']);
@@ -318,10 +316,15 @@ class FileTrustStore implements TrustStoreInterface
      */
     private function defaultBasePath(): string
     {
-        $home = $_SERVER['HOME'] ?? null;
-        $base = PHP_OS_FAMILY === 'Windows'
-            ? (getenv('APPDATA') ?: getenv('LOCALAPPDATA') ?: null)
-            : (is_string($home) && $home !== '' ? $home : (getenv('HOME') ?: null));
+        if (PHP_OS_FAMILY === 'Windows') {
+            $base = getenv('APPDATA') ?: getenv('LOCALAPPDATA');
+        } else {
+            $home = $_SERVER['HOME'] ?? null;
+            if (! is_string($home) || $home === '') {
+                $home = getenv('HOME');
+            }
+            $base = $home;
+        }
 
         $base = $base ?: sys_get_temp_dir();
         $dotPrefix = PHP_OS_FAMILY === 'Windows' ? '' : '.';

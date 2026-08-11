@@ -1,6 +1,6 @@
 # Changelog
 
-## [v4.5.0] - TBD
+## [v4.5.0] - 2026-08-11
 
 Security hardening release: the remaining items from the security review are
 implemented. All checks are interoperability-tested against UA-.NETStandard in
@@ -135,6 +135,26 @@ Brainpool P256r1/P384r1).
   Behavior-preserving; the storage-specific `get`/`set`/`delete`/`clear`
   implementations are unchanged.
 
+### Code quality
+
+- **SonarCloud code-smell cleanup** (32 issues, behavior-preserving):
+  dead stores removed from the binary decoders (the reads that advance the
+  buffer offset are kept, the unused assignments are dropped); duplicated
+  method bodies now delegate (`decodeBrowseNextResponse`,
+  `decodeSetPublishingModeResponse`, `writeDataTypeAttributes`,
+  `SecurityPolicy::getDerivedSignatureKeyLength()`/`getKeyDerivationAlgorithm()`);
+  `Client::requireSession()` moved into `ManagesSessionTrait` where it is
+  used; the unused `$userPrivateKey` parameter dropped from the private
+  `SessionService::writeIdentityToken()` (the user token signature is
+  written separately); nested ternaries and collapsible `if`s flattened;
+  duplicated exception-message literals extracted to private constants;
+  `BinaryEncoder::writeNodeId()` gains a defensive `default` that throws
+  `EncodingException` on an unknown encoding byte (previously unreachable
+  and silently skipped). Only observable change: the unsupported-curve
+  message of `loadEcPublicKeyFromBytes()` is now "Unsupported EC curve: …".
+  The PascalCase constants in `src/Types` (spec-mandated names) are
+  excluded from Sonar rule S115 via `sonar-project.properties`.
+
 ### CI
 
 - The test workflow runs in three phases: format check and PHPStan in
@@ -142,10 +162,13 @@ Brainpool P256r1/P384r1).
   PHP 8.2–8.5), then integration tests. The PHP 8.5 integration leg runs the
   full suite and produces the coverage report; the other legs run the
   integration group only.
-- **SonarCloud analysis** enabled for the repository
-  (`.sonarcloud.properties`); the README shows the SonarCloud badges
-  (reliability, security, maintainability, vulnerabilities, duplicated
-  lines) next to the existing tests/coverage ones.
+- **SonarCloud analysis** enabled for the repository, running CI-based via
+  `SonarSource/sonarqube-scan-action` on the PHP 8.5 integration leg
+  (`sonar-project.properties`; requires the `SONAR_TOKEN` secret). The scan
+  ingests the same `coverage/clover.xml` already sent to Codecov, so
+  SonarCloud reports coverage too. The README shows the SonarCloud badges
+  (quality gate, ratings, coverage, vulnerabilities, code smells,
+  duplicated lines) next to the existing tests/coverage ones.
 
 ### Tests
 

@@ -47,7 +47,7 @@ class PublishService extends AbstractProtocolService
         $moreNotifications = $decoder->readBoolean();
 
         $sequenceNumber = $decoder->readUInt32();
-        $publishTime = $decoder->readDateTime();
+        $decoder->readDateTime();
 
         $notifCount = $decoder->readInt32();
         $notifications = [];

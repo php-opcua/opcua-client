@@ -272,17 +272,9 @@ class SubscriptionService extends AbstractProtocolService
      */
     public function decodeSetPublishingModeResponse(BinaryDecoder $decoder): array
     {
-        $this->readResponseMetadata($decoder);
-
-        $count = $decoder->readInt32();
-        $results = [];
-        for ($i = 0; $i < $count; $i++) {
-            $results[] = $decoder->readUInt32();
-        }
-
-        $decoder->skipDiagnosticInfoArray();
-
-        return $results;
+        // SetPublishingModeResponse carries the same StatusCode[] payload as
+        // DeleteSubscriptionsResponse.
+        return $this->decodeDeleteSubscriptionsResponse($decoder);
     }
 
     /**

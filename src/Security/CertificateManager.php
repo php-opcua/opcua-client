@@ -15,6 +15,10 @@ class CertificateManager
 {
     use EnsuresOpenSslSuccess;
 
+    private const READ_CERT_FAILED = 'Failed to read certificate';
+
+    private const PUBLIC_KEY_FAILED = 'Failed to get public key from certificate';
+
     /**
      * @param string $path
      * @return string DER-encoded certificate bytes.
@@ -80,8 +84,8 @@ class CertificateManager
     public function getPublicKeyLength(string $derCert): int
     {
         $pem = $this->derToPem($derCert);
-        $cert = self::ensureNotFalse(openssl_x509_read($pem), 'Failed to read certificate');
-        $pubKey = self::ensureNotFalse(openssl_pkey_get_public($cert), 'Failed to get public key from certificate');
+        $cert = self::ensureNotFalse(openssl_x509_read($pem), self::READ_CERT_FAILED);
+        $pubKey = self::ensureNotFalse(openssl_pkey_get_public($cert), self::PUBLIC_KEY_FAILED);
         $details = self::ensureNotFalse(openssl_pkey_get_details($pubKey), 'Failed to get key details');
 
         return (int) ($details['bits'] / 8);
@@ -95,9 +99,9 @@ class CertificateManager
     public function getPublicKeyFromCert(string $derCert): OpenSSLAsymmetricKey
     {
         $pem = $this->derToPem($derCert);
-        $cert = self::ensureNotFalse(openssl_x509_read($pem), 'Failed to read certificate');
+        $cert = self::ensureNotFalse(openssl_x509_read($pem), self::READ_CERT_FAILED);
 
-        return self::ensureNotFalse(openssl_pkey_get_public($cert), 'Failed to get public key from certificate');
+        return self::ensureNotFalse(openssl_pkey_get_public($cert), self::PUBLIC_KEY_FAILED);
     }
 
     /**
@@ -158,8 +162,8 @@ class CertificateManager
     public function getKeyType(string $derCert): int
     {
         $pem = $this->derToPem($derCert);
-        $cert = self::ensureNotFalse(openssl_x509_read($pem), 'Failed to read certificate');
-        $pubKey = self::ensureNotFalse(openssl_pkey_get_public($cert), 'Failed to get public key from certificate');
+        $cert = self::ensureNotFalse(openssl_x509_read($pem), self::READ_CERT_FAILED);
+        $pubKey = self::ensureNotFalse(openssl_pkey_get_public($cert), self::PUBLIC_KEY_FAILED);
         $details = self::ensureNotFalse(openssl_pkey_get_details($pubKey), 'Failed to get key details');
 
         return (int) $details['type'];

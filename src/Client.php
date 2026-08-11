@@ -414,14 +414,6 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
     }
 
     /**
-     * Get the active session service, failing if none is established.
-     */
-    private function requireSession(): SessionService
-    {
-        return $this->session ?? throw new ConnectionException('No active session: call connect() first');
-    }
-
-    /**
      * Unwrap a raw transport response, handling ERR messages and secure channel decryption.
      *
      * @param string $response The raw response bytes from the transport layer.

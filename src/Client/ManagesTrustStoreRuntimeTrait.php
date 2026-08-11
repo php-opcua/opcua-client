@@ -89,7 +89,10 @@ trait ManagesTrustStoreRuntimeTrait
             return;
         }
 
-        $caCertPem = $this->caCertPath !== null ? @file_get_contents($this->caCertPath) ?: null : null;
+        $caCertPem = null;
+        if ($this->caCertPath !== null) {
+            $caCertPem = @file_get_contents($this->caCertPath) ?: null;
+        }
         $result = $this->trustStore->validate($this->serverCertDer, $this->trustPolicy, $caCertPem);
 
         if ($result->trusted) {

@@ -16,6 +16,8 @@ use PhpOpcua\Client\Exception\ProtocolException;
  */
 class TcpTransport implements ClientTransportInterface
 {
+    private const NOT_CONNECTED = 'Not connected';
+
     /** @var resource|null */
     private $socket = null;
 
@@ -87,7 +89,7 @@ class TcpTransport implements ClientTransportInterface
     public function send(string $data): void
     {
         if ($this->socket === null) {
-            throw new ConnectionException('Not connected');
+            throw new ConnectionException(self::NOT_CONNECTED);
         }
 
         $totalSent = 0;
@@ -108,7 +110,7 @@ class TcpTransport implements ClientTransportInterface
     public function receive(): string
     {
         if ($this->socket === null) {
-            throw new ConnectionException('Not connected');
+            throw new ConnectionException(self::NOT_CONNECTED);
         }
 
         $header = $this->readExact(8);
@@ -140,7 +142,7 @@ class TcpTransport implements ClientTransportInterface
     {
         $socket = $this->socket;
         if ($socket === null) {
-            throw new ConnectionException('Not connected');
+            throw new ConnectionException(self::NOT_CONNECTED);
         }
 
         $data = '';

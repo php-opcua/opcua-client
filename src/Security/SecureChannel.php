@@ -305,7 +305,7 @@ class SecureChannel
             throw new MessageTypeException('OPN', $header->getMessageType());
         }
 
-        $channelId = $decoder->readUInt32();
+        $decoder->readUInt32();
 
         $policyUri = $decoder->readString();
 
@@ -511,7 +511,7 @@ class SecureChannel
         $headerBytes = substr($rawResponse, 0, 12);
 
         $decoder = new BinaryDecoder($rawResponse);
-        $header = MessageHeader::decode($decoder);
+        MessageHeader::decode($decoder);
         $channelId = $decoder->readUInt32();
         $tokenId = $decoder->readUInt32();
 
@@ -532,7 +532,6 @@ class SecureChannel
         $remaining = $decoder->readRawBytes($decoder->getRemainingLength());
 
         $signatureSize = $this->policy->getSymmetricSignatureSize();
-        $blockSize = $this->policy->getSymmetricBlockSize();
 
         if ($this->mode === SecurityMode::SignAndEncrypt) {
             $decrypted = $this->messageSecurity->symmetricDecrypt(
@@ -753,9 +752,8 @@ class SecureChannel
 
         $decoder->readNodeId();
         $decoder->readInt64();
-        $requestHandle = $decoder->readUInt32();
 
-        return $requestHandle;
+        return $decoder->readUInt32();
     }
 
     /**

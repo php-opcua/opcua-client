@@ -163,7 +163,7 @@ class SessionService
 
         $sessionId = $decoder->readNodeId();
         $authenticationToken = $decoder->readNodeId();
-        $revisedSessionTimeout = $decoder->readDouble();
+        $decoder->readDouble();
         $serverNonce = $decoder->readByteString();
         $serverCertificate = $decoder->readByteString();
 
@@ -256,7 +256,6 @@ class SessionService
             $username,
             $password,
             $userCertDer,
-            $userPrivateKey,
             $serverNonce,
         );
 
@@ -389,15 +388,15 @@ class SessionService
 
         $paramCount = $dec->readInt32();
         for ($i = 0; $i < $paramCount; $i++) {
-            $nsIndex = $dec->readUInt16();
+            $dec->readUInt16();
             $key = $dec->readString();
 
             $variantEncoding = $dec->readByte();
             if ($key === 'ECDHKey' && ($variantEncoding & 0x3F) === 22) {
-                $extTypeId = $dec->readNodeId();
+                $dec->readNodeId();
                 $extEncoding = $dec->readByte();
                 if ($extEncoding === 0x01) {
-                    $extBodyLen = $dec->readInt32();
+                    $dec->readInt32();
                     $publicKey = $dec->readByteString();
                     $signature = $dec->readByteString();
                     $this->verifyEccEphemeralKeySignature($publicKey, $signature);
@@ -721,7 +720,6 @@ class SessionService
             $username,
             $password,
             $userCertDer,
-            $userPrivateKey,
             $serverNonce,
         );
 
@@ -812,7 +810,6 @@ class SessionService
      * @param ?string $username
      * @param ?string $password
      * @param ?string $userCertDer
-     * @param ?OpenSSLAsymmetricKey $userPrivateKey
      * @param ?string $serverNonce
      */
     private function writeIdentityToken(
@@ -820,7 +817,6 @@ class SessionService
         ?string $username,
         ?string $password,
         ?string $userCertDer,
-        ?OpenSSLAsymmetricKey $userPrivateKey,
         ?string $serverNonce,
     ): void {
         if ($username !== null && $password !== null) {

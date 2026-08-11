@@ -28,6 +28,8 @@ use PhpOpcua\Client\Wire\WireTypeRegistry;
  */
 class ReadWriteModule extends ServiceModule
 {
+    private const NOT_BOOTED = 'ReadWrite module not booted: call connect() first';
+
     private ?ReadService $readService = null;
 
     private ?WriteService $writeService = null;
@@ -527,16 +529,16 @@ class ReadWriteModule extends ServiceModule
 
     private function readService(): ReadService
     {
-        return $this->readService ?? throw new ConnectionException('ReadWrite module not booted: call connect() first');
+        return $this->readService ?? throw new ConnectionException(self::NOT_BOOTED);
     }
 
     private function writeService(): WriteService
     {
-        return $this->writeService ?? throw new ConnectionException('ReadWrite module not booted: call connect() first');
+        return $this->writeService ?? throw new ConnectionException(self::NOT_BOOTED);
     }
 
     private function callService(): CallService
     {
-        return $this->callService ?? throw new ConnectionException('ReadWrite module not booted: call connect() first');
+        return $this->callService ?? throw new ConnectionException(self::NOT_BOOTED);
     }
 }

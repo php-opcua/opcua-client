@@ -158,16 +158,15 @@ class TypeDiscoveryModule extends ServiceModule
         foreach ($nodes as $node) {
             $nodeId = $node->reference->nodeId;
 
-            if ($nodeId->namespaceIndex !== 0) {
-                if ($namespaceIndex === null || $nodeId->namespaceIndex === $namespaceIndex) {
-                    try {
-                        $entry = $this->discoverSingleDataType($nodeId);
-                        if ($entry !== null) {
-                            $registered++;
-                            $discoveredEntries[] = $entry;
-                        }
-                    } catch (Throwable) {
+            if ($nodeId->namespaceIndex !== 0
+                && ($namespaceIndex === null || $nodeId->namespaceIndex === $namespaceIndex)) {
+                try {
+                    $entry = $this->discoverSingleDataType($nodeId);
+                    if ($entry !== null) {
+                        $registered++;
+                        $discoveredEntries[] = $entry;
                     }
+                } catch (Throwable) {
                 }
             }
 

@@ -29,6 +29,7 @@ enum SecurityPolicy: string
         };
     }
 
+    /** @return ''|'sha1'|'sha256'|'sha384' */
     public function getSymmetricSignatureAlgorithm(): string
     {
         return match ($this) {
@@ -58,6 +59,7 @@ enum SecurityPolicy: string
         };
     }
 
+    /** @return int<0, max> */
     public function getSymmetricSignatureSize(): int
     {
         return match ($this) {
@@ -110,26 +112,26 @@ enum SecurityPolicy: string
         return $this->getSymmetricKeyLength();
     }
 
-    /** @return int<0, max> */
+    /**
+     * The derived signing key of every policy is as long as the output of
+     * its symmetric signature hash.
+     *
+     * @return int<0, max>
+     */
     public function getDerivedSignatureKeyLength(): int
     {
-        return match ($this) {
-            self::None => 0,
-            self::Basic128Rsa15, self::Basic256 => 20,
-            self::Basic256Sha256, self::Aes128Sha256RsaOaep, self::Aes256Sha256RsaPss, self::EccNistP256, self::EccBrainpoolP256r1 => 32,
-            self::EccNistP384, self::EccBrainpoolP384r1 => 48,
-        };
+        return $this->getSymmetricSignatureSize();
     }
 
-    /** @return ''|'sha1'|'sha256'|'sha384' */
+    /**
+     * Every policy derives keys with the same hash used for symmetric
+     * signatures (P_SHA1/P_SHA256 for RSA, HKDF for ECC).
+     *
+     * @return ''|'sha1'|'sha256'|'sha384'
+     */
     public function getKeyDerivationAlgorithm(): string
     {
-        return match ($this) {
-            self::None => '',
-            self::Basic128Rsa15, self::Basic256 => 'sha1',
-            self::Basic256Sha256, self::Aes128Sha256RsaOaep, self::Aes256Sha256RsaPss, self::EccNistP256, self::EccBrainpoolP256r1 => 'sha256',
-            self::EccNistP384, self::EccBrainpoolP384r1 => 'sha384',
-        };
+        return $this->getSymmetricSignatureAlgorithm();
     }
 
     public function getAsymmetricPaddingOverhead(): int

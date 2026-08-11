@@ -38,6 +38,8 @@ use PhpOpcua\Client\Wire\WireTypeRegistry;
  */
 class SubscriptionModule extends ServiceModule
 {
+    private const NOT_BOOTED = 'Subscription module not booted: call connect() first';
+
     private ?SubscriptionService $subscriptionService = null;
 
     private ?MonitoredItemService $monitoredItemService = null;
@@ -716,16 +718,16 @@ class SubscriptionModule extends ServiceModule
 
     private function subscriptionService(): SubscriptionService
     {
-        return $this->subscriptionService ?? throw new ConnectionException('Subscription module not booted: call connect() first');
+        return $this->subscriptionService ?? throw new ConnectionException(self::NOT_BOOTED);
     }
 
     private function monitoredItemService(): MonitoredItemService
     {
-        return $this->monitoredItemService ?? throw new ConnectionException('Subscription module not booted: call connect() first');
+        return $this->monitoredItemService ?? throw new ConnectionException(self::NOT_BOOTED);
     }
 
     private function publishService(): PublishService
     {
-        return $this->publishService ?? throw new ConnectionException('Subscription module not booted: call connect() first');
+        return $this->publishService ?? throw new ConnectionException(self::NOT_BOOTED);
     }
 }

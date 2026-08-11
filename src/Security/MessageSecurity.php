@@ -365,11 +365,6 @@ class MessageSecurity
             throw new SecurityException('EC public key must be in uncompressed format (0x04 prefix)');
         }
 
-        $coordinateSize = self::getCoordinateSize($curveName);
-
-        $x = substr($publicKeyBytes, 1, $coordinateSize);
-        $y = substr($publicKeyBytes, 1 + $coordinateSize, $coordinateSize);
-
         $curveOid = match ($curveName) {
             'prime256v1' => "\x06\x08\x2a\x86\x48\xce\x3d\x03\x01\x07",
             'secp384r1' => "\x06\x05\x2b\x81\x04\x00\x22",
