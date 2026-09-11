@@ -1,6 +1,6 @@
 # Types reference
 
-OPC UA primitives as PHP classes, all under `PhpOpcua\Client\Types\`. The wire value objects (NodeId, Variant, DataValue, ExtensionObject, LocalizedText, QualifiedName, EndpointDescription, ReferenceDescription, StructureDefinition, StructureField, UserTokenPolicy) are `final readonly` with public readonly properties. `StatusCode` is a plain class of int constants plus static helpers (`isGood`/`isBad`/`isUncertain`/`getName`/`withDataValueInfoBits`); `AttributeId` is a plain class of int constants only; BuiltinType, NodeClass, BrowseDirection, and ConnectionState are enums; and BrowseNode is `final` but mutable (children are added via `addChild()`).
+OPC UA primitives as PHP classes, all under `PhpOpcua\Client\Types\`. The wire value objects (NodeId, Variant, DataValue, ExtensionObject, LocalizedText, QualifiedName, EndpointDescription, ReferenceDescription, StructureDefinition, StructureField, UserTokenPolicy) are `final readonly` with public readonly properties. `StatusCode` is a plain class of int constants plus static helpers (`isGood`/`isBad`/`isUncertain`/`getName`/`withDataValueInfoBits`/`hasDataValueInfoBits`/`isOverflow`/`limit`); `AttributeId` is a plain class of int constants only; BuiltinType, NodeClass, BrowseDirection, ConnectionState, and DataValueLimit are enums; and BrowseNode is `final` but mutable (children are added via `addChild()`).
 
 ## NodeId
 
@@ -67,6 +67,7 @@ use PhpOpcua\Client\Types\DataValue;
 
 // Public readonly:
 $dv->statusCode;                                   // int — 0 = Good, see StatusCode
+$dv->isOverflow();                                 // bool — queue-overflow InfoBit; only set when queueSize > 1
 $dv->sourceTimestamp;                              // ?DateTimeImmutable
 $dv->serverTimestamp;                              // ?DateTimeImmutable
 $dv->type;                                         // ?BuiltinType — derived from inner Variant; null when no Variant
@@ -156,8 +157,9 @@ BuiltinType::DiagnosticInfo; // = 25
 | `UserTokenPolicy` | discovery result | `policyId`, `tokenType` (int: 0=Anonymous, 1=UserName, 2=Certificate, 3=IssuedToken), `issuedTokenType`, `issuerEndpointUrl`, `securityPolicyUri` |
 | `LocalizedText` | i18n string | `locale`, `text`. `__toString()` returns text. |
 | `QualifiedName` | namespaced name | `namespaceIndex`, `name`. `__toString()` returns `'namespaceIndex:name'` (e.g. `2:Temperature`), or just `'name'` when `namespaceIndex` is 0. |
-| `StatusCode` | static helpers | `StatusCode::isGood($code)`, `isUncertain($code)`, `isBad($code)`, `withDataValueInfoBits()` |
+| `StatusCode` | static helpers | `StatusCode::isGood($code)`, `isUncertain($code)`, `isBad($code)`, `isOverflow($code)`, `limit($code)`, `withDataValueInfoBits()` |
 | `ConnectionState` | enum | `Disconnected`, `Connected`, `Broken` |
+| `DataValueLimit` | enum | `None`, `Low`, `High`, `Constant` — returned by `$dv->limit()` |
 
 ## StatusCode interpretation
 
@@ -177,6 +179,15 @@ if (StatusCode::isGood($dv->statusCode)) { /* trustworthy */ }
 if (StatusCode::isUncertain($dv->statusCode)) { /* log + maybe accept */ }
 if (StatusCode::isBad($dv->statusCode)) { /* discard */ }
 ```
+
+The InfoBits are read with dedicated accessors — never mask them by hand, since they only mean something under the DataValue InfoType:
+
+```php
+$dv->isOverflow();  // the queue discarded a value in favour of this one
+$dv->limit();       // DataValueLimit::None | Low | High | Constant
+```
+
+`isOverflow()` is only meaningful when the monitored item has `queueSize > 1`: with the default queue of 1 the server overwrites the single slot on every sample and never sets the bit, so `false` there does not prove that no value was skipped. An overflowed Good value is still Good for `isGood()`.
 
 Common codes you'll see (these are the `StatusCode` constants defined in the library; use `StatusCode::getName($code)` for display):
 - `0x00000000` — `StatusCode::Good`

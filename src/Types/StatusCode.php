@@ -81,6 +81,16 @@ class StatusCode
 
     public const HistorianMultiValue = 0x00000010;
 
+    public const Overflow = 0x00000080;
+
+    public const LimitLow = 0x00000100;
+
+    public const LimitHigh = 0x00000200;
+
+    public const LimitConstant = 0x00000300;
+
+    private const INFO_TYPE_MASK = 0x00000C00;
+
     private const NAMES = [
         self::Good => 'Good',
         self::BadUnexpectedError => 'BadUnexpectedError',
@@ -172,5 +182,44 @@ class StatusCode
         }
 
         return ($severityCode | self::InfoTypeDataValue | ($infoBits & 0x3FF)) & 0xFFFFFFFF;
+    }
+
+    /**
+     * Checks whether the status code carries DataValue InfoBits (Part 4 §7.34.2).
+     *
+     * @param int $code
+     * @return bool
+     */
+    public static function hasDataValueInfoBits(int $code): bool
+    {
+        return ($code & self::INFO_TYPE_MASK) === self::InfoTypeDataValue;
+    }
+
+    /**
+     * Checks whether the MonitoredItem queue overflowed and this value replaced a discarded one.
+     *
+     * @param int $code
+     * @return bool
+     * @see self::hasDataValueInfoBits()
+     */
+    public static function isOverflow(int $code): bool
+    {
+        return self::hasDataValueInfoBits($code) && ($code & self::Overflow) !== 0;
+    }
+
+    /**
+     * Returns the LimitBits of a DataValue status code.
+     *
+     * @param int $code
+     * @return DataValueLimit {@see DataValueLimit::None} when the code carries no DataValue InfoBits.
+     * @see self::hasDataValueInfoBits()
+     */
+    public static function limit(int $code): DataValueLimit
+    {
+        if (! self::hasDataValueInfoBits($code)) {
+            return DataValueLimit::None;
+        }
+
+        return DataValueLimit::from(($code & self::LimitConstant) >> 8);
     }
 }

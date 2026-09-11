@@ -79,10 +79,10 @@ if (! function_exists('generateTestCertKeyPair')) {
         $totalWithMinPadding = $bodyLen + $overhead;
         $remainder = $totalWithMinPadding % $plainTextBlockSize;
         $paddingSize = ($remainder === 0) ? 1 : 1 + ($plainTextBlockSize - $remainder);
-        $paddingByte = chr($paddingSize - 1);
+        $paddingByte = chr(($paddingSize - 1) & 0xFF);
         $padding = str_repeat($paddingByte, $paddingSize);
         if ($extraPaddingByte) {
-            $padding .= chr(($paddingSize - 1) >> 8);
+            $padding .= chr((($paddingSize - 1) >> 8) & 0xFF);
         }
         $bodyWithPadding = $plainBody . $padding;
 

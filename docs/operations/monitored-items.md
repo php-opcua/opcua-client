@@ -75,10 +75,17 @@ Builder methods, accumulated against the most recent `add()`:
 | ----------------------------- | ----------------------------------------- |
 | `add(NodeId\|string)`         | Start a new item                          |
 | `samplingInterval(float)`     | Target ms; `0` = server-default           |
-| `queueSize(int)`              | Server-side notification queue depth      |
+| `queueSize(int)`              | Server-side notification queue depth (default `1`) |
 | `clientHandle(int)`           | Caller-defined correlation handle         |
 | `attributeId(int)`            | Which attribute to monitor (default `Value`) |
 | `execute()`                   | Issue the call                            |
+
+Without `queueSize` an item gets a single-slot queue that keeps only
+the latest sample, so intermediate values are overwritten silently —
+see [DataValue and Variant · Overflow and limit
+bits](../types/data-value-and-variant.md#overflow-and-limit-bits).
+Without `clientHandle`, the library assigns each item its position in
+the list plus one.
 
 ## Creating event items
 
@@ -135,20 +142,41 @@ need to interpret the raw payload yourself for these cases. See
 
 <!-- @method name="$client->modifyMonitoredItems(int \$subscriptionId, array \$itemsToModify): array" returns="MonitoredItemModifyResult[]" visibility="public" -->
 
-Change sampling interval, queue size, or client handle without
-deleting/recreating:
+Change sampling interval, queue size, client handle or discard policy
+without deleting and recreating the item.
+
+**This is not a partial update.** Every item is sent with all of its
+parameters, and a key you leave out is sent as a default — the server
+does not keep the previous value:
+
+| Omitted key        | Sent as | Effect on the server                                          |
+| ------------------ | ------- | ------------------------------------------------------------- |
+| `clientHandle`     | `0`     | Notifications arrive with handle `0`; a handle-to-node map no longer matches them |
+| `queueSize`        | `0`     | Revised to a single-slot queue                                |
+| `samplingInterval` | `-1`    | Samples at the subscription's publishing interval             |
+| `discardOldest`    | `true`  | The oldest value is dropped when the queue is full            |
+
+Against UA-.NETStandard, modifying only the `samplingInterval` of an
+item created with `clientHandle: 7` and `queueSize: 10` returns `Good`
+with `revisedQueueSize: 1`, and every notification after it carries
+`clientHandle` `0`. Always pass every parameter you want to keep:
 
 <!-- @code-block language="php" label="modify sampling rate" -->
 ```php
 $client->modifyMonitoredItems($sub->subscriptionId, [
     [
         'monitoredItemId'  => $results[0]->monitoredItemId,
+        'clientHandle'     => 1,        // the handle it was created with
         'samplingInterval' => 1000.0,
         'queueSize'        => 20,
+        'discardOldest'    => true,
     ],
 ]);
 ```
 <!-- @endcode-block -->
+
+`discardOldest` can only be chosen here: `createMonitoredItems()`
+always creates items with `discardOldest: true`.
 
 ## Triggering
 

@@ -442,6 +442,9 @@ $builder->setBatchSize(0);   // disable batching
 StatusCode::isGood($code);      // true if 0x0XXXXXXX
 StatusCode::isBad($code);       // true if 0x8XXXXXXX
 StatusCode::getName($code);     // e.g. "BadNodeIdUnknown"
+StatusCode::isOverflow($code);  // queue-overflow InfoBit, checked under the DataValue InfoType
+StatusCode::limit($code);       // DataValueLimit::None|Low|High|Constant
+$dv->isOverflow(); $dv->limit(); // same checks on a DataValue; overflow is only flagged when queueSize > 1
 ```
 
 ### Node Management
@@ -528,6 +531,22 @@ $results = $client->createMonitoredItems($subscriptionId, [
     ['nodeId' => 'i=2258', 'samplingInterval' => 500.0, 'queueSize' => 10],
     ['nodeId' => 'ns=2;i=1001'],
 ]);
+```
+
+`queueSize` defaults to 1 (only the latest sample is kept). Items without `clientHandle` get their position plus one, and are always created with `discardOldest: true`.
+
+### Modifying Monitored Items
+
+`modifyMonitoredItems()` is NOT a partial update: omitted keys are sent as defaults (`clientHandle` 0, `queueSize` 0 → revised to 1, `samplingInterval` -1, `discardOldest` true). Always pass every parameter you want to keep:
+
+```php
+$client->modifyMonitoredItems($subscriptionId, [[
+    'monitoredItemId' => $results[0]->monitoredItemId,
+    'clientHandle' => 1,          // the handle it was created with
+    'samplingInterval' => 1000.0,
+    'queueSize' => 10,
+    'discardOldest' => true,
+]]);
 ```
 
 ### Event Monitoring

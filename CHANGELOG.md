@@ -1,5 +1,55 @@
 # Changelog
 
+## [v4.5.1] - 2026-09-11
+
+### Added
+
+- **DataValue InfoBits accessors.** `DataValue::isOverflow()`, `DataValue::limit()`
+  and `DataValue::hasInfoBits()` read the InfoBits carried by the status code
+  (OPC UA Part 4 §7.34.2), backed by static helpers that work on any raw code:
+  `StatusCode::isOverflow()`, `StatusCode::limit()` and
+  `StatusCode::hasDataValueInfoBits()`. New constants `StatusCode::Overflow`,
+  `LimitLow`, `LimitHigh` and `LimitConstant`, and a `DataValueLimit` enum
+  (`None`, `Low`, `High`, `Constant`). InfoType is checked on its full two-bit
+  field, so the reserved InfoType `0x0C00` is not mistaken for DataValue
+  InfoBits. The overflow bit is only set for monitored items with a
+  `queueSize` greater than 1 (the library default is 1). Additive — no wire
+  or behaviour change.
+
+### Fixed
+
+- **`SecureChannel::addAsymmetricPadding()` no longer passes values above 255
+  to `chr()`.** With keys over 2048 bits (e.g. RSA-4096) the asymmetric padding
+  count can exceed 255: the padding bytes must carry its low byte and
+  ExtraPaddingSize its high byte (OPC UA Part 6). `chr()` produced the low byte
+  only through its implicit `% 256`, which PHP 8.5 deprecates and PHP 9 will
+  reject. Both bytes are now masked explicitly with `& 0xFF` — byte-for-byte
+  identical output on PHP 8.2–8.5, so no wire change.
+
+### Documentation
+
+- **`modifyMonitoredItems()` is documented as a full replacement, not a partial
+  update.** Omitted keys are sent as defaults — `clientHandle` `0`, `queueSize`
+  `0` (revised to 1), `samplingInterval` `-1`, `discardOldest` `true` — so
+  changing one parameter silently resets the others, and a reset
+  `clientHandle` breaks handle-to-node maps while the call still returns
+  Good. Verified against UA-.NETStandard. Stated in the PHPDoc of
+  `OpcUaClientInterface`, `Client` and `SubscriptionModule`, in
+  `docs/operations/monitored-items.md` (whose example omitted the
+  `clientHandle`), in the subscription recipe and in the LLM/AI-skill
+  references. Also documented: `queueSize` defaults to 1, items without a
+  `clientHandle` get their position plus one, and items are always created
+  with `discardOldest: true`.
+
+### Tests
+
+- New regression test in `SecureChannelFullCoverageTest`: a padding count of
+  416 with RSA-4096 parameters encodes as low byte `0xA0` plus ExtraPaddingSize
+  `1`, stays block-aligned, and raises no deprecation. The same padding logic
+  duplicated in the test helpers (`SecurityTestHelpers`, `SecureChannelTest`,
+  `SecurityCoverageTest`) is masked the same way, so the suite runs free of
+  deprecations on PHP 8.5.
+
 ## [v4.5.0] - 2026-08-11
 
 Security hardening release: the remaining items from the security review are

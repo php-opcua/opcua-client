@@ -89,6 +89,38 @@ $value = $dv->getValue();
 ```
 <!-- @endcode-block -->
 
+### Overflow and limit bits
+
+Besides success or failure, the status code carries *InfoBits* — flags
+about the value itself. Two of them matter on subscription data:
+
+<!-- @code-block language="php" label="InfoBits" -->
+```php
+use PhpOpcua\Client\Types\DataValueLimit;
+
+$dv->isOverflow();   // bool — the queue discarded a value in favour of this one
+$dv->limit();        // DataValueLimit — None, Low, High or Constant
+$dv->hasInfoBits();  // bool — whether the server sent DataValue InfoBits at all
+```
+<!-- @endcode-block -->
+
+The same checks work on a raw code as `StatusCode::isOverflow()`,
+`StatusCode::limit()` and `StatusCode::hasDataValueInfoBits()`. The bits
+only mean something under the DataValue InfoType, and both forms check it
+for you: masking `& 0x80` on its own reads the same bit out of codes where
+it means something else. An overflowed `Good` value is still `Good` —
+`StatusCode::isGood()` looks at severity only.
+
+The overflow bit is only set when the monitored item has a `queueSize`
+greater than 1 — and the library's default is 1. With a single-slot queue
+the server overwrites the value on every sample: that is the intended
+sampling behaviour, not an overflow, so the bit is never set and
+`isOverflow()` stays `false` even when intermediate values were skipped.
+To detect lost values, give the item a queue large enough for the samples
+expected between two publishes and watch `isOverflow()`: with
+`discardOldest` (the default) the bit is set on the first value delivered
+after the gap.
+
 ## PHP ↔ OPC UA type mapping
 
 The library maps between PHP types and `BuiltinType` cases as follows:

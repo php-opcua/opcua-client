@@ -86,6 +86,20 @@ closing](../connection/opening-and-closing.md).
 | `Connected`   | After `connect()` returns and during normal operation |
 | `Broken`      | An I/O error invalidated the session; needs `reconnect()` or `disconnect()` |
 
+<!-- @divider eyebrow="DataValueLimit" -->
+The LimitBits of a DataValue status code — whether the value is clamped
+at a limit. Returned by `DataValue::limit()` and `StatusCode::limit()`;
+see [DataValue and Variant · Overflow and limit
+bits](../types/data-value-and-variant.md#overflow-and-limit-bits).
+<!-- @enddivider -->
+
+| Case       | Value | Meaning                                                   |
+| ---------- | ----- | --------------------------------------------------------- |
+| `None`     | 0     | Not at a limit, or the server sent no DataValue InfoBits  |
+| `Low`      | 1     | At the lower limit of the data source                     |
+| `High`     | 2     | At the upper limit of the data source                     |
+| `Constant` | 3     | The value is constant and cannot change                   |
+
 <!-- @divider eyebrow="SecurityPolicy" -->
 The full algorithm-suite enum — 6 RSA + 4 ECC. See [Security ·
 Policies](../security/policies.md) for picking criteria.

@@ -96,7 +96,7 @@ function buildFakeServerMsg(SecureChannel $channel, string $innerBody, SecurityM
         $totalWithMinPadding = $plaintextLen + $overhead;
         $remainder = $totalWithMinPadding % $blockSize;
         $paddingSize = ($remainder === 0) ? 1 : 1 + ($blockSize - $remainder);
-        $paddingByte = chr($paddingSize - 1);
+        $paddingByte = chr(($paddingSize - 1) & 0xFF);
         $paddedPlaintext = $plaintextBytes . str_repeat($paddingByte, $paddingSize);
 
         $encryptedDataLen = strlen($paddedPlaintext) + $signatureSize;

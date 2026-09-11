@@ -360,3 +360,29 @@ If the user's `composer.json` constrains `php-opcua/opcua-client: ^4.3`, do NOT 
 - The ext packages (`opcua-client-ext-reverse-connect`, `opcua-client-ext-transport-https`) — these require ^4.4
 
 Check the user's `composer.json` first, OR explicitly ask which v4.x they're on.
+
+## 19. Treating `modifyMonitoredItems()` as a partial update
+
+**Wrong** — changing one parameter and assuming the others stay as they were:
+
+```php
+$client->modifyMonitoredItems($subId, [
+    ['monitoredItemId' => $itemId, 'samplingInterval' => 250.0],
+]);
+```
+
+Every omitted key is sent as a default: `clientHandle` 0, `queueSize` 0 (revised to 1), `samplingInterval` -1, `discardOldest` true. The call still returns Good, but the item loses its queue and every later notification arrives with `clientHandle` 0 — any handle-to-node map silently stops matching.
+
+**Right** — pass every parameter you want to keep:
+
+```php
+$client->modifyMonitoredItems($subId, [[
+    'monitoredItemId' => $itemId,
+    'clientHandle' => $handle,
+    'samplingInterval' => 250.0,
+    'queueSize' => 10,
+    'discardOldest' => true,
+]]);
+```
+
+Related: `createMonitoredItems()` defaults `queueSize` to 1 and always creates items with `discardOldest: true`; the discard policy can only be changed through `modifyMonitoredItems()`.

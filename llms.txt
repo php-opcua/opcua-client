@@ -182,7 +182,7 @@ $client = ClientBuilder::create()
 - PhpOpcua\Client\Module\ServiceModule — abstract base class for modules (register, boot, reset, requires)
 - PhpOpcua\Client\Types\NodeId — node identifier (public readonly: namespaceIndex, identifier, type)
 - PhpOpcua\Client\Types\Variant — typed value (public readonly: type, value, dimensions)
-- PhpOpcua\Client\Types\DataValue — value with metadata (public readonly: statusCode, sourceTimestamp, serverTimestamp; method: getValue())
+- PhpOpcua\Client\Types\DataValue — value with metadata (public readonly: statusCode, sourceTimestamp, serverTimestamp; methods: getValue(), isOverflow(), limit(), hasInfoBits())
 - PhpOpcua\Client\Types\BuiltinType — enum of 25 OPC UA primitive types
 - PhpOpcua\Client\Types\ReferenceDescription — browse result (public readonly: referenceTypeId, isForward, nodeId, browseName, displayName, nodeClass, typeDefinition)
 - PhpOpcua\Client\Types\BrowseNode — tree node (public readonly: reference; methods: getChildren(), hasChildren())

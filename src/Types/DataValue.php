@@ -241,6 +241,39 @@ final readonly class DataValue implements WireSerializable
     }
 
     /**
+     * Whether the status code carries DataValue InfoBits (Overflow, Limit, Historian).
+     *
+     * @return bool
+     * @see StatusCode::hasDataValueInfoBits()
+     */
+    public function hasInfoBits(): bool
+    {
+        return StatusCode::hasDataValueInfoBits($this->statusCode);
+    }
+
+    /**
+     * Whether the server discarded at least one queued value in favour of this one.
+     *
+     * @return bool
+     * @see StatusCode::isOverflow()
+     */
+    public function isOverflow(): bool
+    {
+        return StatusCode::isOverflow($this->statusCode);
+    }
+
+    /**
+     * Whether the value is clamped at a limit.
+     *
+     * @return DataValueLimit {@see DataValueLimit::None} when the server sent no DataValue InfoBits.
+     * @see StatusCode::limit()
+     */
+    public function limit(): DataValueLimit
+    {
+        return StatusCode::limit($this->statusCode);
+    }
+
+    /**
      * Returns the binary encoding mask indicating which optional fields are present.
      *
      * @return int

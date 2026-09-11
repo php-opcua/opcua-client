@@ -157,6 +157,7 @@ $results = $client->readMulti([
 - `getValue()` unwraps the Variant and returns the PHP-native value
 - Always check `$dv->statusCode` — `0` means Good, non-zero means the read failed or the value is uncertain
 - Use `StatusCode::isGood($dv->statusCode)` for proper status checking
+- Read queue overflow with `$dv->isOverflow()`, never by masking `0x80` — it is only set when the monitored item has `queueSize > 1`; with the default queue of 1 intermediate values are overwritten silently
 - Common well-known nodes: `i=2259` (ServerState), `i=2258` (CurrentTime), `i=2256` (ServerStatus), `i=85` (Objects folder)
 - Use `getServerBuildInfo()` to read all server build metadata in one call (see Server BuildInfo skill below)
 
@@ -445,6 +446,8 @@ $client->deleteSubscription($sub->subscriptionId);
 - In standard PHP (request/response), the subscription dies with the process. Use `opcua-session-manager` for persistent subscriptions across requests
 - `createSubscription()` returns a `SubscriptionResult` with `subscriptionId`
 - `createMonitoredItems()` returns `MonitoredItemResult[]` with `monitoredItemId`
+- `queueSize` defaults to 1 (only the latest sample is kept); size it for the samples expected between two publishes
+- `modifyMonitoredItems()` is NOT a partial update — pass `clientHandle`, `samplingInterval`, `queueSize` and `discardOldest` again, or they are reset (handle → 0, queue → 1, sampling → publishing interval)
 - Always `deleteSubscription()` before disconnecting to clean up server resources
 - `publishingInterval` is in milliseconds
 

@@ -646,11 +646,13 @@ class SecureChannel
             $paddingSize = 1 + ($plainTextBlockSize - $remainder);
         }
 
-        $paddingByte = chr($paddingSize - 1);
+        // Low byte of the padding count (the high byte goes into ExtraPaddingSize
+        // below). Explicit because PHP 8.5 deprecates chr() outside 0-255.
+        $paddingByte = chr(($paddingSize - 1) & 0xFF);
         $padding = str_repeat($paddingByte, $paddingSize);
 
         if ($extraPaddingByte) {
-            $padding .= chr(($paddingSize - 1) >> 8);
+            $padding .= chr((($paddingSize - 1) >> 8) & 0xFF);
         }
 
         return $plainBody . $padding;

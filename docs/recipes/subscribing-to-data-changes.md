@@ -113,6 +113,12 @@ The server has its own `monitoredItemId` per item (returned on
 publish notifications — only your `clientHandle` is. Pick stable
 integers when you allocate them.
 
+Pass the same `clientHandle` again whenever you call
+`modifyMonitoredItems()`: the call is not a partial update, and an
+omitted handle is reset to `0` on the server — after which this map
+resolves every notification to `<unknown>`. See [Operations ·
+Monitored items](../operations/monitored-items.md#modifying).
+
 ## Sampling interval vs publishing interval
 
 Two intervals matter:

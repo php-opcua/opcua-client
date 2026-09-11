@@ -121,6 +121,43 @@ describe('SecureChannel private helpers', function () {
         expect(strlen($result))->toBe(strlen($body) + 1);
         expect(ord($result[strlen($result) - 1]))->toBe(0);
     });
+
+    it('addAsymmetricPadding encodes a padding count above 255 as low byte plus ExtraPaddingSize', function () {
+        [$certDer, $privKey] = generateTestCertKeyPair();
+        $sc = new SecureChannel(
+            SecurityPolicy::Basic256Sha256,
+            SecurityMode::SignAndEncrypt,
+            $certDer,
+            $privKey,
+            $certDer,
+        );
+
+        $method = new ReflectionMethod($sc, 'addAsymmetricPadding');
+        $signatureSize = 512;
+        $plainTextBlockSize = 470;
+        $keyLengthBytes = 512;
+        $body = str_repeat('A', 10);
+
+        $deprecations = [];
+        set_error_handler(function (int $errno, string $message) use (&$deprecations): bool {
+            $deprecations[] = $message;
+
+            return true;
+        }, E_DEPRECATED);
+        try {
+            $result = $method->invoke($sc, $body, $signatureSize, $plainTextBlockSize, $keyLengthBytes);
+        } finally {
+            restore_error_handler();
+        }
+
+        $padding = substr($result, strlen($body));
+
+        expect($deprecations)->toBe([]);
+        expect(strlen($padding) - 2)->toBe(416);
+        expect(substr($padding, 0, -1))->toBe(str_repeat(chr(416 & 0xFF), 417));
+        expect(ord($padding[strlen($padding) - 1]))->toBe(416 >> 8);
+        expect((strlen($result) + $signatureSize) % $plainTextBlockSize)->toBe(0);
+    });
 });
 
 describe('SecureChannel OPN ERR response', function () {
