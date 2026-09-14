@@ -4,6 +4,15 @@
 
 ### Added
 
+- **`PublishResult::$publishTime` and `PublishResult::$acknowledgementResults`**,
+  added as optional trailing constructor parameters and carried through the
+  wire format. The Publish decoder read both and discarded them: an
+  acknowledgement the server rejected went unnoticed, and `publish()` lacked
+  the publish time `republish()` already returned. Against UA-.NETStandard, a
+  valid acknowledgement reports `Good`, an unknown sequence number
+  `BadSequenceNumberUnknown` and an unknown subscription
+  `BadSubscriptionIdInvalid`.
+
 - **`SecureChannelRenewed` event** (`channelId`, `tokenId`, `revisedLifetime`),
   dispatched after each security token renewal.
 
@@ -144,6 +153,10 @@
 
 ### Tests
 
+- Publish (`PublishResultTest`, against UA-.NETStandard): `publishTime` is
+  within seconds of now, and three acknowledgements report `Good`,
+  `BadSequenceNumberUnknown` and `BadSubscriptionIdInvalid`. Unit: both fields
+  are decoded and survive the wire round-trip.
 - History pagination (`HistoryContinuationTest`, against open62541-historizing):
   the server's first page holds 1 024 of 1 500 inserted values plus a
   continuation point; `historyReadRaw()` returns all 1 500 with a second

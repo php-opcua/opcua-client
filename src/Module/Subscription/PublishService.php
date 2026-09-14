@@ -49,18 +49,19 @@ class PublishService extends AbstractProtocolService
         $moreNotifications = $decoder->readBoolean();
 
         $sequenceNumber = $decoder->readUInt32();
-        $decoder->readDateTime();
+        $publishTime = $decoder->readDateTime();
 
         $notifications = $this->decodeNotificationData($decoder);
 
         $resultCount = $decoder->readInt32();
+        $acknowledgementResults = [];
         for ($i = 0; $i < $resultCount; $i++) {
-            $decoder->readUInt32();
+            $acknowledgementResults[] = $decoder->readUInt32();
         }
 
         $decoder->skipDiagnosticInfoArray();
 
-        return new PublishResult($subscriptionId, $sequenceNumber, $moreNotifications, $notifications, $availableSequenceNumbers);
+        return new PublishResult($subscriptionId, $sequenceNumber, $moreNotifications, $notifications, $availableSequenceNumbers, $publishTime, $acknowledgementResults);
     }
 
     /**

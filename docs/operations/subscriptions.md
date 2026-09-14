@@ -111,6 +111,11 @@ The `publish()` call returns a `PublishResult` carrying:
 - `sequenceNumber` — to acknowledge in a later `publish()`
 - `availableSequenceNumbers` — outstanding (un-acked) sequence numbers
   the server still holds
+- `publishTime` — when the server sent the notification message
+- `acknowledgementResults` — the status code of each acknowledgement you
+  passed to this `publish()`, in order: `Good`, or e.g.
+  `BadSequenceNumberUnknown` for a sequence number the server no longer
+  holds and `BadSubscriptionIdInvalid` for an unknown subscription
 - `moreNotifications` — `true` if more data is queued server-side; call
   `publish()` again immediately
 - `notifications` — an array of `DataChangeNotification`

@@ -710,7 +710,7 @@ Module\TranslateBrowsePath\BrowsePathTarget: targetId (NodeId), remainingPathInd
 Module\ReadWrite\CallResult: statusCode (int), inputArgumentResults (int[]), outputArguments (Variant[])
 Module\Subscription\SubscriptionResult: subscriptionId (int), revisedPublishingInterval (float), revisedLifetimeCount (int), revisedMaxKeepAliveCount (int)
 Module\Subscription\MonitoredItemResult: statusCode (int), monitoredItemId (int), revisedSamplingInterval (float), revisedQueueSize (int)
-Module\Subscription\PublishResult: subscriptionId (int), sequenceNumber (int), moreNotifications (bool), notifications (array), availableSequenceNumbers (int[])
+Module\Subscription\PublishResult: subscriptionId (int), sequenceNumber (int), moreNotifications (bool), notifications (array), publishTime (?DateTimeImmutable), acknowledgementResults (int[], one status per acknowledgement sent), availableSequenceNumbers (int[])
 Module\Subscription\TransferResult: statusCode (int), availableSequenceNumbers (int[])
 Types\ExtensionObject: typeId (NodeId), encoding (int), body (?string), value (mixed); methods: isDecoded(), isRaw(). DataValue::getValue() auto-extracts decoded value when codec is registered.
 Module\ServerInfo\BuildInfo: productName (?string), manufacturerName (?string), softwareVersion (?string), buildNumber (?string), buildDate (?DateTimeImmutable)
@@ -1026,7 +1026,7 @@ Alarm-specific events are deduced from event notification fields:
 - PhpOpcua\Client\Module\Subscription\SubscriptionResult — public readonly: subscriptionId, revisedPublishingInterval, revisedLifetimeCount, revisedMaxKeepAliveCount
 - PhpOpcua\Client\Module\Subscription\MonitoredItemResult — public readonly: statusCode, monitoredItemId, revisedSamplingInterval, revisedQueueSize
 - PhpOpcua\Client\Module\ReadWrite\CallResult — public readonly: statusCode, inputArgumentResults, outputArguments
-- PhpOpcua\Client\Module\Subscription\PublishResult — public readonly: subscriptionId, sequenceNumber, moreNotifications, notifications
+- PhpOpcua\Client\Module\Subscription\PublishResult — public readonly: subscriptionId, sequenceNumber, moreNotifications, notifications, publishTime, acknowledgementResults
 - PhpOpcua\Client\Module\Subscription\TransferResult — public readonly: statusCode, availableSequenceNumbers
 - PhpOpcua\Client\Module\Browse\BrowseResultSet — public readonly: references, continuationPoint
 - PhpOpcua\Client\Module\TranslateBrowsePath\BrowsePathResult — public readonly: statusCode, targets

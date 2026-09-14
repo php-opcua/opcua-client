@@ -268,6 +268,13 @@ describe('Core + module DTO round-trip', function () {
         expect($r->availableSequenceNumbers)->toBe([99, 100]);
     });
 
+    it('PublishResult with publish time and acknowledgement results', function () {
+        $publishTime = new DateTimeImmutable('2026-09-14T10:15:30.123456+00:00');
+        $r = roundTrip($this->registry, new PublishResult(1, 100, false, [], [], $publishTime, [0, 0x807A0000]));
+        expect($r->publishTime?->format('Y-m-d\TH:i:s.u'))->toBe('2026-09-14T10:15:30.123456');
+        expect($r->acknowledgementResults)->toBe([0, 0x807A0000]);
+    });
+
     it('SetTriggeringResult', function () {
         $st = new SetTriggeringResult([0, 0], [0x80340000]);
         $r = roundTrip($this->registry, $st);
