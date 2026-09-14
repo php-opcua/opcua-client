@@ -184,7 +184,7 @@ Under `src/Types/`:
   - `SessionService` — kernel-level session bookkeeping (channel/token IDs, sequence numbers, request IDs)
   - `MessageHeader`, `HelloMessage`, `AcknowledgeMessage`, `SecureChannelRequest`, `SecureChannelResponse`
 
-- **`src/Event/`** — 56 PSR-14 event classes + `NullEventDispatcher` (57 files total). See `references/EVENTS.md`.
+- **`src/Event/`** — 57 PSR-14 event classes + `NullEventDispatcher` (57 files total). See `references/EVENTS.md`.
 
 - **`src/Testing/`** — `MockClient`: in-memory `OpcUaClientInterface` impl (no TCP). Handler registration, call tracking. See `references/TESTING.md`.
 

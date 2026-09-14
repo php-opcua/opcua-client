@@ -170,6 +170,14 @@ re-issues the request, up to `maxRetries` total tries. See [Connection
 · Timeouts and retry](./timeouts-and-retry.md) for the classification
 of recoverable vs fatal failures.
 
+## Security token renewal
+
+The server grants the secure channel a security token with a limited
+lifetime. At 75% of that lifetime the client renews it on the first
+request that follows, on the same channel and session, and dispatches
+`SecureChannelRenewed`. A connection idle past the lifetime renews on its
+next request.
+
 ## Lifecycle events
 
 The connection lifecycle is fully observable via PSR-14 events. Wire a
@@ -184,6 +192,7 @@ dispatcher with `setEventDispatcher()` and listen for:
 | `ClientDisconnected` | Disconnected (clean or broken — distinguish via prior `ConnectionFailed` / `ClientDisconnecting`) |
 | `ClientReconnecting` | `reconnect()` started                                     |
 | `SecureChannelOpened` / `SecureChannelClosed` | OPN / CLO frames     |
+| `SecureChannelRenewed` | Security token renewed                                  |
 | `SessionCreated` / `SessionActivated` / `SessionClosed` | CreateSession / ActivateSession / CloseSession |
 
 See [Observability · Event reference](../observability/event-reference.md).

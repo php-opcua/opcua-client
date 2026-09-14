@@ -44,7 +44,7 @@ class SessionService
      */
     public function __construct(
         private readonly int $secureChannelId,
-        private readonly int $tokenId,
+        private int $tokenId,
         private readonly ?SecureChannel $secureChannel = null,
     ) {
     }
@@ -102,6 +102,15 @@ class SessionService
         }
 
         return $this->tokenId;
+    }
+
+    /**
+     * @param int $tokenId
+     * @return void
+     */
+    public function setTokenId(int $tokenId): void
+    {
+        $this->tokenId = $tokenId;
     }
 
     public function getNextSequenceNumber(): int

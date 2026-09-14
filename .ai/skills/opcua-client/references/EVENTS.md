@@ -27,6 +27,7 @@ $client = ClientBuilder::create()
 
 - `SecureChannelOpened($client, int $channelId, SecurityPolicy $securityPolicy, SecurityMode $securityMode)`
 - `SecureChannelClosed($client, int $channelId)`
+- `SecureChannelRenewed($client, int $channelId, int $tokenId, int $revisedLifetime)` — security token renewed
 
 ### Session (3)
 

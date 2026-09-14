@@ -91,6 +91,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
 
     private ?int $expectedRequestId = null;
 
+    private ?float $secureChannelRenewAt = null;
+
     private SecurityPolicy $securityPolicy;
 
     private SecurityMode $securityMode;

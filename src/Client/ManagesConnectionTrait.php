@@ -114,6 +114,10 @@ trait ManagesConnectionTrait
     public function ensureConnected(): void
     {
         if ($this->connectionState === ConnectionState::Connected) {
+            if ($this->secureChannelRenewAt !== null && microtime(true) >= $this->secureChannelRenewAt) {
+                $this->renewSecureChannel();
+            }
+
             return;
         }
 

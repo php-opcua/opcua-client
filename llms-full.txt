@@ -801,7 +801,7 @@ src/
 ├── Types/*.php                   # Shared types (NodeId, DataValue, Variant, etc. — module-specific DTOs live in Module/*)
 ├── Builder/*.php                 # Fluent builders for multi-operations
 ├── Event/NullEventDispatcher.php   # No-op PSR-14 dispatcher
-├── Event/*.php                    # 47 event classes
+├── Event/*.php                    # 57 event classes
 ├── Cache/CacheCodecInterface.php  # Cache codec contract (encode/decode for PSR-16 values)
 ├── Cache/WireCacheCodec.php       # Default codec — JSON gated by Wire\WireTypeRegistry (no unserialize)
 ├── Cache/InMemoryCache.php        # PSR-16 in-memory cache
@@ -980,7 +980,7 @@ $client = $builder->connect('opc.tcp://localhost:4840');
 
 Connection (6): ClientConnecting, ClientConnected, ConnectionFailed, ClientReconnecting, ClientDisconnecting, ClientDisconnected
 Session (3): SessionCreated, SessionActivated, SessionClosed
-Secure Channel (2): SecureChannelOpened, SecureChannelClosed
+Secure Channel (3): SecureChannelOpened, SecureChannelClosed, SecureChannelRenewed
 Subscription (9): SubscriptionCreated, SubscriptionDeleted, SubscriptionTransferred, MonitoredItemCreated, MonitoredItemDeleted, DataChangeReceived, EventNotificationReceived, PublishResponseReceived, SubscriptionKeepAlive
 Alarms — generic (1): AlarmEventReceived (subscriptionId, clientHandle, eventFields, severity, sourceName, message, eventType, time)
 Alarms — specific (8): AlarmActivated, AlarmDeactivated, AlarmAcknowledged, AlarmConfirmed, AlarmShelved, AlarmSeverityChanged, LimitAlarmExceeded, OffNormalAlarmTriggered

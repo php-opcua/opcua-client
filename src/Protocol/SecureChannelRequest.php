@@ -12,10 +12,16 @@ use PhpOpcua\Client\Types\NodeId;
  */
 class SecureChannelRequest
 {
+    public const REQUEST_TYPE_ISSUE = 0;
+
+    public const REQUEST_TYPE_RENEW = 1;
+
     /**
      * @param int $secureChannelId
+     * @param int $requestType
+     * @param int $sequenceNumber
      */
-    public function encode(int $secureChannelId = 0): string
+    public function encode(int $secureChannelId = 0, int $requestType = self::REQUEST_TYPE_ISSUE, int $sequenceNumber = 1): string
     {
         $body = new BinaryEncoder();
 
@@ -23,7 +29,7 @@ class SecureChannelRequest
         $body->writeByteString(null);
         $body->writeByteString(null);
 
-        $body->writeUInt32(1);
+        $body->writeUInt32($sequenceNumber);
         $body->writeUInt32(1);
 
         $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::OPEN_SECURE_CHANNEL_REQUEST));
@@ -38,7 +44,7 @@ class SecureChannelRequest
         $body->writeByte(0);
 
         $body->writeUInt32(0);
-        $body->writeUInt32(0);
+        $body->writeUInt32($requestType);
         $body->writeUInt32(1);
         $body->writeByteString(null);
         $body->writeUInt32(3600000);

@@ -4,6 +4,9 @@
 
 ### Added
 
+- **`SecureChannelRenewed` event** (`channelId`, `tokenId`, `revisedLifetime`),
+  dispatched after each security token renewal.
+
 - **Data change filters.** Items passed to `createMonitoredItems()` and
   `modifyMonitoredItems()` accept a `filter` key —
   `['trigger' => int, 'deadbandType' => int, 'deadbandValue' => float]` —
@@ -48,6 +51,20 @@
 
 ### Fixed
 
+- **The secure channel security token was never renewed.** The client asked
+  for a one-hour token, discarded the lifetime the server granted and had no
+  renewal path, so every connection failed once the token expired: against
+  UA-.NETStandard with a 30 s token, the first request after expiry returned
+  `0x807F0000` and the server then closed the channel, losing session and
+  subscriptions. The client now schedules a renewal at 75% of the revised
+  lifetime and, on the first request after that point, sends an
+  OpenSecureChannel `Renew` on the open channel — with a fresh nonce and new
+  symmetric keys when security is active — then keeps using the same session.
+  A connection idle past the token lifetime renews on its next request.
+  `SecureChannelRequest::encode()` takes the request type and sequence number,
+  `SecureChannel::createOpenSecureChannelMessage()` a `$renew` flag, and
+  `SessionService::setTokenId()` updates the token of a channel without
+  security.
 - **Responses larger than one message chunk were truncated.** The transport
   returned a single chunk and `unwrapResponse()` treated it as the whole
   message, while the Hello advertises no message size or chunk count limit, so
@@ -116,6 +133,13 @@
 
 ### Tests
 
+- Token renewal (`SecureChannelRenewalTest`, against the test suite's
+  `opcua-short-token-lifetime` server with a 30 s token): in None, Sign and
+  SignAndEncrypt, 45 s of reads succeed with at least one renewal and the same
+  session; a subscription created before the renewal keeps delivering data
+  changes after it, on the same session; after 40 s idle the next read renews
+  and succeeds. All fail without the renewal. Unit: the Renew request encoding, renewal once due with
+  the new token on the next request, no renewal before.
 - Browse (`BrowseStatusTest`, against UA-.NETStandard): a missing node raises
   `BadNodeIdUnknown` from `browse()`, `browseAll()` and `browseRecursive()`,
   also on a repeated call (not cached); an unknown reference type raises

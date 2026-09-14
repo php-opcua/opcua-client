@@ -8,6 +8,7 @@ use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Event\SecureChannelClosed;
 use PhpOpcua\Client\Event\SecureChannelOpened;
+use PhpOpcua\Client\Event\SecureChannelRenewed;
 use PhpOpcua\Client\Exception\ConfigurationException;
 use PhpOpcua\Client\Exception\MessageTypeException;
 use PhpOpcua\Client\Exception\ProtocolException;
@@ -64,6 +65,7 @@ trait ManagesSecureChannelTrait
     {
         $this->secureChannel = new SecureChannel(SecurityPolicy::None, SecurityMode::None);
         $this->secureChannelId = 1;
+        $this->secureChannelRenewAt = null;
 
         $this->session = new SessionService($this->secureChannelId, 1);
         $this->session->setUserTokenPolicyIds(
@@ -127,6 +129,7 @@ trait ManagesSecureChannelTrait
         );
 
         $this->initServices($this->session);
+        $this->scheduleSecureChannelRenewal($scResponse->getRevisedLifetime());
     }
 
     /**
@@ -182,6 +185,58 @@ trait ManagesSecureChannelTrait
         );
 
         $this->initServices($this->session);
+        $this->scheduleSecureChannelRenewal($result['revisedLifetime']);
+    }
+
+    /**
+     * Renew the security token of the open secure channel.
+     *
+     * @return void
+     *
+     * @throws ProtocolException If the server responds with an unexpected message type.
+     */
+    private function renewSecureChannel(): void
+    {
+        $session = $this->requireSession();
+
+        if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
+            $this->transport->send($this->secureChannel->createOpenSecureChannelMessage(true));
+            $result = $this->secureChannel->processOpenSecureChannelResponse($this->transport->receive());
+            $tokenId = $result['tokenId'];
+            $revisedLifetime = $result['revisedLifetime'];
+        } else {
+            $request = new SecureChannelRequest();
+            $this->transport->send($request->encode($this->secureChannelId, SecureChannelRequest::REQUEST_TYPE_RENEW, $session->getNextSequenceNumber()));
+
+            $decoder = new BinaryDecoder($this->transport->receive());
+            $header = MessageHeader::decode($decoder);
+            if ($header->getMessageType() !== 'OPN') {
+                throw new MessageTypeException('OPN', $header->getMessageType());
+            }
+            $decoder->readUInt32();
+
+            $scResponse = SecureChannelResponse::decode($decoder);
+            $tokenId = $scResponse->getTokenId();
+            $revisedLifetime = $scResponse->getRevisedLifetime();
+            $session->setTokenId($tokenId);
+        }
+
+        $this->scheduleSecureChannelRenewal($revisedLifetime);
+        $this->logger->debug('Secure channel token renewed (channelId={channelId}, tokenId={tokenId}, lifetime={lifetime}ms)', $this->logContext([
+            'channelId' => $this->secureChannelId,
+            'tokenId' => $tokenId,
+            'lifetime' => $revisedLifetime,
+        ]));
+        $this->dispatch(fn () => new SecureChannelRenewed($this, $this->secureChannelId, $tokenId, $revisedLifetime));
+    }
+
+    /**
+     * @param int $revisedLifetime Token lifetime granted by the server, in milliseconds.
+     * @return void
+     */
+    private function scheduleSecureChannelRenewal(int $revisedLifetime): void
+    {
+        $this->secureChannelRenewAt = $revisedLifetime > 0 ? microtime(true) + $revisedLifetime * 0.75 / 1000 : null;
     }
 
     /**

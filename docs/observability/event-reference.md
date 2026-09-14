@@ -13,7 +13,7 @@ next: { label: 'Caching',  href: './caching.md' }
 
 # Event reference
 
-The library dispatches **56** event classes. Every event extends a
+The library dispatches **57** event classes. Every event extends a
 common shape with a `$client` property; the per-event fields below are
 the additions on top of that.
 
@@ -30,12 +30,13 @@ All event classes live in `PhpOpcua\Client\Event\`.
 | `ClientReconnecting` | `reconnect()` starts                                | `endpoint`                          |
 | `ConnectionFailed`   | `connect()` raised                                  | `endpoint`, `exception`             |
 
-## Secure channel (2)
+## Secure channel (3)
 
 | Event                  | Fires when                            | Key fields                                  |
 | ---------------------- | ------------------------------------- | ------------------------------------------- |
 | `SecureChannelOpened`  | OPN exchange completed                | `channelId`, `securityPolicy` (enum), `securityMode` |
 | `SecureChannelClosed`  | CLO sent or socket dropped            | `channelId`                                 |
+| `SecureChannelRenewed` | Security token renewed (75% of its lifetime) | `channelId`, `tokenId`, `revisedLifetime` |
 
 ## Session (3)
 

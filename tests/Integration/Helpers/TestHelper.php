@@ -24,6 +24,8 @@ final class TestHelper
 
     public const ENDPOINT_ALL_SECURITY = 'opc.tcp://localhost:4843/UA/TestServer';
 
+    public const ENDPOINT_SHORT_TOKEN_LIFETIME = 'opc.tcp://localhost:4850/UA/TestServer';
+
     public const ENDPOINT_DISCOVERY = 'opc.tcp://localhost:4844';
 
     public const ENDPOINT_AUTO_ACCEPT = 'opc.tcp://localhost:4845/UA/TestServer';

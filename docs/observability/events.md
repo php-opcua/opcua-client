@@ -13,7 +13,7 @@ next: { label: 'Event reference',  href: './event-reference.md' }
 
 # Events
 
-The library dispatches **47** event classes through PSR-14. They cover
+The library dispatches **57** event classes through PSR-14. They cover
 the full lifecycle: connection, session, secure channel,
 subscription, monitored items, read / write / browse, alarms, retries,
 cache, trust store. Wire a dispatcher and listen — there is no other

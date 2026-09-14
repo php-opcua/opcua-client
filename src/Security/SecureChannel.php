@@ -170,7 +170,10 @@ class SecureChannel
         return $this->policy !== SecurityPolicy::None && $this->mode !== SecurityMode::None;
     }
 
-    public function createOpenSecureChannelMessage(): string
+    /**
+     * @param bool $renew Request a new token for the open channel instead of issuing the first one.
+     */
+    public function createOpenSecureChannelMessage(bool $renew = false): string
     {
         if ($this->isSecurityActive()) {
             if ($this->policy->isEcc()) {
@@ -215,7 +218,7 @@ class SecureChannel
         $plainBody->writeByte(0);
 
         $plainBody->writeUInt32(0);
-        $plainBody->writeUInt32(0);
+        $plainBody->writeUInt32($renew ? 1 : 0);
         $plainBody->writeUInt32($this->mode->value);
         $plainBody->writeByteString($this->clientNonce ?: null);
         $plainBody->writeUInt32(3600000);

@@ -79,7 +79,7 @@ All Type classes and result DTOs use public readonly properties. Access is $ref-
 - Types (src/Types/): shared OPC UA data types and enums (NodeId, DataValue, Variant, StatusCode, etc.). Module-specific DTOs live in their module namespace.
 - Repository (src/Repository/): per-client ExtensionObject codec registry
 - Cache (src/Cache/): PSR-16 cache drivers (InMemoryCache, FileCache) + cache codec layer (CacheCodecInterface, WireCacheCodec — JSON gated by Wire\WireTypeRegistry, no unserialize() on the cache path). Swap with ClientBuilder::setCacheCodec(?CacheCodecInterface). Corrupted/unknown payloads raise Exception\CacheCorruptedException and are treated as cache misses.
-- Event (src/Event/): 47 PSR-14 event classes + NullEventDispatcher
+- Event (src/Event/): 57 PSR-14 event classes + NullEventDispatcher
 - TrustStore (src/TrustStore/): server certificate trust management (FileTrustStore, TrustPolicy, TrustResult)
 - Testing (src/Testing/): MockClient — in-memory test double (implements full OpcUaClientInterface, adds hasMethod/hasModule)
 - Exception (src/Exception/): exception hierarchy (includes ModuleConflictException, MissingModuleDependencyException)
