@@ -33,10 +33,12 @@ class HistoryReadService extends AbstractProtocolService
         ?DateTimeImmutable $endTime = null,
         int $numValuesPerNode = 0,
         bool $returnBounds = false,
+        ?string $continuationPoint = null,
+        bool $releaseContinuationPoints = false,
     ): string {
         $detailsBody = $this->buildReadRawModifiedDetailsBody($startTime, $endTime, $numValuesPerNode, $returnBounds);
 
-        return $this->encodeHistoryReadRequest($requestId, $authToken, [$nodeId], 649, $detailsBody);
+        return $this->encodeHistoryReadRequest($requestId, $authToken, [$nodeId], 649, $detailsBody, $continuationPoint, $releaseContinuationPoints);
     }
 
     /**
@@ -56,10 +58,12 @@ class HistoryReadService extends AbstractProtocolService
         DateTimeImmutable $endTime,
         float $processingInterval,
         NodeId $aggregateType,
+        ?string $continuationPoint = null,
+        bool $releaseContinuationPoints = false,
     ): string {
         $detailsBody = $this->buildReadProcessedDetailsBody($startTime, $endTime, $processingInterval, $aggregateType);
 
-        return $this->encodeHistoryReadRequest($requestId, $authToken, [$nodeId], 652, $detailsBody);
+        return $this->encodeHistoryReadRequest($requestId, $authToken, [$nodeId], 652, $detailsBody, $continuationPoint, $releaseContinuationPoints);
     }
 
     /**
@@ -73,10 +77,12 @@ class HistoryReadService extends AbstractProtocolService
         NodeId $authToken,
         NodeId $nodeId,
         array $timestamps,
+        ?string $continuationPoint = null,
+        bool $releaseContinuationPoints = false,
     ): string {
         $detailsBody = $this->buildReadAtTimeDetailsBody($timestamps);
 
-        return $this->encodeHistoryReadRequest($requestId, $authToken, [$nodeId], 655, $detailsBody);
+        return $this->encodeHistoryReadRequest($requestId, $authToken, [$nodeId], 655, $detailsBody, $continuationPoint, $releaseContinuationPoints);
     }
 
     /**
@@ -92,9 +98,11 @@ class HistoryReadService extends AbstractProtocolService
         array $nodeIds,
         int $detailsTypeId,
         string $detailsBody,
+        ?string $continuationPoint = null,
+        bool $releaseContinuationPoints = false,
     ): string {
         $body = new BinaryEncoder();
-        $this->writeHistoryReadInnerBody($body, $requestId, $authToken, $nodeIds, $detailsTypeId, $detailsBody);
+        $this->writeHistoryReadInnerBody($body, $requestId, $authToken, $nodeIds, $detailsTypeId, $detailsBody, $continuationPoint, $releaseContinuationPoints);
 
         return $this->encodeRequestAuto($requestId, $body->getBuffer());
     }
@@ -105,10 +113,22 @@ class HistoryReadService extends AbstractProtocolService
      */
     public function decodeHistoryReadResponse(BinaryDecoder $decoder): array
     {
+        return $this->decodeHistoryReadResponseWithContinuation($decoder)['values'];
+    }
+
+    /**
+     * @param BinaryDecoder $decoder
+     * @return array{values: DataValue[], continuationPoint: ?string}
+     *
+     * @throws ServiceException If the HistoryRead result carries a Bad status code.
+     */
+    public function decodeHistoryReadResponseWithContinuation(BinaryDecoder $decoder): array
+    {
         $this->readResponseMetadata($decoder);
 
         $resultCount = $decoder->readInt32();
         $allValues = [];
+        $continuationPoint = null;
 
         for ($i = 0; $i < $resultCount; $i++) {
             $statusCode = $decoder->readUInt32();
@@ -116,7 +136,7 @@ class HistoryReadService extends AbstractProtocolService
                 throw new ServiceException('HistoryRead failed: ' . StatusCode::getName($statusCode), $statusCode);
             }
 
-            $decoder->readByteString();
+            $continuationPoint = $decoder->readByteString();
 
             $typeId = $decoder->readNodeId();
             $encoding = $decoder->readByte();
@@ -148,7 +168,7 @@ class HistoryReadService extends AbstractProtocolService
 
         $decoder->skipDiagnosticInfoArray();
 
-        return $allValues;
+        return ['values' => $allValues, 'continuationPoint' => $continuationPoint];
     }
 
     /**
@@ -166,6 +186,8 @@ class HistoryReadService extends AbstractProtocolService
         array $nodeIds,
         int $detailsTypeId,
         string $detailsBody,
+        ?string $continuationPoint = null,
+        bool $releaseContinuationPoints = false,
     ): void {
         $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::HISTORY_READ_REQUEST));
 
@@ -178,7 +200,7 @@ class HistoryReadService extends AbstractProtocolService
 
         $body->writeUInt32(2);
 
-        $body->writeBoolean(false);
+        $body->writeBoolean($releaseContinuationPoints);
 
         $body->writeInt32(count($nodeIds));
         foreach ($nodeIds as $nodeId) {
@@ -186,7 +208,7 @@ class HistoryReadService extends AbstractProtocolService
             $body->writeString(null);
             $body->writeUInt16(0);
             $body->writeString(null);
-            $body->writeByteString(null);
+            $body->writeByteString($continuationPoint);
         }
     }
 

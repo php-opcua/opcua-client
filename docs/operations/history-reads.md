@@ -64,7 +64,7 @@ Inclusive upper bound, or `null` for open-ended. Reverse the order
 (`startTime > endTime`) to read history in reverse-chronological order.
 <!-- @endparam -->
 <!-- @param name="$numValuesPerNode" type="int" default="0" -->
-Max samples to return. `0` = unlimited (subject to server-side caps).
+Max samples to return in total. `0` = every sample in the range.
 <!-- @endparam -->
 <!-- @param name="$returnBounds" type="bool" default="false" -->
 When `true`, the server may synthesise interpolated values at
@@ -77,7 +77,10 @@ When `true`, the server may synthesise interpolated values at
 History responses can carry a continuation point when the result set
 exceeds `numValuesPerNode` or the server's internal cap. The library
 follows continuation points transparently until the server reports
-done — the returned array is the full set.
+done — the returned array is the full set. When `numValuesPerNode` is
+reached first, the library releases the pending continuation point so
+the server frees it. `historyReadProcessed()` and `historyReadAtTime()`
+follow continuation points the same way.
 
 ## historyReadProcessed
 

@@ -51,6 +51,17 @@
 
 ### Fixed
 
+- **History reads stopped at the server's first page.** The documentation said
+  continuation points were followed transparently, but the decoder discarded
+  them: against open62541, which returns at most 1 024 values per response,
+  `historyReadRaw()` of 1 500 values returned 1 024 without an error, whatever
+  `numValuesPerNode` was. `historyReadRaw()`, `historyReadProcessed()` and
+  `historyReadAtTime()` now follow continuation points until the server is
+  done; with `numValuesPerNode` set, reading stops at that many values and the
+  pending continuation point is released. The HistoryRead encoders accept a
+  continuation point and the release flag, and
+  `HistoryReadService::decodeHistoryReadResponseWithContinuation()` returns
+  the values with the continuation point.
 - **The secure channel security token was never renewed.** The client asked
   for a one-hour token, discarded the lifetime the server granted and had no
   renewal path, so every connection failed once the token expired: against
@@ -133,6 +144,15 @@
 
 ### Tests
 
+- History pagination (`HistoryContinuationTest`, against open62541-historizing):
+  the server's first page holds 1 024 of 1 500 inserted values plus a
+  continuation point; `historyReadRaw()` returns all 1 500 with a second
+  HistoryRead that carries it, and `numValuesPerNode` 1 100 and 5 return exactly
+  those values (the latter releasing the continuation point), each in two
+  requests counted on the wire. Unit: the
+  continuation point and release flag are encoded and decoded, pages are
+  followed for raw, processed and at-time reads, and the continuation point is
+  released when `numValuesPerNode` is reached.
 - Token renewal (`SecureChannelRenewalTest`, against the test suite's
   `opcua-short-token-lifetime` server with a 30 s token): in None, Sign and
   SignAndEncrypt, 45 s of reads succeed with at least one renewal and the same
