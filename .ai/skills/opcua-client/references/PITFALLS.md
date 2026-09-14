@@ -371,7 +371,7 @@ $client->modifyMonitoredItems($subId, [
 ]);
 ```
 
-Every omitted key is sent as a default: `clientHandle` 0, `queueSize` 0 (revised to 1), `samplingInterval` -1, `discardOldest` true. The call still returns Good, but the item loses its queue and every later notification arrives with `clientHandle` 0 — any handle-to-node map silently stops matching.
+Every omitted key is sent as a default: `clientHandle` 0, `queueSize` 0 (revised to 1), `samplingInterval` -1, `discardOldest` true, no `filter` (a deadband set earlier is removed). The call still returns Good, but the item loses its queue and every later notification arrives with `clientHandle` 0 — any handle-to-node map silently stops matching.
 
 **Right** — pass every parameter you want to keep:
 
@@ -385,4 +385,4 @@ $client->modifyMonitoredItems($subId, [[
 ]]);
 ```
 
-Related: `createMonitoredItems()` defaults `queueSize` to 1 and always creates items with `discardOldest: true`; the discard policy can only be changed through `modifyMonitoredItems()`.
+Related: `createMonitoredItems()` defaults `queueSize` to 1 and `discardOldest` to true; both, and `filter`, can be set at creation.

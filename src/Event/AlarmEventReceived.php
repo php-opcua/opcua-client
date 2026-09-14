@@ -15,7 +15,10 @@ use PhpOpcua\Client\Types\Variant;
  * This is the generic alarm event — specific alarm events ({@see AlarmActivated},
  * {@see AlarmDeactivated}, etc.) may also be dispatched based on field analysis.
  *
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::publish()
+ * `republished` is true when the notification was retransmitted by republish()
+ * rather than delivered by publish().
+ *
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::publish()
  */
 readonly class AlarmEventReceived
 {
@@ -40,6 +43,7 @@ readonly class AlarmEventReceived
         public ?string $message = null,
         public ?NodeId $eventType = null,
         public ?DateTimeImmutable $time = null,
+        public bool $republished = false,
     ) {
     }
 }

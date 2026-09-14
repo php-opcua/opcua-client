@@ -9,7 +9,7 @@ use PhpOpcua\Client\OpcUaClientInterface;
 /**
  * Dispatched after a SetTriggering operation completes.
  *
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::setTriggering()
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::setTriggering()
  */
 readonly class TriggeringConfigured
 {

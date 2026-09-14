@@ -560,7 +560,7 @@ interface OpcUaClientInterface
      * Create monitored items within an existing subscription.
      *
      * @param int $subscriptionId The subscription to add items to.
-     * @param ?array<array{nodeId: NodeId|string, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int}> $items Items to monitor, or null to get a fluent builder.
+     * @param ?array<array{nodeId: NodeId|string, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int, discardOldest?: bool, filter?: array{trigger?: int, deadbandType?: int, deadbandValue?: float}}> $items Items to monitor, or null to get a fluent builder.
      * @return ($items is null ? Builder\MonitoredItemsBuilder : MonitoredItemResult[])
      *
      * @throws InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
@@ -612,7 +612,7 @@ interface OpcUaClientInterface
      * Modify parameters of existing monitored items.
      *
      * @param int $subscriptionId The subscription owning the monitored items.
-     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool}> $itemsToModify Items to modify.
+     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool, filter?: array{trigger?: int, deadbandType?: int, deadbandValue?: float}}> $itemsToModify Items to modify.
      * @return Module\Subscription\MonitoredItemModifyResult[]
      *
      * @throws ConnectionException If the connection is lost during the request.
@@ -669,9 +669,17 @@ interface OpcUaClientInterface
     public function transferSubscriptions(array $subscriptionIds, bool $sendInitialValues = false): array;
 
     /**
+     * Asks the server to retransmit a NotificationMessage it still holds, i.e. one
+     * listed in `availableSequenceNumbers`. The notifications are decoded exactly as
+     * {@see self::publish()} decodes them, and dispatch the same DataChangeReceived,
+     * EventNotificationReceived and alarm events with `republished` set to true: a
+     * retransmission can repeat a notification publish() already delivered, and the
+     * flag lets a listener tell the two apart. PublishResponseReceived and
+     * SubscriptionKeepAlive are dispatched by publish() only.
+     *
      * @param int $subscriptionId
      * @param int $retransmitSequenceNumber
-     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array<int, mixed>}
+     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array<int, Module\Subscription\DataChangeNotification|Module\Subscription\EventNotification>}
      *
      * @throws ConnectionException If the connection is lost during the request.
      * @throws ServiceException If the server returns an error response.

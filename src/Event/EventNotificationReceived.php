@@ -10,7 +10,10 @@ use PhpOpcua\Client\Types\Variant;
 /**
  * Dispatched for each event notification received from a publish response.
  *
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::publish()
+ * `republished` is true when the notification was retransmitted by republish()
+ * rather than delivered by publish().
+ *
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::publish()
  */
 readonly class EventNotificationReceived
 {
@@ -27,6 +30,7 @@ readonly class EventNotificationReceived
         public int $sequenceNumber,
         public int $clientHandle,
         public array $eventFields,
+        public bool $republished = false,
     ) {
     }
 }

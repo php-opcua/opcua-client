@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
+use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Module\History\HistoryReadService;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\NodeId;
+use PhpOpcua\Client\Types\StatusCode;
 
 function writeHistoryResponseHeader(BinaryEncoder $encoder, int $statusCode = 0): void
 {
@@ -181,6 +183,49 @@ describe('HistoryReadService decoding', function () {
         $decoder = new BinaryDecoder($encoder->getBuffer());
         $result = $service->decodeHistoryReadResponse($decoder);
         expect($result)->toBe([]);
+    });
+
+    it('throws ServiceException with the status code of a Bad HistoryRead result', function () {
+        $service = new HistoryReadService(new SessionService(1, 1));
+
+        $encoder = new BinaryEncoder();
+        writeHistoryMessagePrefix($encoder);
+        $encoder->writeNodeId(NodeId::numeric(0, 667));
+        writeHistoryResponseHeader($encoder);
+        $encoder->writeInt32(1);
+        $encoder->writeUInt32(StatusCode::BadAggregateNotSupported);
+        $encoder->writeByteString(null);
+        $encoder->writeNodeId(NodeId::numeric(0, 0));
+        $encoder->writeByte(0x00);
+        $encoder->writeInt32(0);
+
+        try {
+            $service->decodeHistoryReadResponse(new BinaryDecoder($encoder->getBuffer()));
+            $caught = null;
+        } catch (ServiceException $e) {
+            $caught = $e;
+        }
+
+        expect($caught)->toBeInstanceOf(ServiceException::class);
+        expect($caught->getStatusCode())->toBe(StatusCode::BadAggregateNotSupported);
+        expect($caught->getMessage())->toBe('HistoryRead failed: BadAggregateNotSupported');
+    });
+
+    it('keeps decoding a result with an Uncertain status', function () {
+        $service = new HistoryReadService(new SessionService(1, 1));
+
+        $encoder = new BinaryEncoder();
+        writeHistoryMessagePrefix($encoder);
+        $encoder->writeNodeId(NodeId::numeric(0, 667));
+        writeHistoryResponseHeader($encoder);
+        $encoder->writeInt32(1);
+        $encoder->writeUInt32(StatusCode::UncertainDataSubNormal);
+        $encoder->writeByteString(null);
+        $encoder->writeNodeId(NodeId::numeric(0, 0));
+        $encoder->writeByte(0x00);
+        $encoder->writeInt32(0);
+
+        expect($service->decodeHistoryReadResponse(new BinaryDecoder($encoder->getBuffer())))->toBe([]);
     });
 
     it('decodes an empty HistoryReadResponse', function () {

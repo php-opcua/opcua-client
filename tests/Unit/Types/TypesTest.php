@@ -52,6 +52,48 @@ describe('StatusCode', function () {
         expect(StatusCode::getName(0x80FF0000))->toBe('0x80FF0000');
         expect(StatusCode::getName(0x12345678))->toBe('0x12345678');
     });
+
+    it('gives the corrected constants their specification values', function () {
+        expect(StatusCode::BadNotReadable)->toBe(0x803A0000);
+        expect(StatusCode::BadNoData)->toBe(0x809B0000);
+        expect(StatusCode::UncertainDataSubNormal)->toBe(0x40A40000);
+        expect(StatusCode::BadAggregateNotSupported)->toBe(0x80D50000);
+        expect(StatusCode::BadFileHandleInvalid)->toBe(StatusCode::BadInvalidArgument);
+        expect(StatusCode::BadFileNotOpened)->toBe(StatusCode::BadInvalidState);
+        expect(StatusCode::getName(StatusCode::BadNoData))->toBe('BadNoData');
+        expect(StatusCode::getName(StatusCode::UncertainDataSubNormal))->toBe('UncertainDataSubNormal');
+        expect(StatusCode::getName(StatusCode::BadAggregateNotSupported))->toBe('BadAggregateNotSupported');
+        expect(StatusCode::getName(StatusCode::BadFileHandleInvalid))->toBe('BadInvalidArgument');
+    });
+
+    it('names every standard code, not only those with a constant', function () {
+        expect(StatusCode::getName(0x80440000))->toBe('BadMonitoredItemFilterUnsupported');
+        expect(StatusCode::getName(0x808E0000))->toBe('BadDeadbandFilterInvalid');
+        expect(StatusCode::getName(0x803A0000))->toBe('BadNotReadable');
+        expect(StatusCode::getName(0x40000000))->toBe('Uncertain');
+        expect(StatusCode::getName(0x80000000))->toBe('Bad');
+    });
+
+    it('appends the DataValue InfoBits to the name', function () {
+        expect(StatusCode::getName(StatusCode::withDataValueInfoBits(StatusCode::Good, StatusCode::LimitHigh | StatusCode::Overflow)))
+            ->toBe('Good [LimitHigh, Overflow]');
+        expect(StatusCode::getName(0x00000405))->toBe('Good [HistorianCalculated, HistorianPartial]');
+        expect(StatusCode::getName(0x0000041A))->toBe('Good [HistorianInterpolated, HistorianExtraData, HistorianMultiValue]');
+        expect(StatusCode::getName(0x80340500))->toBe('BadNodeIdUnknown [LimitLow]');
+        expect(StatusCode::getName(StatusCode::InfoTypeDataValue))->toBe('Good');
+    });
+
+    it('appends StructureChanged and SemanticsChanged', function () {
+        expect(StatusCode::getName(0x0000C000))->toBe('Good [StructureChanged, SemanticsChanged]');
+        expect(StatusCode::getName(0x408F8480))->toBe('UncertainNoCommunicationLastUsableValue [StructureChanged, Overflow]');
+    });
+
+    it('appends bits without a defined meaning as hex', function () {
+        expect(StatusCode::getName(0x00000C01))->toBe('Good [0x0C01]');
+        expect(StatusCode::getName(0x00000403))->toBe('Good [0x0003]');
+        expect(StatusCode::getName(0x00002000))->toBe('Good [0x2000]');
+        expect(StatusCode::getName(0x00000080))->toBe('Good [0x0080]');
+    });
 });
 
 describe('QualifiedName', function () {

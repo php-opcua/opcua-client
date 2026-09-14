@@ -149,20 +149,58 @@ republish section below.
 
 <!-- @method name="$client->republish(int \$subscriptionId, int \$retransmitSequenceNumber): array" returns="array" visibility="public" -->
 
-Ask the server for a specific sequence number it still has buffered.
-Useful when the client missed a publish reply (process restart, brief
-network blip) but the subscription itself is still alive:
+Ask the server for a specific sequence number it still has buffered —
+one it sent but you have not acknowledged yet. Useful when the client
+missed a publish reply (process restart, brief network blip) but the
+subscription itself is still alive. `availableSequenceNumbers` on the
+last `PublishResult` (or on a `TransferResult`) lists what can still be
+retransmitted:
 
 <!-- @code-block language="php" label="recover a missed notification" -->
 ```php
+use PhpOpcua\Client\Module\Subscription\DataChangeNotification;
+
 try {
     $missed = $client->republish($subId, retransmitSequenceNumber: 41);
-    process($missed);
+
+    foreach ($missed['notifications'] as $notification) {
+        if ($notification instanceof DataChangeNotification) {
+            process($notification->clientHandle, $notification->dataValue);
+        }
+    }
 } catch (ServiceException $e) {
-    // BadMessageNotAvailable — the server already discarded it. Tough luck.
+    // BadMessageNotAvailable — the server already discarded it.
 }
 ```
 <!-- @endcode-block -->
+
+The result is an array with `sequenceNumber`, `publishTime` and
+`notifications`, which holds the same `DataChangeNotification` /
+`EventNotification` objects `publish()` returns.
+
+`republish()` dispatches the same `DataChangeReceived`,
+`EventNotificationReceived` and alarm events as `publish()`, with
+`republished` set to `true`. A retransmitted message can repeat
+notifications `publish()` already delivered — any sequence number you
+had not acknowledged yet — so a listener that must not process a value
+twice checks the flag:
+
+<!-- @code-block language="php" label="tell retransmissions apart" -->
+```php
+use PhpOpcua\Client\Event\DataChangeReceived;
+
+$listeners->listen(DataChangeReceived::class, function (DataChangeReceived $e) {
+    if ($e->republished && $store->has($e->subscriptionId, $e->sequenceNumber)) {
+        return;
+    }
+
+    $store->save($e->subscriptionId, $e->sequenceNumber, $e->clientHandle, $e->dataValue);
+});
+```
+<!-- @endcode-block -->
+
+`PublishResponseReceived` and `SubscriptionKeepAlive` describe a
+publish round-trip, so only `publish()` dispatches them.
 
 ## Deleting
 

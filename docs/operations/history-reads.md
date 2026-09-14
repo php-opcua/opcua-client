@@ -185,6 +185,11 @@ services](../recipes/service-unsupported.md).
 | `BadInvalidTimestampArgument`    | Timestamps in `historyReadAtTime` are out of order |
 
 For `BadServiceUnsupported`, the library raises
-`ServiceUnsupportedException` rather than letting the bad status pass
-through as `DataValue[]`. See [Reference ·
+`ServiceUnsupportedException`. Any other Bad status on the node's
+HistoryRead result — `BadAggregateNotSupported`,
+`BadHistoryOperationUnsupported`, … — raises `ServiceException`, whose
+`getStatusCode()` carries it; a Bad or Uncertain status on an individual
+processed value (`BadNoData` for an interval without data,
+`UncertainDataSubNormal` for an interval with too few Good raws) stays on
+that `DataValue`. See [Reference ·
 Exceptions](../reference/exceptions.md).

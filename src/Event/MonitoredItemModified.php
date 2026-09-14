@@ -9,7 +9,7 @@ use PhpOpcua\Client\OpcUaClientInterface;
 /**
  * Dispatched after a monitored item has been modified via ModifyMonitoredItems.
  *
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::modifyMonitoredItems()
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::modifyMonitoredItems()
  */
 readonly class MonitoredItemModified
 {

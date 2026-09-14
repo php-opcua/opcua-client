@@ -441,7 +441,7 @@ $builder->setBatchSize(0);   // disable batching
 ```php
 StatusCode::isGood($code);      // true if 0x0XXXXXXX
 StatusCode::isBad($code);       // true if 0x8XXXXXXX
-StatusCode::getName($code);     // e.g. "BadNodeIdUnknown"
+StatusCode::getName($code);     // e.g. "BadNodeIdUnknown"; every standard code is named, set low bits appended: "Good [LimitHigh, Overflow]"
 StatusCode::isOverflow($code);  // queue-overflow InfoBit, checked under the DataValue InfoType
 StatusCode::limit($code);       // DataValueLimit::None|Low|High|Constant
 $dv->isOverflow(); $dv->limit(); // same checks on a DataValue; overflow is only flagged when queueSize > 1
@@ -533,11 +533,13 @@ $results = $client->createMonitoredItems($subscriptionId, [
 ]);
 ```
 
-`queueSize` defaults to 1 (only the latest sample is kept). Items without `clientHandle` get their position plus one, and are always created with `discardOldest: true`.
+`queueSize` defaults to 1 (only the latest sample is kept). Items without `clientHandle` get their position plus one; `discardOldest` defaults to true and `monitoringMode` to 2 (Reporting). Builder: `monitoringMode(int)`, `discardOldest(bool)`, `dataChangeFilter(int $trigger = 1, int $deadbandType = 0, float $deadbandValue = 0.0)`.
+
+Data change filter (deadband): `'filter' => ['trigger' => 1, 'deadbandType' => 1, 'deadbandValue' => 0.5]` — trigger 0 Status / 1 StatusValue (default) / 2 StatusValueTimestamp; deadbandType 0 None (default) / 1 Absolute / 2 Percent. Percent needs an AnalogItemType with EURange, otherwise the item is rejected with a Bad statusCode (BadMonitoredItemFilterUnsupported).
 
 ### Modifying Monitored Items
 
-`modifyMonitoredItems()` is NOT a partial update: omitted keys are sent as defaults (`clientHandle` 0, `queueSize` 0 → revised to 1, `samplingInterval` -1, `discardOldest` true). Always pass every parameter you want to keep:
+`modifyMonitoredItems()` is NOT a partial update: omitted keys are sent as defaults (`clientHandle` 0, `queueSize` 0 → revised to 1, `samplingInterval` -1, `discardOldest` true, `filter` none → any filter is removed). Always pass every parameter you want to keep:
 
 ```php
 $client->modifyMonitoredItems($subscriptionId, [[
@@ -589,8 +591,9 @@ foreach ($results as $result) {
     // $result->statusCode, $result->availableSequenceNumbers
 }
 
-// Re-request an unacknowledged notification
-$notifications = $client->republish(subscriptionId: 1, retransmitSequenceNumber: 42);
+// Re-request an unacknowledged notification; dispatches DataChangeReceived / EventNotificationReceived / alarm events with republished: true
+$republished = $client->republish(subscriptionId: 1, retransmitSequenceNumber: 42);
+// $republished['notifications']: DataChangeNotification|EventNotification objects, same as publish()
 ```
 
 TransferResult DTO: statusCode (int), availableSequenceNumbers (int[])
@@ -692,7 +695,7 @@ Forward(0), Inverse(1), Both(2)
 Disconnected, Connected, Broken
 
 ### StatusCode constants
-Good (0x00000000), BadUnexpectedError (0x80010000), BadTimeout (0x800A0000), BadNodeIdUnknown (0x80340000), BadNotWritable (0x803B0000), BadNotReadable (0x803E0000), BadTypeMismatch (0x80740000), BadUserAccessDenied (0x801F0000), BadMethodInvalid (0x80750000), BadNoData (0x80B10000)
+Good (0x00000000), BadUnexpectedError (0x80010000), BadTimeout (0x800A0000), BadNodeIdUnknown (0x80340000), BadNotWritable (0x803B0000), BadNotReadable (0x803A0000), BadTypeMismatch (0x80740000), BadUserAccessDenied (0x801F0000), BadMethodInvalid (0x80750000), BadNoData (0x809B0000)
 
 ### AttributeId constants
 NodeId(1), NodeClass(2), BrowseName(3), DisplayName(4), Description(5), Value(13), DataType(14), AccessLevel(17)

@@ -143,7 +143,7 @@ class SubscriptionModule extends ServiceModule
 
     /**
      * @param int $subscriptionId The subscription to add items to.
-     * @param ?array<array{nodeId: NodeId|string, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int}> $monitoredItems Items to monitor, or null to get a fluent builder.
+     * @param ?array<array{nodeId: NodeId|string, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int, discardOldest?: bool, filter?: array{trigger?: int, deadbandType?: int, deadbandValue?: float}}> $monitoredItems Items to monitor, or null to get a fluent builder.
      * @return ($monitoredItems is null ? \PhpOpcua\Client\Builder\MonitoredItemsBuilder : MonitoredItemResult[])
      *
      * @throws \PhpOpcua\Client\Exception\InvalidNodeIdException If a string parameter cannot be parsed as a NodeId.
@@ -308,7 +308,7 @@ class SubscriptionModule extends ServiceModule
 
     /**
      * @param int $subscriptionId The subscription owning the monitored items.
-     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool}> $itemsToModify Items to modify.
+     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool, filter?: array{trigger?: int, deadbandType?: int, deadbandValue?: float}}> $itemsToModify Items to modify.
      * @return MonitoredItemModifyResult[]
      *
      * @throws ConnectionException If the connection is lost during the request.
@@ -476,9 +476,17 @@ class SubscriptionModule extends ServiceModule
     }
 
     /**
+     * Asks the server to retransmit a NotificationMessage it still holds, i.e. one
+     * listed in `availableSequenceNumbers`. The notifications are decoded exactly as
+     * {@see self::publish()} decodes them, and dispatch the same DataChangeReceived,
+     * EventNotificationReceived and alarm events with `republished` set to true: a
+     * retransmission can repeat a notification publish() already delivered, and the
+     * flag lets a listener tell the two apart. PublishResponseReceived and
+     * SubscriptionKeepAlive are dispatched by publish() only.
+     *
      * @param int $subscriptionId The subscription ID.
      * @param int $retransmitSequenceNumber The sequence number to retransmit.
-     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array<int, mixed>}
+     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array<int, DataChangeNotification|EventNotification>}
      *
      * @throws ConnectionException If the connection is lost during the request.
      * @throws \PhpOpcua\Client\Exception\ServiceException If the server returns an error response.
@@ -507,6 +515,8 @@ class SubscriptionModule extends ServiceModule
 
             $result = $this->subscriptionService()->decodeRepublishResponse($decoder);
             $this->kernel->log()->debug('Republish response received', $this->kernel->logContext());
+
+            $this->dispatchNotificationEvents($subscriptionId, $result['sequenceNumber'], $result['notifications'], true);
 
             return $result;
         });
@@ -585,25 +595,41 @@ class SubscriptionModule extends ServiceModule
             return;
         }
 
-        foreach ($result->notifications as $notification) {
+        $this->dispatchNotificationEvents($result->subscriptionId, $result->sequenceNumber, $result->notifications, false);
+    }
+
+    /**
+     * Dispatches the per-notification events shared by publish() and republish().
+     *
+     * @param int $subscriptionId
+     * @param int $sequenceNumber
+     * @param array<int, DataChangeNotification|EventNotification> $notifications
+     * @param bool $republished Whether the notifications came from republish().
+     * @return void
+     */
+    private function dispatchNotificationEvents(int $subscriptionId, int $sequenceNumber, array $notifications, bool $republished): void
+    {
+        foreach ($notifications as $notification) {
             if ($notification instanceof DataChangeNotification) {
                 $this->kernel->dispatch(fn () => new DataChangeReceived(
                     $this->client,
-                    $result->subscriptionId,
-                    $result->sequenceNumber,
+                    $subscriptionId,
+                    $sequenceNumber,
                     $notification->clientHandle,
                     $notification->dataValue,
+                    $republished,
                 ));
             } elseif ($notification instanceof EventNotification) {
                 $this->kernel->dispatch(fn () => new EventNotificationReceived(
                     $this->client,
-                    $result->subscriptionId,
-                    $result->sequenceNumber,
+                    $subscriptionId,
+                    $sequenceNumber,
                     $notification->clientHandle,
                     $notification->eventFields,
+                    $republished,
                 ));
 
-                $this->dispatchAlarmEvents($result->subscriptionId, $notification->clientHandle, $notification->eventFields);
+                $this->dispatchAlarmEvents($subscriptionId, $notification->clientHandle, $notification->eventFields, $republished);
             }
         }
     }
@@ -612,9 +638,10 @@ class SubscriptionModule extends ServiceModule
      * @param int $subscriptionId
      * @param int $clientHandle
      * @param Variant[] $eventFields
+     * @param bool $republished
      * @return void
      */
-    private function dispatchAlarmEvents(int $subscriptionId, int $clientHandle, array $eventFields): void
+    private function dispatchAlarmEvents(int $subscriptionId, int $clientHandle, array $eventFields, bool $republished): void
     {
         $fieldValues = [];
         foreach ($eventFields as $i => $variant) {
@@ -642,10 +669,11 @@ class SubscriptionModule extends ServiceModule
             $message,
             $eventType,
             $time,
+            $republished,
         ));
 
         if ($severity !== null) {
-            $this->kernel->dispatch(fn () => new AlarmSeverityChanged($this->client, $subscriptionId, $clientHandle, $sourceName, $severity));
+            $this->kernel->dispatch(fn () => new AlarmSeverityChanged($this->client, $subscriptionId, $clientHandle, $sourceName, $severity, republished: $republished));
         }
 
         if ($eventType !== null && $eventType->namespaceIndex === 0) {
@@ -653,15 +681,15 @@ class SubscriptionModule extends ServiceModule
 
             if (in_array($typeId, self::LIMIT_ALARM_TYPE_IDS, true)) {
                 $limitState = is_string($fieldValues[6] ?? null) ? $fieldValues[6] : null;
-                $this->kernel->dispatch(fn () => new LimitAlarmExceeded($this->client, $subscriptionId, $clientHandle, $sourceName, $limitState, $severity));
+                $this->kernel->dispatch(fn () => new LimitAlarmExceeded($this->client, $subscriptionId, $clientHandle, $sourceName, $limitState, $severity, republished: $republished));
             }
 
             if (in_array($typeId, self::OFF_NORMAL_ALARM_TYPE_IDS, true)) {
-                $this->kernel->dispatch(fn () => new OffNormalAlarmTriggered($this->client, $subscriptionId, $clientHandle, $sourceName, $severity));
+                $this->kernel->dispatch(fn () => new OffNormalAlarmTriggered($this->client, $subscriptionId, $clientHandle, $sourceName, $severity, republished: $republished));
             }
         }
 
-        $this->dispatchStateAlarmEvents($subscriptionId, $clientHandle, $sourceName, $severity, $message, $eventFields);
+        $this->dispatchStateAlarmEvents($subscriptionId, $clientHandle, $sourceName, $severity, $message, $eventFields, $republished);
     }
 
     /**
@@ -671,6 +699,7 @@ class SubscriptionModule extends ServiceModule
      * @param ?int $severity
      * @param ?string $message
      * @param Variant[] $eventFields
+     * @param bool $republished
      * @return void
      */
     private function dispatchStateAlarmEvents(
@@ -680,36 +709,37 @@ class SubscriptionModule extends ServiceModule
         ?int $severity,
         ?string $message,
         array $eventFields,
+        bool $republished,
     ): void {
         for ($i = 6; $i < count($eventFields); $i++) {
             $val = $eventFields[$i]->getValue();
 
             if ($val === true) {
-                $this->kernel->dispatch(fn () => new AlarmActivated($this->client, $subscriptionId, $clientHandle, $sourceName, $severity, $message));
+                $this->kernel->dispatch(fn () => new AlarmActivated($this->client, $subscriptionId, $clientHandle, $sourceName, $severity, $message, republished: $republished));
                 break;
             } elseif ($val === false) {
-                $this->kernel->dispatch(fn () => new AlarmDeactivated($this->client, $subscriptionId, $clientHandle, $sourceName, $message));
+                $this->kernel->dispatch(fn () => new AlarmDeactivated($this->client, $subscriptionId, $clientHandle, $sourceName, $message, republished: $republished));
                 break;
             } elseif (is_string($val)) {
                 $lower = strtolower($val);
                 if (str_contains($lower, 'acknowledged') || str_contains($lower, 'acked')) {
-                    $this->kernel->dispatch(fn () => new AlarmAcknowledged($this->client, $subscriptionId, $clientHandle, $sourceName));
+                    $this->kernel->dispatch(fn () => new AlarmAcknowledged($this->client, $subscriptionId, $clientHandle, $sourceName, republished: $republished));
                     break;
                 }
                 if (str_contains($lower, 'confirmed')) {
-                    $this->kernel->dispatch(fn () => new AlarmConfirmed($this->client, $subscriptionId, $clientHandle, $sourceName));
+                    $this->kernel->dispatch(fn () => new AlarmConfirmed($this->client, $subscriptionId, $clientHandle, $sourceName, republished: $republished));
                     break;
                 }
                 if (str_contains($lower, 'shelved')) {
-                    $this->kernel->dispatch(fn () => new AlarmShelved($this->client, $subscriptionId, $clientHandle, $sourceName));
+                    $this->kernel->dispatch(fn () => new AlarmShelved($this->client, $subscriptionId, $clientHandle, $sourceName, republished: $republished));
                     break;
                 }
                 if (str_starts_with($lower, 'active')) {
-                    $this->kernel->dispatch(fn () => new AlarmActivated($this->client, $subscriptionId, $clientHandle, $sourceName, $severity, $message));
+                    $this->kernel->dispatch(fn () => new AlarmActivated($this->client, $subscriptionId, $clientHandle, $sourceName, $severity, $message, republished: $republished));
                     break;
                 }
                 if (str_starts_with($lower, 'inactive')) {
-                    $this->kernel->dispatch(fn () => new AlarmDeactivated($this->client, $subscriptionId, $clientHandle, $sourceName, $message));
+                    $this->kernel->dispatch(fn () => new AlarmDeactivated($this->client, $subscriptionId, $clientHandle, $sourceName, $message, republished: $republished));
                     break;
                 }
             }

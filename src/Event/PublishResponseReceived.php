@@ -9,7 +9,7 @@ use PhpOpcua\Client\OpcUaClientInterface;
 /**
  * Dispatched after every publish response is decoded, regardless of notification content.
  *
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::publish()
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::publish()
  */
 readonly class PublishResponseReceived
 {

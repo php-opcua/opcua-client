@@ -447,7 +447,7 @@ $client->deleteSubscription($sub->subscriptionId);
 - `createSubscription()` returns a `SubscriptionResult` with `subscriptionId`
 - `createMonitoredItems()` returns `MonitoredItemResult[]` with `monitoredItemId`
 - `queueSize` defaults to 1 (only the latest sample is kept); size it for the samples expected between two publishes
-- `modifyMonitoredItems()` is NOT a partial update — pass `clientHandle`, `samplingInterval`, `queueSize` and `discardOldest` again, or they are reset (handle → 0, queue → 1, sampling → publishing interval)
+- `modifyMonitoredItems()` is NOT a partial update — pass `clientHandle`, `samplingInterval`, `queueSize`, `discardOldest` and `filter` again, or they are reset (handle → 0, queue → 1, sampling → publishing interval, filter removed)
 - Always `deleteSubscription()` before disconnecting to clean up server resources
 - `publishingInterval` is in milliseconds
 

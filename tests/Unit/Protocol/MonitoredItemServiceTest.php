@@ -308,3 +308,60 @@ describe('MonitoredItemService SetTriggering', function () {
         expect($result->removeResults)->toHaveCount(1);
     });
 });
+
+describe('MonitoredItemService data change filter', function () {
+
+    $filterBytes = fn (int $trigger, int $deadbandType, float $deadbandValue): string => "\x01\x00" . pack('v', 724) . "\x01" . pack('V', 16)
+        . pack('V', $trigger) . pack('V', $deadbandType) . pack('e', $deadbandValue);
+
+    it('encodes a DataChangeFilter ExtensionObject when an item carries a filter', function () use ($filterBytes) {
+        $service = new MonitoredItemService(new SessionService(1, 1));
+
+        $bytes = $service->encodeCreateMonitoredItemsRequest(1, NodeId::numeric(0, 0), 42, [
+            ['nodeId' => NodeId::numeric(1, 100), 'queueSize' => 10, 'filter' => ['trigger' => 2, 'deadbandType' => 1, 'deadbandValue' => 0.5]],
+        ]);
+
+        expect(str_contains($bytes, $filterBytes(2, 1, 0.5) . pack('V', 10) . "\x01"))->toBeTrue();
+    });
+
+    it('defaults an incomplete filter to the StatusValue trigger without deadband', function () use ($filterBytes) {
+        $service = new MonitoredItemService(new SessionService(1, 1));
+
+        $bytes = $service->encodeCreateMonitoredItemsRequest(1, NodeId::numeric(0, 0), 42, [
+            ['nodeId' => NodeId::numeric(1, 100), 'filter' => []],
+        ]);
+
+        expect(str_contains($bytes, $filterBytes(1, 0, 0.0)))->toBeTrue();
+    });
+
+    it('writes a null filter and discardOldest true when an item has neither', function () {
+        $service = new MonitoredItemService(new SessionService(1, 1));
+
+        $bytes = $service->encodeCreateMonitoredItemsRequest(1, NodeId::numeric(0, 0), 42, [
+            ['nodeId' => NodeId::numeric(1, 100), 'samplingInterval' => 250.0, 'queueSize' => 7],
+        ]);
+
+        expect(str_ends_with($bytes, pack('e', 250.0) . "\x00\x00\x00" . pack('V', 7) . "\x01"))->toBeTrue();
+        expect(str_contains($bytes, pack('v', 724)))->toBeFalse();
+    });
+
+    it('encodes discardOldest false on creation', function () {
+        $service = new MonitoredItemService(new SessionService(1, 1));
+
+        $bytes = $service->encodeCreateMonitoredItemsRequest(1, NodeId::numeric(0, 0), 42, [
+            ['nodeId' => NodeId::numeric(1, 100), 'queueSize' => 7, 'discardOldest' => false],
+        ]);
+
+        expect(str_ends_with($bytes, pack('V', 7) . "\x00"))->toBeTrue();
+    });
+
+    it('encodes a DataChangeFilter in a ModifyMonitoredItems request', function () use ($filterBytes) {
+        $service = new MonitoredItemService(new SessionService(1, 1));
+
+        $bytes = $service->encodeModifyMonitoredItemsRequest(1, NodeId::numeric(0, 0), 42, [
+            ['monitoredItemId' => 100, 'clientHandle' => 3, 'queueSize' => 5, 'filter' => ['deadbandType' => 2, 'deadbandValue' => 10.0]],
+        ]);
+
+        expect(str_ends_with($bytes, $filterBytes(1, 2, 10.0) . pack('V', 5) . "\x01"))->toBeTrue();
+    });
+});

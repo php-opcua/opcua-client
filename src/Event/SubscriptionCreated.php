@@ -9,7 +9,7 @@ use PhpOpcua\Client\OpcUaClientInterface;
 /**
  * Dispatched after a subscription has been created on the server.
  *
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::createSubscription()
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::createSubscription()
  */
 readonly class SubscriptionCreated
 {

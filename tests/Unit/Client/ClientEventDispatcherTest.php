@@ -35,6 +35,22 @@ use PhpOpcua\Client\Tests\Unit\Helpers\InMemoryEventDispatcher;
 use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\NodeId;
 
+function writeDataChangeNotificationData(BinaryEncoder $e, int $clientHandle, int $value): void
+{
+    $e->writeNodeId(NodeId::numeric(0, 811));
+    $e->writeByte(0x01);
+    $bodyEncoder = new BinaryEncoder();
+    $bodyEncoder->writeInt32(1);
+    $bodyEncoder->writeUInt32($clientHandle);
+    $bodyEncoder->writeByte(0x01);
+    $bodyEncoder->writeByte(BuiltinType::Int32->value);
+    $bodyEncoder->writeInt32($value);
+    $bodyEncoder->writeInt32(0);
+    $body = $bodyEncoder->getBuffer();
+    $e->writeInt32(strlen($body));
+    $e->writeRawBytes($body);
+}
+
 describe('ManagesEventDispatcherTrait on Client', function () {
 
     it('uses NullEventDispatcher by default', function () {
@@ -280,6 +296,125 @@ describe('ManagesEventDispatcherTrait on Client', function () {
         $event = $dispatcher->getEventsOfType(DataChangeReceived::class)[0];
         expect($event->dataValue->getValue())->toBe(99);
         expect($event->clientHandle)->toBe(1);
+    });
+
+    it('flags DataChangeReceived from publish as not republished', function () {
+        $dispatcher = new InMemoryEventDispatcher();
+        $mock = new MockTransport();
+        $mock->addResponse(buildMsgResponse(829, function (BinaryEncoder $e) {
+            $e->writeUInt32(1);
+            $e->writeInt32(0);
+            $e->writeBoolean(false);
+            $e->writeUInt32(5);
+            $e->writeDateTime(new DateTimeImmutable());
+            $e->writeInt32(1);
+            writeDataChangeNotificationData($e, 1, 99);
+            $e->writeInt32(0);
+            $e->writeInt32(0);
+        }));
+
+        $client = setupConnectedClient($mock);
+        setClientProperty($client, 'eventDispatcher', $dispatcher);
+
+        $client->publish();
+
+        expect($dispatcher->getEventsOfType(DataChangeReceived::class)[0]->republished)->toBeFalse();
+    });
+
+    it('dispatches DataChangeReceived flagged as republished for republish, without publish-only events', function () {
+        $dispatcher = new InMemoryEventDispatcher();
+        $mock = new MockTransport();
+        $mock->addResponse(buildMsgResponse(835, function (BinaryEncoder $e) {
+            $e->writeUInt32(41);
+            $e->writeDateTime(new DateTimeImmutable());
+            $e->writeInt32(2);
+            writeDataChangeNotificationData($e, 3, 7);
+            writeDataChangeNotificationData($e, 4, 8);
+        }));
+
+        $client = setupConnectedClient($mock);
+        setClientProperty($client, 'eventDispatcher', $dispatcher);
+
+        $client->republish(12, 41);
+
+        $events = $dispatcher->getEventsOfType(DataChangeReceived::class);
+        expect($events)->toHaveCount(2);
+        expect($events[0]->republished)->toBeTrue();
+        expect($events[0]->subscriptionId)->toBe(12);
+        expect($events[0]->sequenceNumber)->toBe(41);
+        expect($events[0]->clientHandle)->toBe(3);
+        expect($events[0]->dataValue->getValue())->toBe(7);
+        expect($events[1]->clientHandle)->toBe(4);
+        expect($dispatcher->hasEvent(PublishResponseReceived::class))->toBeFalse();
+        expect($dispatcher->hasEvent(SubscriptionKeepAlive::class))->toBeFalse();
+    });
+
+    it('dispatches no events for a republish without notifications', function () {
+        $dispatcher = new InMemoryEventDispatcher();
+        $mock = new MockTransport();
+        $mock->addResponse(buildMsgResponse(835, function (BinaryEncoder $e) {
+            $e->writeUInt32(41);
+            $e->writeDateTime(null);
+            $e->writeInt32(0);
+        }));
+
+        $client = setupConnectedClient($mock);
+        setClientProperty($client, 'eventDispatcher', $dispatcher);
+
+        $client->republish(12, 41);
+
+        expect($dispatcher->getEvents())->toBe([]);
+    });
+
+    it('flags event and alarm events from republish as republished', function () {
+        $dispatcher = new InMemoryEventDispatcher();
+        $mock = new MockTransport();
+        $mock->addResponse(buildMsgResponse(835, function (BinaryEncoder $e) {
+            $e->writeUInt32(9);
+            $e->writeDateTime(new DateTimeImmutable());
+            $e->writeInt32(1);
+            $e->writeNodeId(NodeId::numeric(0, 916));
+            $e->writeByte(0x01);
+            $bodyEncoder = new BinaryEncoder();
+            $bodyEncoder->writeInt32(1);
+            $bodyEncoder->writeUInt32(1);
+            $bodyEncoder->writeInt32(7);
+            $bodyEncoder->writeByte(BuiltinType::ByteString->value);
+            $bodyEncoder->writeByteString('event-id-123');
+            $bodyEncoder->writeByte(BuiltinType::NodeId->value);
+            $bodyEncoder->writeNodeId(NodeId::numeric(0, 2955));
+            $bodyEncoder->writeByte(BuiltinType::String->value);
+            $bodyEncoder->writeString('TempSensor');
+            $bodyEncoder->writeByte(BuiltinType::DateTime->value);
+            $bodyEncoder->writeDateTime(new DateTimeImmutable());
+            $bodyEncoder->writeByte(BuiltinType::String->value);
+            $bodyEncoder->writeString('Temperature high');
+            $bodyEncoder->writeByte(BuiltinType::UInt16->value);
+            $bodyEncoder->writeUInt16(800);
+            $bodyEncoder->writeByte(BuiltinType::Boolean->value);
+            $bodyEncoder->writeBoolean(true);
+            $body = $bodyEncoder->getBuffer();
+            $e->writeInt32(strlen($body));
+            $e->writeRawBytes($body);
+        }));
+
+        $client = setupConnectedClient($mock);
+        setClientProperty($client, 'eventDispatcher', $dispatcher);
+
+        $client->republish(1, 9);
+
+        $classes = [
+            EventNotificationReceived::class,
+            AlarmEventReceived::class,
+            AlarmSeverityChanged::class,
+            LimitAlarmExceeded::class,
+            AlarmActivated::class,
+        ];
+        foreach ($classes as $class) {
+            $events = $dispatcher->getEventsOfType($class);
+            expect($events)->toHaveCount(1);
+            expect($events[0]->republished)->toBeTrue();
+        }
     });
 
     it('dispatches EventNotificationReceived and AlarmEventReceived for event notifications with severity', function () {

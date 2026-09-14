@@ -114,7 +114,7 @@ if (StatusCode::isGood($dv->statusCode)) { … }
 if (StatusCode::isBad($dv->statusCode))  { … }
 if (StatusCode::isUncertain($dv->statusCode)) { … }
 
-echo StatusCode::getName($dv->statusCode);   // "Good", "BadNodeIdUnknown", …
+echo StatusCode::getName($dv->statusCode);   // "Good", "BadNodeIdUnknown", "Good [LimitHigh, Overflow]", …
 ```
 <!-- @endcode-block -->
 

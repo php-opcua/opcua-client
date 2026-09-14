@@ -15,7 +15,7 @@ use PhpOpcua\Client\Types\NodeId;
  */
 class MonitoredItemsBuilder
 {
-    /** @var array<array{nodeId: NodeId|string, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int}> */
+    /** @var array<array{nodeId: NodeId|string, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int, discardOldest?: bool, filter?: array{trigger?: int, deadbandType?: int, deadbandValue?: float}}> */
     private array $items = [];
 
     /**
@@ -98,6 +98,57 @@ class MonitoredItemsBuilder
     {
         if (! empty($this->items)) {
             $this->items[array_key_last($this->items)]['attributeId'] = $attributeId;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Sets the monitoring mode for the last added item (0 Disabled, 1 Sampling, 2 Reporting).
+     *
+     * @param int $mode
+     * @return $this
+     */
+    public function monitoringMode(int $mode): self
+    {
+        if (! empty($this->items)) {
+            $this->items[array_key_last($this->items)]['monitoringMode'] = $mode;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Sets whether the oldest queued value is dropped when the queue of the last added item is full.
+     *
+     * @param bool $discardOldest
+     * @return $this
+     */
+    public function discardOldest(bool $discardOldest): self
+    {
+        if (! empty($this->items)) {
+            $this->items[array_key_last($this->items)]['discardOldest'] = $discardOldest;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Sets a DataChangeFilter on the last added item.
+     *
+     * @param int $trigger 0 Status, 1 StatusValue, 2 StatusValueTimestamp.
+     * @param int $deadbandType 0 None, 1 Absolute, 2 Percent.
+     * @param float $deadbandValue Absolute units, or a percentage of the EURange for Percent.
+     * @return $this
+     */
+    public function dataChangeFilter(int $trigger = 1, int $deadbandType = 0, float $deadbandValue = 0.0): self
+    {
+        if (! empty($this->items)) {
+            $this->items[array_key_last($this->items)]['filter'] = [
+                'trigger' => $trigger,
+                'deadbandType' => $deadbandType,
+                'deadbandValue' => $deadbandValue,
+            ];
         }
 
         return $this;

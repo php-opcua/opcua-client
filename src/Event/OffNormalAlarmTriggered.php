@@ -9,6 +9,9 @@ use PhpOpcua\Client\OpcUaClientInterface;
 /**
  * Dispatched when an event notification originates from an OffNormalAlarm or DiscreteAlarm type.
  *
+ * `republished` is true when the notification was retransmitted by republish()
+ * rather than delivered by publish().
+ *
  * @see AlarmEventReceived
  */
 readonly class OffNormalAlarmTriggered
@@ -19,6 +22,7 @@ readonly class OffNormalAlarmTriggered
         public int $clientHandle,
         public ?string $sourceName = null,
         public ?int $severity = null,
+        public bool $republished = false,
     ) {
     }
 }

@@ -229,6 +229,33 @@ describe('MonitoredItemsBuilder', function () {
         expect($results)->toHaveCount(2);
     });
 
+    it('sets monitoring mode, discardOldest and a data change filter on the last added item', function () {
+        $client = MockClient::create();
+        $client->createMonitoredItems(7)
+            ->add('i=2258')->monitoringMode(1)->discardOldest(false)->dataChangeFilter(2, 1, 0.5)
+            ->add('ns=2;i=1001')->dataChangeFilter()
+            ->execute();
+
+        $items = $client->getCallsFor('createMonitoredItems')[0]['args'][1];
+        expect($items[0])->toBe([
+            'nodeId' => 'i=2258',
+            'monitoringMode' => 1,
+            'discardOldest' => false,
+            'filter' => ['trigger' => 2, 'deadbandType' => 1, 'deadbandValue' => 0.5],
+        ]);
+        expect($items[1])->toBe([
+            'nodeId' => 'ns=2;i=1001',
+            'filter' => ['trigger' => 1, 'deadbandType' => 0, 'deadbandValue' => 0.0],
+        ]);
+    });
+
+    it('ignores item settings before any item is added', function () {
+        $client = MockClient::create();
+        $client->createMonitoredItems(7)->monitoringMode(1)->discardOldest(false)->dataChangeFilter()->execute();
+
+        expect($client->getCallsFor('createMonitoredItems')[0]['args'][1])->toBe([]);
+    });
+
     it('segment without prior from auto-creates root starting node', function () {
         $mock = new MockTransport();
         $mock->addResponse(buildMsgResponse(557, function (BinaryEncoder $e) {

@@ -186,6 +186,9 @@ $transferResult = $client->transferSubscriptions([$sub->subscriptionId]);
 
 $retransmitted = $client->republish($sub->subscriptionId, $sequenceNumber);
 // Force the server to re-send a specific notification message.
+// $retransmitted['notifications'] holds DataChangeNotification / EventNotification
+// objects, exactly like publish(), and dispatches the same data change, event and
+// alarm events with `republished: true` (no PublishResponseReceived / SubscriptionKeepAlive).
 ```
 
 ## History

@@ -12,6 +12,8 @@ use PhpOpcua\Client\Types\NodeId;
 
 class PublishService extends AbstractProtocolService
 {
+    use DecodesNotificationDataTrait;
+
     /**
      * @param int $requestId
      * @param NodeId $authToken
@@ -49,34 +51,7 @@ class PublishService extends AbstractProtocolService
         $sequenceNumber = $decoder->readUInt32();
         $decoder->readDateTime();
 
-        $notifCount = $decoder->readInt32();
-        $notifications = [];
-
-        for ($i = 0; $i < $notifCount; $i++) {
-            $typeId = $decoder->readNodeId();
-            $encoding = $decoder->readByte();
-
-            if ($encoding === 0x01) {
-                $bodyLength = $decoder->readInt32();
-                $bodyStart = $decoder->getOffset();
-
-                $notifTypeId = $typeId->getIdentifier();
-
-                if ($notifTypeId === 811) {
-                    $notifications = array_merge($notifications, $this->decodeDataChangeNotification($decoder));
-                } elseif ($notifTypeId === 916) {
-                    $notifications = array_merge($notifications, $this->decodeEventNotificationList($decoder));
-                } else {
-                    $decoder->skip($bodyLength - ($decoder->getOffset() - $bodyStart));
-                }
-
-                $consumed = $decoder->getOffset() - $bodyStart;
-                if ($consumed < $bodyLength) {
-                    $decoder->skip($bodyLength - $consumed);
-                }
-            } elseif ($encoding === 0x00) {
-            }
-        }
+        $notifications = $this->decodeNotificationData($decoder);
 
         $resultCount = $decoder->readInt32();
         for ($i = 0; $i < $resultCount; $i++) {
@@ -86,49 +61,6 @@ class PublishService extends AbstractProtocolService
         $decoder->skipDiagnosticInfoArray();
 
         return new PublishResult($subscriptionId, $sequenceNumber, $moreNotifications, $notifications, $availableSequenceNumbers);
-    }
-
-    /**
-     * @param BinaryDecoder $decoder
-     * @return DataChangeNotification[]
-     */
-    private function decodeDataChangeNotification(BinaryDecoder $decoder): array
-    {
-        $count = $decoder->readInt32();
-        $items = [];
-        for ($i = 0; $i < $count; $i++) {
-            $clientHandle = $decoder->readUInt32();
-            $dataValue = $decoder->readDataValue();
-
-            $items[] = new DataChangeNotification($clientHandle, $dataValue);
-        }
-
-        $decoder->skipDiagnosticInfoArray();
-
-        return $items;
-    }
-
-    /**
-     * @param BinaryDecoder $decoder
-     * @return EventNotification[]
-     */
-    private function decodeEventNotificationList(BinaryDecoder $decoder): array
-    {
-        $count = $decoder->readInt32();
-        $events = [];
-        for ($i = 0; $i < $count; $i++) {
-            $clientHandle = $decoder->readUInt32();
-
-            $fieldCount = $decoder->readInt32();
-            $fields = [];
-            for ($j = 0; $j < $fieldCount; $j++) {
-                $fields[] = $decoder->readVariant();
-            }
-
-            $events[] = new EventNotification($clientHandle, $fields);
-        }
-
-        return $events;
     }
 
     /**

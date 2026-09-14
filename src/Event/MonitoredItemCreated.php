@@ -10,8 +10,8 @@ use PhpOpcua\Client\Types\NodeId;
 /**
  * Dispatched after a monitored item has been created within a subscription.
  *
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::createMonitoredItems()
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::createEventMonitoredItem()
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::createMonitoredItems()
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::createEventMonitoredItem()
  */
 readonly class MonitoredItemCreated
 {

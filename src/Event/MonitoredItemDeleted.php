@@ -9,7 +9,7 @@ use PhpOpcua\Client\OpcUaClientInterface;
 /**
  * Dispatched after a monitored item has been deleted from a subscription.
  *
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::deleteMonitoredItems()
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::deleteMonitoredItems()
  */
 readonly class MonitoredItemDeleted
 {

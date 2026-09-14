@@ -72,48 +72,60 @@ All event classes live in `PhpOpcua\Client\Event\`.
 | ------------------------ | ------------------------------------------- | -------------------------------- |
 | `SubscriptionCreated`    | `createSubscription()` succeeded            | `subscriptionId`, `revisedPublishingInterval` |
 | `SubscriptionDeleted`    | `deleteSubscription()` succeeded            | `subscriptionId`                 |
-| `SubscriptionKeepAlive`  | Server sent an empty publish response       | `subscriptionId`                 |
-| `SubscriptionTransferred`| `transferSubscriptions()` returned Good     | `subscriptionId`                 |
+| `SubscriptionKeepAlive`  | `publish()` got an empty response           | `subscriptionId`, `sequenceNumber` |
+| `SubscriptionTransferred`| `transferSubscriptions()` returned, once per subscription | `subscriptionId`, `statusCode` |
 
 ## Monitored items (3)
 
 | Event                   | Fires when                                  | Key fields                                  |
 | ----------------------- | ------------------------------------------- | ------------------------------------------- |
-| `MonitoredItemCreated`  | `createMonitoredItems()` returned Good      | `subscriptionId`, `monitoredItemId`, `nodeId`, `statusCode` |
-| `MonitoredItemModified` | `modifyMonitoredItems()` returned Good      | `subscriptionId`, `monitoredItemId`         |
-| `MonitoredItemDeleted`  | `deleteMonitoredItems()` returned Good      | `subscriptionId`, `monitoredItemId`         |
+| `MonitoredItemCreated`  | `createMonitoredItems()` / `createEventMonitoredItem()` returned, once per item | `subscriptionId`, `monitoredItemId`, `nodeId`, `statusCode` |
+| `MonitoredItemModified` | `modifyMonitoredItems()` returned, once per item | `subscriptionId`, `monitoredItemId`, `statusCode` |
+| `MonitoredItemDeleted`  | `deleteMonitoredItems()` returned, once per item | `subscriptionId`, `monitoredItemId`, `statusCode` |
+
+The monitored item events fire for every result, including rejected
+items: check `statusCode`.
 
 ## Publish (3)
 
 | Event                       | Fires when                                  | Key fields                              |
 | --------------------------- | ------------------------------------------- | --------------------------------------- |
-| `DataChangeReceived`        | A data-change notification was delivered    | `subscriptionId`, `sequenceNumber`, `clientHandle`, `dataValue` |
-| `EventNotificationReceived` | An event notification was delivered         | `subscriptionId`, `sequenceNumber`, `clientHandle`, `eventFields` |
-| `PublishResponseReceived`   | Any publish response (including keep-alives)| `subscriptionId`, `sequenceNumber`, `notificationCount`, `moreNotifications` |
+| `DataChangeReceived`        | `publish()` / `republish()` delivered a data-change notification | `subscriptionId`, `sequenceNumber`, `clientHandle`, `dataValue`, `republished` |
+| `EventNotificationReceived` | `publish()` / `republish()` delivered an event notification | `subscriptionId`, `sequenceNumber`, `clientHandle`, `eventFields`, `republished` |
+| `PublishResponseReceived`   | Any `publish()` response (including keep-alives) | `subscriptionId`, `sequenceNumber`, `notificationCount`, `moreNotifications` |
+
+`republished` is `true` when the notification came from `republish()`.
+A retransmission can repeat a notification `publish()` already
+delivered, so check it when a value must not be processed twice.
+`PublishResponseReceived` and `SubscriptionKeepAlive` are dispatched by
+`publish()` only.
 
 ## Triggering (1)
 
 | Event                  | Fires when                              | Key fields                          |
 | ---------------------- | --------------------------------------- | ----------------------------------- |
-| `TriggeringConfigured` | `setTriggering()` returned Good         | `subscriptionId`, `triggeringItemId`, `addResults`, `removeResults` |
+| `TriggeringConfigured` | `setTriggering()` returned              | `subscriptionId`, `triggeringItemId`, `addResults`, `removeResults` |
 
 ## Alarms (9)
 
-These are auto-deduced from event notification payloads — when an
-`EventNotificationReceived` event carries alarm-shaped fields, the
-library dispatches one of the specific events below in addition.
+These are deduced from event notification payloads, in addition to
+`EventNotificationReceived`. The deduction reads the fields by position,
+so it assumes the default select clauses of `createEventMonitoredItem()`
+(`EventId`, `EventType`, `SourceName`, `Time`, `Message`, `Severity`)
+followed by any state fields. Every alarm event also carries
+`subscriptionId`, `clientHandle` and `republished`.
 
 | Event                      | Fires when                                  | Key fields                                    |
 | -------------------------- | ------------------------------------------- | --------------------------------------------- |
-| `AlarmEventReceived`       | Any alarm-shaped event                      | `sourceName`, `message`, `severity`, `eventType` |
-| `AlarmActivated`           | `ActiveState` → `Active`                    | `subscriptionId`, `clientHandle`, `sourceName`, `severity`, `message` |
-| `AlarmDeactivated`         | `ActiveState` → `Inactive`                  | `sourceName`                                  |
-| `AlarmAcknowledged`        | `AckedState` → acknowledged                 | `sourceName`, `acknowledger`                  |
-| `AlarmConfirmed`           | `ConfirmedState` → confirmed                | `sourceName`                                  |
-| `AlarmShelved`             | Shelved/Unshelved state transition          | `sourceName`, `shelved`                       |
-| `AlarmSeverityChanged`     | Severity changed                            | `sourceName`, `oldSeverity`, `newSeverity`    |
-| `LimitAlarmExceeded`       | LimitAlarmType variants tripped a limit     | `subscriptionId`, `clientHandle`, `sourceName`, `limitState`, `severity` |
-| `OffNormalAlarmTriggered`  | OffNormalAlarmType variants tripped         | `subscriptionId`, `clientHandle`, `sourceName`, `severity` |
+| `AlarmEventReceived`       | The event has a `Severity` or an `EventType` | `eventFields`, `severity`, `sourceName`, `message`, `eventType`, `time` |
+| `AlarmSeverityChanged`     | An alarm-shaped event carries a `Severity` (every time, not only on change) | `sourceName`, `severity` |
+| `LimitAlarmExceeded`       | `EventType` is a LimitAlarmType variant     | `sourceName`, `limitState`, `severity`        |
+| `OffNormalAlarmTriggered`  | `EventType` is an OffNormalAlarmType variant | `sourceName`, `severity`                     |
+| `AlarmActivated`           | The first state field is `true`, or a string starting with `Active` | `sourceName`, `severity`, `message` |
+| `AlarmDeactivated`         | The first state field is `false`, or a string starting with `Inactive` | `sourceName`, `message` |
+| `AlarmAcknowledged`        | The first state field is a string containing `Acknowledged` or `Acked` | `sourceName` |
+| `AlarmConfirmed`           | The first state field is a string containing `Confirmed` | `sourceName`                    |
+| `AlarmShelved`             | The first state field is a string containing `Shelved` | `sourceName`                      |
 
 ## Type discovery (1)
 

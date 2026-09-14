@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use PhpOpcua\Client\Module\Subscription\DataChangeNotification;
 use PhpOpcua\Client\Tests\Integration\Helpers\TestHelper;
+use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\StatusCode;
 
 describe('Subscription', function () {
@@ -180,6 +182,87 @@ describe('Subscription', function () {
 
             $client->deleteMonitoredItems($subId, [$monId]);
             $client->deleteSubscription($subId);
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
+    it('applies an absolute deadband filter and changes it with modifyMonitoredItems', function () {
+        $client = null;
+        try {
+            $client = TestHelper::connectNoSecurity();
+            $nodeId = TestHelper::browseToNode($client, ['TestServer', 'DataTypes', 'Scalar', 'DoubleValue']);
+            expect(StatusCode::isGood($client->write($nodeId, 100.0, BuiltinType::Double)))->toBeTrue();
+
+            $sub = $client->createSubscription(100.0, maxKeepAliveCount: 5);
+            $subId = $sub->subscriptionId;
+
+            $results = $client->createMonitoredItems($subId, [
+                [
+                    'nodeId' => $nodeId,
+                    'samplingInterval' => 50.0,
+                    'queueSize' => 10,
+                    'clientHandle' => 5,
+                    'filter' => ['deadbandType' => 1, 'deadbandValue' => 5.0],
+                ],
+            ]);
+            expect(StatusCode::isGood($results[0]->statusCode))->toBeTrue();
+
+            $drain = function () use ($client): array {
+                $values = [];
+                $deadline = microtime(true) + 1.5;
+                while (microtime(true) < $deadline) {
+                    foreach ($client->publish()->notifications as $notification) {
+                        if ($notification instanceof DataChangeNotification) {
+                            $values[] = $notification->dataValue->getValue();
+                        }
+                    }
+                }
+
+                return $values;
+            };
+
+            expect($drain())->toBe([100.0]);
+
+            $client->write($nodeId, 102.0, BuiltinType::Double);
+            usleep(300_000);
+            $client->write($nodeId, 110.0, BuiltinType::Double);
+            expect($drain())->toBe([110.0]);
+
+            $modifyResults = $client->modifyMonitoredItems($subId, [
+                [
+                    'monitoredItemId' => $results[0]->monitoredItemId,
+                    'samplingInterval' => 50.0,
+                    'queueSize' => 10,
+                    'clientHandle' => 5,
+                    'filter' => ['deadbandType' => 0],
+                ],
+            ]);
+            expect(StatusCode::isGood($modifyResults[0]->statusCode))->toBeTrue();
+
+            $client->write($nodeId, 111.0, BuiltinType::Double);
+            expect($drain())->toBe([111.0]);
+
+            $client->deleteSubscription($subId);
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
+    it('rejects a percent deadband on a variable without an EURange', function () {
+        $client = null;
+        try {
+            $client = TestHelper::connectNoSecurity();
+            $nodeId = TestHelper::browseToNode($client, ['TestServer', 'DataTypes', 'Scalar', 'DoubleValue']);
+
+            $sub = $client->createSubscription(500.0);
+            $results = $client->createMonitoredItems($sub->subscriptionId, [
+                ['nodeId' => $nodeId, 'filter' => ['deadbandType' => 2, 'deadbandValue' => 10.0]],
+            ]);
+
+            expect(StatusCode::isBad($results[0]->statusCode))->toBeTrue();
+
+            $client->deleteSubscription($sub->subscriptionId);
         } finally {
             TestHelper::safeDisconnect($client);
         }

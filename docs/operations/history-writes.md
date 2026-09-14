@@ -5,7 +5,7 @@ lede:    'Nine methods that target the OPC UA HistoryUpdate service set — inse
 see_also:
   - { href: './history-reads.md',           meta: '6 min' }
   - { href: './client-side-aggregates.md',  meta: '7 min' }
-  - { href: '../observability/event-reference.md#history-updates-5', meta: '4 min' }
+  - { href: '../observability/event-reference.md#history-updates-4', meta: '4 min' }
   - { href: 'https://opcfoundation.org/specs/part11', meta: 'external', label: 'OPC UA Part 11 — Historical Access' }
 
 prev: { label: 'History reads',           href: './history-reads.md' }
@@ -243,7 +243,7 @@ backfills, or push status to a dashboard:
 | `historyDeleteEvent`                                  | `HistoryEventDeleted` | `$nodeId`, `$eventCount`, `$operationResults`                      |
 
 All four carry a `$client` reference too. See
-[Observability · Event reference](../observability/event-reference.md#history-updates-5)
+[Observability · Event reference](../observability/event-reference.md#history-updates-4)
 for the full field list.
 
 ## Failure modes

@@ -12,6 +12,8 @@ use PhpOpcua\Client\Types\NodeId;
 
 class SubscriptionService extends AbstractProtocolService
 {
+    use DecodesNotificationDataTrait;
+
     /**
      * @param int $requestId
      * @param NodeId $authToken
@@ -394,7 +396,7 @@ class SubscriptionService extends AbstractProtocolService
 
     /**
      * @param BinaryDecoder $decoder
-     * @return array{sequenceNumber: int, publishTime: ?\DateTimeImmutable, notifications: array<int, mixed>}
+     * @return array{sequenceNumber: int, publishTime: ?\DateTimeImmutable, notifications: array<int, DataChangeNotification|EventNotification>}
      */
     public function decodeRepublishResponse(BinaryDecoder $decoder): array
     {
@@ -403,16 +405,7 @@ class SubscriptionService extends AbstractProtocolService
         $sequenceNumber = $decoder->readUInt32();
         $publishTime = $decoder->readDateTime();
 
-        $notifCount = $decoder->readInt32();
-        $notifications = [];
-        for ($i = 0; $i < $notifCount; $i++) {
-            $decoder->readNodeId();
-            $decoder->readByte();
-            $bodyLen = $decoder->readInt32();
-            if ($bodyLen > 0) {
-                $decoder->skip($bodyLen);
-            }
-        }
+        $notifications = $this->decodeNotificationData($decoder);
 
         return [
             'sequenceNumber' => $sequenceNumber,

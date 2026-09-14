@@ -152,7 +152,7 @@ $client->createMonitoredItems($sub->subscriptionId, [
         'samplingInterval' => 250.0,
         'queueSize'        => 10,
         'filter'           => [
-            'trigger'      => 1,        // StatusValue (default 0 = Status, 2 = StatusValueTimestamp)
+            'trigger'      => 1,        // StatusValue, the default (0 = Status, 2 = StatusValueTimestamp)
             'deadbandType' => 1,        // Absolute (2 = Percent)
             'deadbandValue'=> 0.5,      // ignore changes smaller than 0.5 units
         ],

@@ -858,7 +858,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
 
     /**
      * @param int $subscriptionId
-     * @param ?array<array{nodeId: NodeId|string, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int}> $items
+     * @param ?array<array{nodeId: NodeId|string, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int, discardOldest?: bool, filter?: array{trigger?: int, deadbandType?: int, deadbandValue?: float}}> $items
      * @return MonitoredItemResult[]|Builder\MonitoredItemsBuilder
      */
     public function createMonitoredItems(
@@ -896,7 +896,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
 
     /**
      * @param int $subscriptionId
-     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool}> $itemsToModify
+     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool, filter?: array{trigger?: int, deadbandType?: int, deadbandValue?: float}}> $itemsToModify
      * @return Module\Subscription\MonitoredItemModifyResult[]
      */
     public function modifyMonitoredItems(int $subscriptionId, array $itemsToModify): array
@@ -947,7 +947,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
     /**
      * @param int $subscriptionId
      * @param int $retransmitSequenceNumber
-     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array<int, mixed>}
+     * @return array{sequenceNumber: int, publishTime: ?DateTimeImmutable, notifications: array<int, Module\Subscription\DataChangeNotification|Module\Subscription\EventNotification>}
      */
     public function republish(int $subscriptionId, int $retransmitSequenceNumber): array
     {

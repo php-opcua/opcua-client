@@ -11,6 +11,9 @@ use PhpOpcua\Client\OpcUaClientInterface;
  *
  * The limit state indicates which threshold was crossed (HighHigh, High, Low, LowLow).
  *
+ * `republished` is true when the notification was retransmitted by republish()
+ * rather than delivered by publish().
+ *
  * @see AlarmEventReceived
  */
 readonly class LimitAlarmExceeded
@@ -22,6 +25,7 @@ readonly class LimitAlarmExceeded
         public ?string $sourceName = null,
         public ?string $limitState = null,
         public ?int $severity = null,
+        public bool $republished = false,
     ) {
     }
 }

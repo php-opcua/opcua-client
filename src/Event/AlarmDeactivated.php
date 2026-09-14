@@ -11,6 +11,9 @@ use PhpOpcua\Client\OpcUaClientInterface;
  *
  * Deduced from the ActiveState field being false in the event notification.
  *
+ * `republished` is true when the notification was retransmitted by republish()
+ * rather than delivered by publish().
+ *
  * @see AlarmEventReceived
  */
 readonly class AlarmDeactivated
@@ -21,6 +24,7 @@ readonly class AlarmDeactivated
         public int $clientHandle,
         public ?string $sourceName = null,
         public ?string $message = null,
+        public bool $republished = false,
     ) {
     }
 }

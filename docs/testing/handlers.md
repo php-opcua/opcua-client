@@ -97,7 +97,7 @@ use PhpOpcua\Client\Types\NodeId;
 
 $client->onWrite('ns=2;s=PLC/Setpoint', function (NodeId $nodeId, mixed $value, BuiltinType $type) {
     if ($value < 0 || $value > 100) {
-        return 0x803E0000;          // BadOutOfRange
+        return 0x803C0000;          // BadOutOfRange
     }
     return 0;                       // Good
 });

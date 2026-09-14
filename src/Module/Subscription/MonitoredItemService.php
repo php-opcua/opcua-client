@@ -17,7 +17,7 @@ class MonitoredItemService extends AbstractProtocolService
      * @param int $requestId
      * @param NodeId $authToken
      * @param int $subscriptionId
-     * @param array<array{nodeId: NodeId, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int}> $items
+     * @param array<array{nodeId: NodeId, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int, discardOldest?: bool, filter?: array{trigger?: int, deadbandType?: int, deadbandValue?: float}}> $items
      * @param int $timestampsToReturn
      */
     public function encodeCreateMonitoredItemsRequest(
@@ -63,7 +63,7 @@ class MonitoredItemService extends AbstractProtocolService
      * @param int $requestId
      * @param NodeId $authToken
      * @param int $subscriptionId
-     * @param array<array{nodeId: NodeId, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int}> $items
+     * @param array<array{nodeId: NodeId, attributeId?: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, monitoringMode?: int, discardOldest?: bool, filter?: array{trigger?: int, deadbandType?: int, deadbandValue?: float}}> $items
      * @param int $timestampsToReturn
      */
     private function writeCreateMonitoredItemsInnerBody(
@@ -95,10 +95,9 @@ class MonitoredItemService extends AbstractProtocolService
 
             $body->writeUInt32($item['clientHandle'] ?? $index + 1);
             $body->writeDouble($item['samplingInterval'] ?? -1.0);
-            $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
-            $body->writeByte(0x00);
+            $this->writeDataChangeFilter($body, $item['filter'] ?? null);
             $body->writeUInt32($item['queueSize'] ?? 1);
-            $body->writeBoolean(true);
+            $body->writeBoolean($item['discardOldest'] ?? true);
         }
     }
 
@@ -200,10 +199,38 @@ class MonitoredItemService extends AbstractProtocolService
     }
 
     /**
+     * Writes the filter of a data change item's MonitoringParameters: a DataChangeFilter
+     * ExtensionObject when one is given, a null ExtensionObject otherwise. An omitted
+     * trigger is StatusValue, the trigger servers apply when no filter is sent.
+     *
+     * @param BinaryEncoder $body
+     * @param ?array{trigger?: int, deadbandType?: int, deadbandValue?: float} $filter
+     */
+    private function writeDataChangeFilter(BinaryEncoder $body, ?array $filter): void
+    {
+        if ($filter === null) {
+            $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
+            $body->writeByte(0x00);
+
+            return;
+        }
+
+        $filterBody = new BinaryEncoder();
+        $filterBody->writeUInt32($filter['trigger'] ?? 1);
+        $filterBody->writeUInt32($filter['deadbandType'] ?? 0);
+        $filterBody->writeDouble($filter['deadbandValue'] ?? 0.0);
+
+        $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::DATA_CHANGE_FILTER_ENCODING));
+        $body->writeByte(0x01);
+        $body->writeInt32(strlen($filterBody->getBuffer()));
+        $body->writeRawBytes($filterBody->getBuffer());
+    }
+
+    /**
      * @param int $requestId
      * @param NodeId $authToken
      * @param int $subscriptionId
-     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool}> $itemsToModify
+     * @param array<array{monitoredItemId: int, samplingInterval?: float, queueSize?: int, clientHandle?: int, discardOldest?: bool, filter?: array{trigger?: int, deadbandType?: int, deadbandValue?: float}}> $itemsToModify
      * @param int $timestampsToReturn
      * @return string
      */
@@ -228,8 +255,7 @@ class MonitoredItemService extends AbstractProtocolService
 
             $body->writeUInt32($item['clientHandle'] ?? 0);
             $body->writeDouble($item['samplingInterval'] ?? -1.0);
-            $body->writeNodeId(NodeId::numeric(0, ServiceTypeId::NULL));
-            $body->writeByte(0x00);
+            $this->writeDataChangeFilter($body, $item['filter'] ?? null);
             $body->writeUInt32($item['queueSize'] ?? 0);
             $body->writeBoolean($item['discardOldest'] ?? true);
         }

@@ -224,6 +224,8 @@ StatusCode::isBad(0x80340000);          // true (BadNodeIdUnknown)
 StatusCode::isUncertain(0x40000000);    // true
 
 StatusCode::getName(0x80340000);        // "BadNodeIdUnknown"
+StatusCode::getName(0x80440000);        // "BadMonitoredItemFilterUnsupported"
+StatusCode::getName(0x00000680);        // "Good [LimitHigh, Overflow]"
 
 // Common bad codes:
 StatusCode::BadNodeIdUnknown;           // 0x80340000
@@ -231,8 +233,10 @@ StatusCode::BadUserAccessDenied;        // 0x801F0000
 StatusCode::BadServiceUnsupported;      // 0x800B0000
 StatusCode::BadTimeout;                 // 0x800A0000
 StatusCode::BadTypeMismatch;            // 0x80740000
-StatusCode::BadOutOfRange;              // 0x803E0000
-StatusCode::BadWriteNotSupported;       // 0x80730000
+
+// Codes without a constant are compared by value:
+$code === 0x803C0000;                   // BadOutOfRange
+$code === 0x80730000;                   // BadWriteNotSupported
 ```
 <!-- @endcode-block -->
 
@@ -242,9 +246,18 @@ The bit layout (Part 4 §7.34):
 - **Bits 29–16** — sub-code (the meaning)
 - **Bits 15–0** — info bits (semantic flags rarely used directly)
 
-The full catalogue of named codes is in `src/Types/StatusCode.php` —
-~250 constants covering everything Part 4 §7.34 defines. Browse it
-in the IDE for autocomplete.
+`getName()` knows every standard status code (generated from the OPC
+Foundation's `StatusCode.csv`), not only those with a constant. Low
+bits that are set are appended in brackets: `StructureChanged`,
+`SemanticsChanged` and, under the DataValue InfoType, `LimitLow` /
+`LimitHigh` / `LimitConstant`, `Overflow` and the historian flags. Bits
+with no defined meaning are appended as hex, and a code whose upper 16
+bits are not a standard code is returned entirely as hex
+(`0x80FF0000`).
+
+The constants in `src/Types/StatusCode.php` cover a smaller set of
+common codes; compare codes outside it by value, or by
+`getName()`.
 
 ## AttributeId
 

@@ -9,7 +9,7 @@ use PhpOpcua\Client\OpcUaClientInterface;
 /**
  * Dispatched when a publish response contains no notifications (keep-alive).
  *
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::publish()
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::publish()
  */
 readonly class SubscriptionKeepAlive
 {

@@ -89,7 +89,7 @@ $value = $dv->getValue();
 ```
 <!-- @endcode-block -->
 
-### Overflow and limit bits
+## Overflow and limit bits
 
 Besides success or failure, the status code carries *InfoBits* — flags
 about the value itself. Two of them matter on subscription data:

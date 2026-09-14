@@ -1,5 +1,116 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **Data change filters.** Items passed to `createMonitoredItems()` and
+  `modifyMonitoredItems()` accept a `filter` key —
+  `['trigger' => int, 'deadbandType' => int, 'deadbandValue' => float]` —
+  encoded as a `DataChangeFilter` ExtensionObject
+  (`ServiceTypeId::DATA_CHANGE_FILTER_ENCODING`, `ns=0;i=724`). Omitted keys
+  default to the StatusValue trigger with no deadband. A Percent deadband on a
+  variable without an `EURange` is rejected per item with
+  `BadMonitoredItemFilterUnsupported`.
+- **`discardOldest` on creation.** `createMonitoredItems()` accepts
+  `discardOldest` (default `true`, as before); it could previously be set only
+  through `modifyMonitoredItems()`.
+- **`MonitoredItemsBuilder`**: `monitoringMode()`, `discardOldest()` and
+  `dataChangeFilter()`, so the builder covers every item key.
+- **`republished` on notification events.** `DataChangeReceived`,
+  `EventNotificationReceived` and the nine alarm events carry
+  `bool $republished` (default `false`, added as the last constructor
+  parameter).
+
+### Changed
+
+- **HistoryRead raises the result's Bad status.** `historyReadRaw()`,
+  `historyReadProcessed()` and `historyReadAtTime()` discarded the
+  StatusCode of the node's HistoryRead result, so a rejected read — an
+  unknown aggregate, an unsupported operation — returned an empty array
+  indistinguishable from "no data". A Bad result now raises
+  `ServiceException` with that status code. Callers that relied on an empty
+  array for a rejected read must catch it.
+- **`republish()` dispatches PSR-14 events**, consistent with `publish()`:
+  `DataChangeReceived`, `EventNotificationReceived` and the alarm events, with
+  `republished: true`. A retransmission can repeat a notification `publish()`
+  already delivered, so listeners that must not process a value twice check
+  the flag. `PublishResponseReceived` and `SubscriptionKeepAlive` remain
+  `publish()`-only.
+
+### Fixed
+
+- **The data change `filter` was silently ignored.** The recipe
+  *Subscribing to data changes* documented a deadband `filter`, but both
+  encoders always wrote a null filter, so every change was reported. Verified
+  against UA-.NETStandard: with an Absolute deadband of 5 on a value of 100, a
+  write of 102 is now suppressed and a write of 110 reported.
+- **Six `StatusCode` constants had the wrong value.** Hand-written, they
+  held the value of a different code: `BadNotReadable` `0x803E0000` →
+  `0x803A0000` (the old value is `BadNotFound`), `BadNoData` `0x80B10000` →
+  `0x809B0000` (old value `BadNoDataAvailable`), `BadAggregateNotSupported`
+  `0x80D80000` → `0x80D50000` (old value `BadBoundNotSupported`) and
+  `UncertainDataSubNormal` `0x40A30000` → `0x40A40000` (the old value is not a
+  standard code). Comparisons against them never matched what servers send, and
+  the client-side aggregate calculators emitted the wrong codes.
+  `BadFileHandleInvalid` and `BadFileNotOpened` are not standard codes: they
+  are deprecated and now alias the codes FileType methods return,
+  `BadInvalidArgument` (`0x80AB0000`, was `0x80E70000`, `BadDataSetIdInvalid`)
+  and `BadInvalidState` (`0x80AF0000`, was `0x80E80000`,
+  `BadTransactionPending`). Every value is checked by an integration test
+  against the code UA-.NETStandard itself returns.
+- **`StatusCode::getName()` returned hex for most codes.** It knew only the
+  30 codes with a constant, so a server's `BadMonitoredItemFilterUnsupported`
+  came back as `0x80440000`, and any code with InfoBits — a Good value with
+  `Overflow`, say — came back as hex too. It now names all 272 standard codes
+  (generated from the OPC Foundation's UA-Nodeset `StatusCode.csv`) from the
+  upper 16 bits and appends the set low bits in brackets: `StructureChanged`,
+  `SemanticsChanged` and, under the DataValue InfoType, the limit, overflow and
+  historian flags (`Good [LimitHigh, Overflow]`); undefined bits are appended
+  as hex. The table references the constants by name.
+- **Event reference.** Key fields listed properties the classes do not have
+  (`acknowledger`, `shelved`, `oldSeverity` / `newSeverity`); the monitored
+  item, `SubscriptionTransferred` and `TriggeringConfigured` events were
+  described as firing on Good only, while they fire for every result with its
+  `statusCode`; the alarm rows now describe the actual deduction rules. The
+  `@see` tags of the subscription events pointed to the removed
+  `ManagesSubscriptionsTrait`; they now point to `SubscriptionModule`.
+
+- **`republish()` now returns the retransmitted notifications.**
+  `SubscriptionService::decodeRepublishResponse()` read the header of every
+  NotificationData entry and skipped its body, so `notifications` was always
+  an empty array even when the server retransmitted data. Publish and
+  Republish responses now share one decoder (`DecodesNotificationDataTrait`),
+  so `republish()` returns the same `DataChangeNotification` /
+  `EventNotification` objects as `publish()`. Entries without a body, with
+  an empty body or XML-encoded are skipped without desynchronising the
+  decoder, in both responses.
+
+### Tests
+
+- Unit: a Republish response carrying DataChange, StatusChange and
+  EventNotificationList entries decodes into typed objects; bodyless, empty
+  and XML-encoded entries are skipped. Integration, against UA-.NETStandard:
+  for every unacknowledged sequence number, `republish()` returns the same
+  client handles and values `publish()` delivered.
+- Unit: the DataChangeFilter ExtensionObject is encoded for create and modify,
+  with defaults for missing keys; `discardOldest` is encoded on creation; the
+  builder sets mode, discard policy and filter; `republish()` dispatches
+  data change, event and alarm events flagged `republished` and no
+  publish-only events, while `publish()` events stay unflagged. Integration,
+  against UA-.NETStandard: an Absolute deadband suppresses small changes and is
+  removed through `modifyMonitoredItems()`; a Percent deadband on a variable
+  without an `EURange` is rejected. The new tests fail against the previous
+  encoder and module.
+- Integration, against UA-.NETStandard (`StatusCodeConstantsTest`): each
+  corrected constant equals the code the stack returns — `BadNotReadable` on a
+  write-only variable, `BadNoData` and `UncertainDataSubNormal` from the SDK's
+  aggregate calculators, `BadAggregateNotSupported` for an unknown aggregate,
+  and `BadFileHandleInvalid` / `BadFileNotOpened` from FileType `Read`.
+  Requires the test suite's new processed-history support and
+  `HistoricalWithBadSamples` node. Unit: `getName()` names every standard
+  code and appends InfoBits.
+
 ## [v4.5.1] - 2026-09-11
 
 ### Added

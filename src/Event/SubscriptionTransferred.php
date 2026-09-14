@@ -9,7 +9,7 @@ use PhpOpcua\Client\OpcUaClientInterface;
 /**
  * Dispatched after a subscription has been transferred from another session.
  *
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::transferSubscriptions()
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::transferSubscriptions()
  */
 readonly class SubscriptionTransferred
 {

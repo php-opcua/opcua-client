@@ -157,7 +157,7 @@ BuiltinType::DiagnosticInfo; // = 25
 | `UserTokenPolicy` | discovery result | `policyId`, `tokenType` (int: 0=Anonymous, 1=UserName, 2=Certificate, 3=IssuedToken), `issuedTokenType`, `issuerEndpointUrl`, `securityPolicyUri` |
 | `LocalizedText` | i18n string | `locale`, `text`. `__toString()` returns text. |
 | `QualifiedName` | namespaced name | `namespaceIndex`, `name`. `__toString()` returns `'namespaceIndex:name'` (e.g. `2:Temperature`), or just `'name'` when `namespaceIndex` is 0. |
-| `StatusCode` | static helpers | `StatusCode::isGood($code)`, `isUncertain($code)`, `isBad($code)`, `isOverflow($code)`, `limit($code)`, `withDataValueInfoBits()` |
+| `StatusCode` | static helpers | `StatusCode::isGood($code)`, `isUncertain($code)`, `isBad($code)`, `isOverflow($code)`, `limit($code)`, `withDataValueInfoBits()`, `getName($code)` — every standard code, set low bits in brackets (`Good [LimitHigh, Overflow]`) |
 | `ConnectionState` | enum | `Disconnected`, `Connected`, `Broken` |
 | `DataValueLimit` | enum | `None`, `Low`, `High`, `Constant` — returned by `$dv->limit()` |
 

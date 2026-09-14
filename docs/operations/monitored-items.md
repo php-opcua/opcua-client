@@ -78,6 +78,9 @@ Builder methods, accumulated against the most recent `add()`:
 | `queueSize(int)`              | Server-side notification queue depth (default `1`) |
 | `clientHandle(int)`           | Caller-defined correlation handle         |
 | `attributeId(int)`            | Which attribute to monitor (default `Value`) |
+| `monitoringMode(int)`         | `0` Disabled, `1` Sampling, `2` Reporting (default) |
+| `discardOldest(bool)`         | Drop the oldest queued value when the queue is full (default `true`) |
+| `dataChangeFilter(int $trigger = 1, int $deadbandType = 0, float $deadbandValue = 0.0)` | Set a `DataChangeFilter` — see below |
 | `execute()`                   | Issue the call                            |
 
 Without `queueSize` an item gets a single-slot queue that keeps only
@@ -86,6 +89,40 @@ see [DataValue and Variant · Overflow and limit
 bits](../types/data-value-and-variant.md#overflow-and-limit-bits).
 Without `clientHandle`, the library assigns each item its position in
 the list plus one.
+
+### Data change filter
+
+The `filter` key (or `dataChangeFilter()` on the builder) sets a
+`DataChangeFilter`, which decides which changes produce a notification:
+
+| Key             | Values                                                   | Default |
+| --------------- | -------------------------------------------------------- | ------- |
+| `trigger`       | `0` Status, `1` StatusValue, `2` StatusValueTimestamp    | `1`     |
+| `deadbandType`  | `0` None, `1` Absolute, `2` Percent                      | `0`     |
+| `deadbandValue` | Engineering units (Absolute) or a percentage of the variable's `EURange` (Percent) | `0.0` |
+
+<!-- @code-block language="php" label="absolute deadband" -->
+```php
+$results = $client->createMonitoredItems($sub->subscriptionId, [
+    [
+        'nodeId'           => 'ns=2;s=Sensors/Temperature',
+        'samplingInterval' => 250.0,
+        'filter'           => ['deadbandType' => 1, 'deadbandValue' => 0.5],
+    ],
+]);
+```
+<!-- @endcode-block -->
+
+With an Absolute deadband, a value is reported only when it differs
+from the last reported value by more than `deadbandValue`. Against
+UA-.NETStandard, with a deadband of `5` on a value of `100`, a write of
+`102` produces no notification and a following write of `110` does.
+
+A Percent deadband needs an `AnalogItemType` variable with an
+`EURange`; on any other variable the server rejects the item with a Bad
+`statusCode`, which is why checking every `MonitoredItemResult` matters.
+Without `filter` no filter is sent, and the server reports every change
+of status or value.
 
 ## Creating event items
 
@@ -142,8 +179,8 @@ need to interpret the raw payload yourself for these cases. See
 
 <!-- @method name="$client->modifyMonitoredItems(int \$subscriptionId, array \$itemsToModify): array" returns="MonitoredItemModifyResult[]" visibility="public" -->
 
-Change sampling interval, queue size, client handle or discard policy
-without deleting and recreating the item.
+Change sampling interval, queue size, client handle, discard policy or
+data change filter without deleting and recreating the item.
 
 **This is not a partial update.** Every item is sent with all of its
 parameters, and a key you leave out is sent as a default — the server
@@ -155,6 +192,7 @@ does not keep the previous value:
 | `queueSize`        | `0`     | Revised to a single-slot queue                                |
 | `samplingInterval` | `-1`    | Samples at the subscription's publishing interval             |
 | `discardOldest`    | `true`  | The oldest value is dropped when the queue is full            |
+| `filter`           | none    | Any data change filter the item had is removed                |
 
 Against UA-.NETStandard, modifying only the `samplingInterval` of an
 item created with `clientHandle: 7` and `queueSize: 10` returns `Good`
@@ -174,9 +212,6 @@ $client->modifyMonitoredItems($sub->subscriptionId, [
 ]);
 ```
 <!-- @endcode-block -->
-
-`discardOldest` can only be chosen here: `createMonitoredItems()`
-always creates items with `discardOldest: true`.
 
 ## Triggering
 

@@ -9,7 +9,7 @@ use PhpOpcua\Client\OpcUaClientInterface;
 /**
  * Dispatched after a subscription has been deleted from the server.
  *
- * @see \PhpOpcua\Client\Client\ManagesSubscriptionsTrait::deleteSubscription()
+ * @see \PhpOpcua\Client\Module\Subscription\SubscriptionModule::deleteSubscription()
  */
 readonly class SubscriptionDeleted
 {

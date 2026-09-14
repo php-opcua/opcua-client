@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use PhpOpcua\Client\Module\Subscription\DataChangeNotification;
 use PhpOpcua\Client\Module\Subscription\TransferResult;
 use PhpOpcua\Client\Tests\Integration\Helpers\TestHelper;
 use PhpOpcua\Client\Types\NodeId;
@@ -85,6 +86,44 @@ describe('Republish', function () {
                 expect($result['sequenceNumber'])->toBe($response->sequenceNumber);
             } catch (PhpOpcua\Client\Exception\ServiceException $e) {
                 expect(StatusCode::isBad($e->getStatusCode()))->toBeTrue();
+            }
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
+    it('returns the notifications publish delivered for every unacknowledged sequence number', function () {
+        $client = null;
+        try {
+            $client = TestHelper::connectNoSecurity();
+
+            $sub = $client->createSubscription(publishingInterval: 250.0);
+            $client->createMonitoredItems($sub->subscriptionId, [
+                ['nodeId' => TestHelper::browseToNode($client, ['TestServer', 'Dynamic', 'Counter']), 'clientHandle' => 7],
+            ]);
+
+            $published = [];
+            for ($i = 0; $i < 4; $i++) {
+                $response = $client->publish();
+                if ($response->notifications !== []) {
+                    $published[$response->sequenceNumber] = $response->notifications;
+                }
+            }
+
+            expect($published)->not->toBeEmpty();
+
+            foreach ($published as $sequenceNumber => $notifications) {
+                $result = $client->republish($sub->subscriptionId, $sequenceNumber);
+
+                expect($result['sequenceNumber'])->toBe($sequenceNumber);
+                expect($result['notifications'])->toHaveCount(count($notifications));
+
+                foreach ($notifications as $index => $original) {
+                    $replayed = $result['notifications'][$index];
+                    expect($replayed)->toBeInstanceOf(DataChangeNotification::class);
+                    expect($replayed->clientHandle)->toBe($original->clientHandle);
+                    expect($replayed->dataValue->getValue())->toBe($original->dataValue->getValue());
+                }
             }
         } finally {
             TestHelper::safeDisconnect($client);

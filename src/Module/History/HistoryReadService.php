@@ -7,10 +7,12 @@ namespace PhpOpcua\Client\Module\History;
 use DateTimeImmutable;
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
+use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Protocol\AbstractProtocolService;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Types\DataValue;
 use PhpOpcua\Client\Types\NodeId;
+use PhpOpcua\Client\Types\StatusCode;
 
 class HistoryReadService extends AbstractProtocolService
 {
@@ -109,7 +111,10 @@ class HistoryReadService extends AbstractProtocolService
         $allValues = [];
 
         for ($i = 0; $i < $resultCount; $i++) {
-            $decoder->readUInt32();
+            $statusCode = $decoder->readUInt32();
+            if (StatusCode::isBad($statusCode)) {
+                throw new ServiceException('HistoryRead failed: ' . StatusCode::getName($statusCode), $statusCode);
+            }
 
             $decoder->readByteString();
 
