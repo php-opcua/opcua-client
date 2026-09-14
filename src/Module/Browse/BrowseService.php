@@ -6,11 +6,13 @@ namespace PhpOpcua\Client\Module\Browse;
 
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Encoding\BinaryEncoder;
+use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Protocol\AbstractProtocolService;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Types\BrowseDirection;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\ReferenceDescription;
+use PhpOpcua\Client\Types\StatusCode;
 
 class BrowseService extends AbstractProtocolService
 {
@@ -41,6 +43,8 @@ class BrowseService extends AbstractProtocolService
     /**
      * @param BinaryDecoder $decoder
      * @return BrowseResultSet
+     *
+     * @throws ServiceException If the BrowseResult carries a Bad status code.
      */
     public function decodeBrowseResponseWithContinuation(BinaryDecoder $decoder): BrowseResultSet
     {
@@ -51,7 +55,10 @@ class BrowseService extends AbstractProtocolService
         $continuationPoint = null;
 
         for ($i = 0; $i < $resultCount; $i++) {
-            $decoder->readUInt32();
+            $statusCode = $decoder->readUInt32();
+            if (StatusCode::isBad($statusCode)) {
+                throw new ServiceException('Browse failed: ' . StatusCode::getName($statusCode), $statusCode);
+            }
             $continuationPoint = $decoder->readByteString();
 
             $refCount = $decoder->readInt32();

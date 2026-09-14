@@ -24,6 +24,14 @@
 
 ### Changed
 
+- **Browse raises the result's Bad status.** `browse()`,
+  `browseWithContinuation()`, `browseNext()` and, through them, `browseAll()`
+  and `browseRecursive()` discarded the StatusCode of the BrowseResult, so a
+  node that does not exist returned an empty array indistinguishable from a
+  node without children. A Bad result now raises `ServiceException` with that
+  status code (`BadNodeIdUnknown`, `BadReferenceTypeIdInvalid`,
+  `BadContinuationPointInvalid`, …); a rejected browse is not cached. Callers
+  that relied on an empty array for a missing node must catch it.
 - **HistoryRead raises the result's Bad status.** `historyReadRaw()`,
   `historyReadProcessed()` and `historyReadAtTime()` discarded the
   StatusCode of the node's HistoryRead result, so a rejected read — an
@@ -40,6 +48,26 @@
 
 ### Fixed
 
+- **Responses larger than one message chunk were truncated.** The transport
+  returned a single chunk and `unwrapResponse()` treated it as the whole
+  message, while the Hello advertises no message size or chunk count limit, so
+  servers legitimately split any response above the negotiated buffer
+  (65 535 bytes) into chunks. The client decoded the first chunk only — a
+  one-hour `historyReadRaw()` failed with `Buffer underflow` — and left the
+  remaining chunks on the socket. `unwrapResponse()` now reads the chunks that
+  follow an intermediate (`C`) chunk and appends their bodies, in plain and
+  secured channels alike (each chunk is verified and decrypted on its own). An
+  abort chunk (`A`) raises `ServiceException` with the server's error and
+  reason; a chunk belonging to another request raises `ProtocolException`.
+  Verified against UA-.NETStandard: a 262 144-byte `readFile()` in one call,
+  with no security, Sign and SignAndEncrypt.
+- **Responses were not matched to their request.** A response left on the
+  socket — the tail of a truncated message, or the answer to a request whose
+  reply was never read — was taken as the reply to the next call, so the
+  connection kept returning other requests' data without an error. The client
+  now remembers the request ID issued last and discards responses to any other
+  request. Transports that own the secure channel (such as the HTTPS
+  transport, which pairs each response with its request) are not checked.
 - **The data change `filter` was silently ignored.** The recipe
   *Subscribing to data changes* documented a deadband `filter`, but both
   encoders always wrote a null filter, so every change was reported. Verified
@@ -87,6 +115,21 @@
   decoder, in both responses.
 
 ### Tests
+
+- Browse (`BrowseStatusTest`, against UA-.NETStandard): a missing node raises
+  `BadNodeIdUnknown` from `browse()`, `browseAll()` and `browseRecursive()`,
+  also on a repeated call (not cached); an unknown reference type raises
+  `BadReferenceTypeIdInvalid`; an unknown continuation point raises
+  `BadContinuationPointInvalid`; a node without children returns `[]`. Unit:
+  a Bad BrowseResult raises its status, an Uncertain one keeps decoding.
+- Unit (`ClientChunkedResponseTest`): chunked responses are assembled; stale
+  responses, single or chunked, are discarded; abort chunks, ERR messages
+  between chunks and chunks of another request are raised; transports with an
+  external secure channel skip the request check. The unit mock transports echo
+  the request ID of the last request, as a server does. Integration, against
+  UA-.NETStandard with no security, Sign and SignAndEncrypt
+  (`ChunkedMessageTest`): a 262 144-byte `readFile()` in one call, and a read
+  after an abandoned request returns its own value.
 
 - Unit: a Republish response carrying DataChange, StatusChange and
   EventNotificationList entries decodes into typed objects; bodyless, empty

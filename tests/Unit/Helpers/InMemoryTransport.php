@@ -62,7 +62,14 @@ class InMemoryTransport implements ClientTransportInterface
             throw new ConnectionException('Response queue exhausted');
         }
 
-        return array_shift($this->responseQueue);
+        $response = array_shift($this->responseQueue);
+        $lastRequest = $this->sentMessages === [] ? null : $this->sentMessages[array_key_last($this->sentMessages)];
+        if ($lastRequest === null || strlen($response) < 24 || strlen($lastRequest) < 24
+            || ! str_starts_with($response, 'MSG') || ! str_starts_with($lastRequest, 'MSG')) {
+            return $response;
+        }
+
+        return substr($response, 0, 20) . substr($lastRequest, 20, 4) . substr($response, 24);
     }
 
     public function setReceiveBufferSize(int $size): void

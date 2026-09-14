@@ -91,6 +91,8 @@ foreach ($nodes as $node) {
 
 // Cross-batches of continuation points automatically
 $client->browseAll('i=85');                             // forces full traversal
+// A rejected browse (e.g. BadNodeIdUnknown for a missing node) throws ServiceException;
+// a node without children returns [].
 ```
 
 `ReferenceDescription` exposes: `referenceTypeId`, `isForward`, `nodeId`, `browseName`, `displayName`, `nodeClass`, `typeDefinition`.

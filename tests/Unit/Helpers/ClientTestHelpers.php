@@ -50,7 +50,7 @@ if (! class_exists('MockTransport')) {
                 throw new ConnectionException('No more mock responses');
             }
 
-            return $this->responses[$this->index++];
+            return echoRequestId($this->responses[$this->index++], $this->sent === [] ? null : $this->sent[array_key_last($this->sent)]);
         }
 
         public function close(): void
@@ -204,7 +204,7 @@ if (! class_exists('SecureMockTransport')) {
                 throw new ConnectionException('No more mock responses');
             }
 
-            return $this->responses[$this->index++];
+            return echoRequestId($this->responses[$this->index++], $this->sent === [] ? null : $this->sent[array_key_last($this->sent)]);
         }
 
         public function close(): void
@@ -264,6 +264,22 @@ if (! function_exists('buildMsgResponse')) {
         $d = $e->getBuffer();
 
         return substr($d, 0, 4) . pack('V', strlen($d)) . substr($d, 8);
+    }
+}
+
+if (! function_exists('echoRequestId')) {
+    /**
+     * Copies the request ID of the last plain MSG request into a plain MSG response, as a
+     * server does, so canned responses match the request the client is waiting for.
+     */
+    function echoRequestId(string $response, ?string $lastRequest): string
+    {
+        if ($lastRequest === null || strlen($response) < 24 || strlen($lastRequest) < 24
+            || ! str_starts_with($response, 'MSG') || ! str_starts_with($lastRequest, 'MSG')) {
+            return $response;
+        }
+
+        return substr($response, 0, 20) . substr($lastRequest, 20, 4) . substr($response, 24);
     }
 }
 

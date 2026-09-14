@@ -14,6 +14,7 @@ use PhpOpcua\Client\Module\Subscription\SubscriptionService;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Types\BuiltinType;
 use PhpOpcua\Client\Types\NodeId;
+use PhpOpcua\Client\Types\StatusCode;
 
 /**
  * Writes a minimal OPC UA ResponseHeader into the encoder.
@@ -240,6 +241,50 @@ describe('BrowseService decoding', function () {
         $result = $service->decodeBrowseResponseWithContinuation($decoder);
         expect($result->references)->toBe([]);
         expect($result->continuationPoint)->toBe('continuation-data');
+    });
+
+    it('throws ServiceException with the status code of a Bad BrowseResult', function () {
+        $service = new BrowseService(new SessionService(1, 1));
+
+        $encoder = new BinaryEncoder();
+        writeMessagePrefix($encoder);
+        $encoder->writeNodeId(NodeId::numeric(0, 530));
+        writeResponseHeader($encoder);
+        $encoder->writeInt32(1);
+        $encoder->writeUInt32(StatusCode::BadNodeIdUnknown);
+        $encoder->writeByteString(null);
+        $encoder->writeInt32(0);
+        $encoder->writeInt32(0);
+
+        try {
+            $service->decodeBrowseResponseWithContinuation(new BinaryDecoder($encoder->getBuffer()));
+            $caught = null;
+        } catch (ServiceException $e) {
+            $caught = $e;
+        }
+
+        expect($caught)->toBeInstanceOf(ServiceException::class);
+        expect($caught->getStatusCode())->toBe(StatusCode::BadNodeIdUnknown);
+        expect($caught->getMessage())->toBe('Browse failed: BadNodeIdUnknown');
+    });
+
+    it('keeps the references of a BrowseResult with an Uncertain status', function () {
+        $service = new BrowseService(new SessionService(1, 1));
+
+        $encoder = new BinaryEncoder();
+        writeMessagePrefix($encoder);
+        $encoder->writeNodeId(NodeId::numeric(0, 530));
+        writeResponseHeader($encoder);
+        $encoder->writeInt32(1);
+        $encoder->writeUInt32(0x40000000);
+        $encoder->writeByteString(null);
+        $encoder->writeInt32(0);
+        $encoder->writeInt32(0);
+
+        $result = $service->decodeBrowseResponseWithContinuation(new BinaryDecoder($encoder->getBuffer()));
+
+        expect($result->references)->toBe([]);
+        expect($result->continuationPoint)->toBeNull();
     });
 
     it('decodeBrowseResponse returns flat array', function () {

@@ -17,6 +17,7 @@ use PhpOpcua\Client\Client\ManagesTrustStoreRuntimeTrait;
 use PhpOpcua\Client\Encoding\BinaryDecoder;
 use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\ModuleConflictException;
+use PhpOpcua\Client\Exception\ProtocolException;
 use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Kernel\ClientKernelInterface;
 use PhpOpcua\Client\Module\Browse\BrowseResultSet;
@@ -87,6 +88,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
     private int $secureChannelId = 0;
 
     private int $requestId = 10;
+
+    private ?int $expectedRequestId = null;
 
     private SecurityPolicy $securityPolicy;
 
@@ -400,6 +403,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
      */
     public function nextRequestId(): int
     {
+        $this->expectedRequestId = $this->requestId;
+
         return $this->requestId++;
     }
 
@@ -414,17 +419,73 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
     }
 
     /**
-     * Unwrap a raw transport response, handling ERR messages and secure channel decryption.
+     * Unwrap a raw transport response, handling ERR messages, secure channel decryption and message chunks.
      *
      * @param string $response The raw response bytes from the transport layer.
      * @return string The decoded response body.
      *
-     * @throws ServiceException If the server returned an ERR message.
+     * @throws ServiceException If the server returned an ERR message or aborted the message.
+     * @throws ProtocolException If a chunk is truncated or belongs to a different request.
      */
     public function unwrapResponse(string $response): string
     {
-        if (str_starts_with($response, 'ERR')) {
-            $decoder = $this->createDecoder($response);
+        while (true) {
+            $chunkType = $response[3] ?? 'F';
+            $body = $this->unwrapChunk($response);
+            $requestId = $this->readChunkRequestId($body);
+            $abortBody = $chunkType === 'A' ? $body : null;
+
+            while ($chunkType === 'C') {
+                $response = $this->transport->receive();
+                $chunkType = $response[3] ?? 'F';
+                $chunkBody = $this->unwrapChunk($response);
+
+                if ($this->readChunkRequestId($chunkBody) !== $requestId) {
+                    throw new ProtocolException(sprintf(
+                        'Message chunk for request %d received while assembling request %d',
+                        $this->readChunkRequestId($chunkBody),
+                        $requestId,
+                    ));
+                }
+
+                if ($chunkType === 'A') {
+                    $abortBody = $chunkBody;
+                } else {
+                    $body .= substr($chunkBody, 12);
+                }
+            }
+
+            if ($this->expectedRequestId !== null && $requestId !== $this->expectedRequestId && ! $this->transport->isSecureChannelExternal()) {
+                $this->logger->warning('Discarding response to request {received} while waiting for request {expected}', $this->logContext([
+                    'received' => $requestId,
+                    'expected' => $this->expectedRequestId,
+                ]));
+                $response = $this->transport->receive();
+
+                continue;
+            }
+
+            if ($abortBody !== null) {
+                $decoder = $this->createDecoder(substr($abortBody, 12));
+                $errorCode = $decoder->readUInt32();
+                $reason = $decoder->readString() ?? 'Unknown error';
+                throw new ServiceException(sprintf('Server aborted the message 0x%08X: %s', $errorCode, $reason), $errorCode);
+            }
+
+            return $body;
+        }
+    }
+
+    /**
+     * @param string $chunk
+     * @return string
+     *
+     * @throws ServiceException If the chunk is an ERR message.
+     */
+    private function unwrapChunk(string $chunk): string
+    {
+        if (str_starts_with($chunk, 'ERR')) {
+            $decoder = $this->createDecoder($chunk);
             MessageHeader::decode($decoder);
             $errorCode = $decoder->readUInt32();
             $reason = $decoder->readString() ?? 'Unknown error';
@@ -432,10 +493,26 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
         }
 
         if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
-            return $this->secureChannel->processMessage($response);
+            return $this->secureChannel->processMessage($chunk);
         }
 
-        return substr($response, MessageHeader::HEADER_SIZE + 4);
+        return substr($chunk, MessageHeader::HEADER_SIZE + 4);
+    }
+
+    /**
+     * @param string $chunkBody
+     * @return int
+     *
+     * @throws ProtocolException If the body is too short to hold the sequence header.
+     */
+    private function readChunkRequestId(string $chunkBody): int
+    {
+        $unpacked = strlen($chunkBody) >= 12 ? unpack('V', $chunkBody, 8) : false;
+        if ($unpacked === false) {
+            throw new ProtocolException('Message chunk too short to contain a sequence header');
+        }
+
+        return $unpacked[1];
     }
 
     /**

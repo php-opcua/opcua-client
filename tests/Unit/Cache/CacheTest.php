@@ -41,7 +41,7 @@ class CacheMockTransport extends TcpTransport
             throw new PhpOpcua\Client\Exception\ConnectionException('No more mock responses');
         }
 
-        return $this->responses[$this->index++];
+        return echoRequestId($this->responses[$this->index++], $this->sent === [] ? null : $this->sent[array_key_last($this->sent)]);
     }
 
     public function close(): void

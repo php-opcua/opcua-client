@@ -158,6 +158,22 @@ current page and an optional continuation point. `browseNext()` takes
 that token and returns the next page. The continuation point is opaque
 and unique to the originating call — pass it back unchanged.
 
+## Errors
+
+A browse that the server rejects for the node — as opposed to the whole
+request — raises `ServiceException`, whose `getStatusCode()` carries the
+server's status. Against UA-.NETStandard:
+
+| Call                                            | Status code                   |
+| ----------------------------------------------- | ----------------------------- |
+| `browse()` of a node that does not exist        | `BadNodeIdUnknown`            |
+| `browse()` with an unknown `referenceTypeId`    | `BadReferenceTypeIdInvalid`   |
+| `browseNext()` with an unknown continuation point | `BadContinuationPointInvalid` |
+
+`browseAll()` and `browseRecursive()` raise the error of any browse they
+issue. A rejected browse is never cached. An existing node without
+children still returns an empty array.
+
 ## Caching
 
 By default every browse call caches its result keyed by endpoint URL,

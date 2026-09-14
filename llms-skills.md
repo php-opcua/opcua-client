@@ -359,6 +359,7 @@ $value = $client->read($nodeId);
 - `browse()` returns `ReferenceDescription[]` with properties: `nodeId`, `displayName`, `browseName`, `nodeClass`, `isForward`, `referenceTypeId`, `typeDefinition`
 - `browseRecursive()` returns `BrowseNode[]` — each has `reference` and `children`
 - Browse results are cached by default — use `useCache: false` to bypass
+- A browse the server rejects (missing node → `BadNodeIdUnknown`, unknown reference type, invalid continuation point) throws `ServiceException` with `getStatusCode()`; an existing node without children returns `[]`. Rejected browses are not cached
 - `resolveNodeId()` translates paths like `/Objects/Server/ServerStatus` to NodeId objects
 
 ---
