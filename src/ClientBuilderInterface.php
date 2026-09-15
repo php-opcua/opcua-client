@@ -221,6 +221,36 @@ interface ClientBuilderInterface
     public function getAutoRetry(): int;
 
     /**
+     * Recreate the session and repeat the call once when the server reports the session as no longer valid.
+     *
+     * @param bool $enabled
+     * @return self
+     */
+    public function setRecreateExpiredSession(bool $enabled = true): self;
+
+    /**
+     * Whether an expired session is recreated automatically.
+     *
+     * @return bool
+     */
+    public function isRecreateExpiredSession(): bool;
+
+    /**
+     * Renew the secure channel security token at 75% of its lifetime.
+     *
+     * @param bool $enabled
+     * @return self
+     */
+    public function setRenewSecurityToken(bool $enabled = true): self;
+
+    /**
+     * Whether the secure channel security token is renewed automatically.
+     *
+     * @return bool
+     */
+    public function isRenewSecurityToken(): bool;
+
+    /**
      * Set the batch size for multi-read and multi-write operations.
      *
      * @param int $batchSize Maximum items per batch (0 to disable batching).

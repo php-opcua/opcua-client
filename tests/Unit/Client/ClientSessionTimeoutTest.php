@@ -22,6 +22,17 @@ describe('Session timeout', function () {
         expect(str_contains($session->encodeCreateSessionRequest(1, 'opc.tcp://localhost:4840'), pack('e', 120000.0)))->toBeTrue();
     });
 
+    it('recreates expired sessions by default and lets the builder turn it off', function () {
+        $builder = new ClientBuilder();
+        expect($builder->isRecreateExpiredSession())->toBeTrue();
+        expect($builder->setRecreateExpiredSession(false))->toBe($builder);
+        expect($builder->isRecreateExpiredSession())->toBeFalse();
+
+        $mock = MockClient::create();
+        expect($mock->isRecreateExpiredSession())->toBeTrue();
+        expect($mock->setRecreateExpiredSession(false)->isRecreateExpiredSession())->toBeFalse();
+    });
+
     it('exposes the session timeout on the mock client', function () {
         $mock = MockClient::create();
         expect($mock->getSessionTimeout())->toBe(120000.0);

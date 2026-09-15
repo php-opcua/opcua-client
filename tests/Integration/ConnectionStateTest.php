@@ -115,12 +115,12 @@ describe('Reconnect', function () {
 
 describe('Auto-retry', function () {
 
-    it('getAutoRetry returns 1 by default after connect', function () {
+    it('getAutoRetry returns 0 by default after connect', function () {
         $client = null;
         try {
             $client = (new ClientBuilder())
                 ->connect(TestHelper::ENDPOINT_NO_SECURITY);
-            expect($client->getAutoRetry())->toBe(1);
+            expect($client->getAutoRetry())->toBe(0);
         } finally {
             TestHelper::safeDisconnect($client);
         }

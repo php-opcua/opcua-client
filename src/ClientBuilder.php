@@ -360,6 +360,8 @@ class ClientBuilder implements ClientBuilderInterface
             transport: $this->transport,
             verifyApplicationUri: $this->verifyApplicationUri,
             sessionTimeout: $this->sessionTimeout,
+            recreateExpiredSession: $this->recreateExpiredSession,
+            renewSecurityToken: $this->renewSecurityToken,
         );
     }
 }

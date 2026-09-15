@@ -149,6 +149,8 @@ $client->disconnect();
 $builder = ClientBuilder::create();
 $builder->setTimeout(10.0); // 10 seconds (default: 5)
 $builder->setSessionTimeout(600000.0); // session timeout in ms requested from the server (default: 120000); $client->getSessionTimeout() returns the value the server granted
+$builder->setRecreateExpiredSession(true); // default: on BadSessionIdInvalid/BadSessionClosed/BadSessionNotActivated reconnect with a new session and repeat the call once
+$builder->setRenewSecurityToken(true); // default: renew the secure channel security token at 75% of its lifetime
 $client = $builder->connect('opc.tcp://localhost:4840');
 ```
 

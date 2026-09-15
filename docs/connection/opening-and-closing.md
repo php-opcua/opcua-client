@@ -176,7 +176,9 @@ The server grants the secure channel a security token with a limited
 lifetime. At 75% of that lifetime the client renews it on the first
 request that follows, on the same channel and session, and dispatches
 `SecureChannelRenewed`. A connection idle past the lifetime renews on its
-next request.
+next request. Renewal is on by default; `setRenewSecurityToken(false)` on
+the builder turns it off, and the server then rejects requests once the
+token expires.
 
 ## Lifecycle events
 

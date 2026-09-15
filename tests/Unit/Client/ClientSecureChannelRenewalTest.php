@@ -84,6 +84,26 @@ describe('Secure channel token renewal', function () {
         expect($renewAt)->toBeGreaterThan(microtime(true) + 2600);
     });
 
+    it('does not renew when renewal is disabled', function () {
+        $mock = new MockTransport();
+        $mock->addResponse(readResponseWithInt(5));
+
+        $client = setupConnectedClient($mock);
+        setClientProperty($client, 'renewSecurityToken', false);
+        setClientProperty($client, 'secureChannelRenewAt', microtime(true) - 1);
+
+        expect($client->read('i=2258')->getValue())->toBe(5);
+        expect($mock->sent)->toHaveCount(1);
+        expect(substr($mock->sent[0], 0, 3))->toBe('MSG');
+    });
+
+    it('renews by default and lets the builder turn it off', function () {
+        $builder = new PhpOpcua\Client\ClientBuilder();
+        expect($builder->isRenewSecurityToken())->toBeTrue();
+        expect($builder->setRenewSecurityToken(false)->isRenewSecurityToken())->toBeFalse();
+        expect(PhpOpcua\Client\Testing\MockClient::create()->setRenewSecurityToken(false)->isRenewSecurityToken())->toBeFalse();
+    });
+
     it('does not renew before the renewal time', function () {
         $mock = new MockTransport();
         $mock->addResponse(readResponseWithInt(5));

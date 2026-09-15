@@ -99,6 +99,28 @@ describe('Secure channel token renewal against a real server', function () {
         }
     })->group('integration');
 
+    it('lets the token expire when renewal is disabled', function () {
+        $client = null;
+        try {
+            $client = (new ClientBuilder())->setRenewSecurityToken(false)->connect(TestHelper::ENDPOINT_SHORT_TOKEN_LIFETIME);
+
+            $failure = null;
+            $deadline = microtime(true) + 40;
+            while ($failure === null && microtime(true) < $deadline) {
+                try {
+                    $client->read('i=2258');
+                    usleep(5_000_000);
+                } catch (PhpOpcua\Client\Exception\OpcUaException $e) {
+                    $failure = $e;
+                }
+            }
+
+            expect($failure)->not->toBeNull();
+        } finally {
+            TestHelper::safeDisconnect($client);
+        }
+    })->group('integration');
+
     it('renews an expired token on the first call after the connection sat idle', function () {
         $modes = ['None' => SecurityMode::None, 'SignAndEncrypt' => SecurityMode::SignAndEncrypt];
         $clients = [];

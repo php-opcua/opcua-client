@@ -73,10 +73,31 @@ $client->getSessionTimeout();   // e.g. 600000.0, or the server's limit
 <!-- @endcode-block -->
 
 Against UA-.NETStandard, a requested `1000` is raised to the server's
-minimum of `10000`, and a session requested at `15000` that stays idle
-for 20 s is closed: the next call fails with `BadSessionIdInvalid`.
-Size it above the longest gap between two requests — or keep the
-session busy, for example with a subscription's publish loop.
+minimum of `10000`. The server does not close an idle session the moment
+its timeout passes: it checks for expired sessions every
+`MinSessionTimeout` (10 s), so a 10 s session is closed somewhere between
+10 and 20 s of inactivity.
+
+### Expired sessions
+
+When a call fails because the server no longer knows the session —
+`BadSessionIdInvalid`, `BadSessionClosed` or `BadSessionNotActivated` —
+the client reconnects with a new session and repeats the call once,
+whatever `setAutoRetry()` says. The reconnect dispatches
+`ClientReconnecting`. Subscriptions and monitored items of the expired
+session are gone: create them again.
+
+<!-- @method name="ClientBuilder::setRecreateExpiredSession(bool \$enabled = true): self" returns="self" visibility="public" -->
+
+On by default. Turn it off to receive the `ServiceException` instead:
+
+<!-- @code-block language="php" label="no session recreation" -->
+```php
+$client = ClientBuilder::create()
+    ->setRecreateExpiredSession(false)
+    ->connect('opc.tcp://plc.local:4840');
+```
+<!-- @endcode-block -->
 
 ## Auto-retry
 
@@ -115,7 +136,7 @@ invalidation:
 | ----------------------------------- | ---------------------------------- |
 | Socket I/O error or timeout         | `ConnectionException`              |
 | Channel rejected by the server      | `ConnectionException` (`BadSecureChannelClosed`) |
-| Session invalidated                 | `ServiceException` (`BadSessionIdInvalid`, `BadSessionNotActivated`) |
+| Session invalidated                 | `ServiceException` (`BadSessionIdInvalid`, `BadSessionClosed`, `BadSessionNotActivated`) — recreated once by `setRecreateExpiredSession()`, independently of the retry budget |
 
 These are reasonable to retry because `reconnect()` clears the state
 that caused them. Other exceptions are **not** retried:

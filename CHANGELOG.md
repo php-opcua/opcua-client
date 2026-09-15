@@ -1,8 +1,20 @@
 # Changelog
 
-## [Unreleased]
+## [v4.6.0] - 2026-09-XX UNRELEASED
 
 ### Added
+
+- **Expired sessions are recreated.** When a call fails with
+  `BadSessionIdInvalid`, `BadSessionClosed` or `BadSessionNotActivated`,
+  `executeWithRetry()` reconnects with a new session and repeats the call once,
+  independently of `setAutoRetry()`. The auto-retry documentation already
+  listed session invalidation as recoverable, but only `ConnectionException`
+  was handled. On by default; `ClientBuilder::setRecreateExpiredSession(false)`
+  turns it off. Against UA-.NETStandard, a 10 s session idle for 30 s reads
+  again on a new session.
+- **Security token renewal can be turned off** with
+  `ClientBuilder::setRenewSecurityToken(false)`; it stays on by default.
+  `ClientBuilderInterface` gains both setters and their `is…()` getters.
 
 - **Configurable session timeout.** `ClientBuilder::setSessionTimeout(float
   $milliseconds)` (default `120000`, the value previously hard-coded in both
@@ -11,8 +23,9 @@
   granted, which the CreateSession decoder previously discarded.
   `SessionService::encodeCreateSessionRequest()` takes the requested timeout and
   `decodeCreateSessionResponse()` returns `revisedSessionTimeout`. Against
-  UA-.NETStandard, `1000` is revised to `10000` and a `15000` session idle for
-  20 s fails the next call with `BadSessionIdInvalid`. `ClientBuilderInterface`
+  UA-.NETStandard, `1000` is revised to `10000` and a `10000` session idle for
+  30 s fails the next call with `BadSessionIdInvalid` (the server checks for
+  expired sessions every 10 s). `ClientBuilderInterface`
   gains `setSessionTimeout()` / `getSessionTimeout()` and `OpcUaClientInterface`
   gains `getSessionTimeout()`: custom implementations must add them.
 
@@ -80,6 +93,12 @@
 
 ### Fixed
 
+- **`Client::getAutoRetry()` reported a retry that never happened.** For a
+  connected client whose `autoRetry` was never set it returned `1`, while
+  `executeWithRetry()` applies `autoRetry ?? 0` and does not retry. It now
+  returns `0`, the effective default; `setAutoRetry()` still enables retries.
+  Verified against UA-.NETStandard: without `setAutoRetry()` a closed socket
+  raises `ConnectionException`, with `setAutoRetry(1)` the next read reconnects.
 - **History reads stopped at the server's first page.** The documentation said
   continuation points were followed transparently, but the decoder discarded
   them: against open62541, which returns at most 1 024 values per response,
@@ -173,9 +192,21 @@
 
 ### Tests
 
+- Auto-retry default (`AutoRetryDefaultTest`, against UA-.NETStandard): a
+  client without `setAutoRetry()` reports `0` and throws `ConnectionException`
+  after its socket is closed; with `setAutoRetry(1)` the next read reconnects.
+  Unit: no `RetryAttempt` by default, one with `autoRetry` 1. The existing
+  tests that expected `getAutoRetry()` to return `1` after connecting now
+  expect `0`.
+- Session recreation and token renewal flags (against UA-.NETStandard): an
+  expired 10 s session reads again on a new session with `ClientReconnecting`,
+  and with recreation off the call fails with `BadSessionIdInvalid`; with
+  renewal off, reads on the 30 s token server fail once the token expires. The
+  recreation test fails without the change. Unit: builder and `MockClient`
+  defaults and setters, no OPN sent when renewal is off.
 - Session timeout (`SessionTimeoutTest`, against UA-.NETStandard): the default
   is granted at 120 000 ms, 15 000 ms at 15 000 and 1 000 ms raised to
-  10 000; after 20 s idle the 15 s session fails with `BadSessionIdInvalid`
+  10 000; after 30 s idle the 10 s session fails with `BadSessionIdInvalid`
   while the default one still reads. Unit: builder default and setter, the
   requested value in the CreateSession request, `MockClient`.
 - Event filter results (`EventFilterResultTest`, against open62541): valid

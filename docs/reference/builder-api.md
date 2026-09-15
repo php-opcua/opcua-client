@@ -88,6 +88,19 @@ Session timeout requested from the server, in milliseconds (default
 returns the granted value. See [Timeouts and
 retry](../connection/timeouts-and-retry.md#session-timeout).
 
+<!-- @method name="setRecreateExpiredSession(bool \$enabled = true): self" returns="self" visibility="public" -->
+
+When a call fails with `BadSessionIdInvalid`, `BadSessionClosed` or
+`BadSessionNotActivated`, reconnect with a new session and repeat the
+call once (default `true`). See [Timeouts and
+retry](../connection/timeouts-and-retry.md#expired-sessions).
+
+<!-- @method name="setRenewSecurityToken(bool \$enabled = true): self" returns="self" visibility="public" -->
+
+Renew the secure channel security token at 75% of its lifetime (default
+`true`). See [Opening and
+closing](../connection/opening-and-closing.md#security-token-renewal).
+
 <!-- @method name="setAutoRetry(int \$maxRetries): self" returns="self" visibility="public" -->
 <!-- @method name="setBatchSize(int \$batchSize): self" returns="self" visibility="public" -->
 

@@ -80,6 +80,10 @@ class MockClient implements OpcUaClientInterface
 
     private float $sessionTimeout = 120000.0;
 
+    private bool $recreateExpiredSession = true;
+
+    private bool $renewSecurityToken = true;
+
     private int $autoRetry = 0;
 
     private ?int $batchSize = null;
@@ -1149,6 +1153,44 @@ class MockClient implements OpcUaClientInterface
         $this->sessionTimeout = $milliseconds;
 
         return $this;
+    }
+
+    /**
+     * @param bool $enabled
+     * @return $this
+     */
+    public function setRecreateExpiredSession(bool $enabled = true): self
+    {
+        $this->recreateExpiredSession = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isRecreateExpiredSession(): bool
+    {
+        return $this->recreateExpiredSession;
+    }
+
+    /**
+     * @param bool $enabled
+     * @return $this
+     */
+    public function setRenewSecurityToken(bool $enabled = true): self
+    {
+        $this->renewSecurityToken = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isRenewSecurityToken(): bool
+    {
+        return $this->renewSecurityToken;
     }
 
     /**

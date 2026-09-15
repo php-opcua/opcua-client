@@ -16,11 +16,13 @@ use PhpOpcua\Client\Event\RetryExhausted;
 use PhpOpcua\Client\Exception\ConfigurationException;
 use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\OpcUaException;
+use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Exception\UntrustedCertificateException;
 use PhpOpcua\Client\Security\CertificateManager;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\Client\Types\ConnectionState;
+use PhpOpcua\Client\Types\StatusCode;
 
 /**
  * Provides connection lifecycle management including connect, reconnect, disconnect, and automatic retry logic.
@@ -114,7 +116,7 @@ trait ManagesConnectionTrait
     public function ensureConnected(): void
     {
         if ($this->connectionState === ConnectionState::Connected) {
-            if ($this->secureChannelRenewAt !== null && microtime(true) >= $this->secureChannelRenewAt) {
+            if ($this->renewSecurityToken && $this->secureChannelRenewAt !== null && microtime(true) >= $this->secureChannelRenewAt) {
                 $this->renewSecureChannel();
             }
 
@@ -135,10 +137,12 @@ trait ManagesConnectionTrait
      * @return T
      *
      * @throws ConnectionException If all retry attempts are exhausted.
+     * @throws ServiceException If the operation fails with a service error that is not an expired session.
      */
     public function executeWithRetry(Closure $operation): mixed
     {
         $maxRetries = $this->autoRetry ?? 0;
+        $sessionRecreated = false;
 
         for ($attempt = 0; ; $attempt++) {
             try {
@@ -159,6 +163,19 @@ trait ManagesConnectionTrait
                 $this->logger->warning('Connection lost, retrying ({attempt}/{max})', $this->logContext([
                     'attempt' => $attempt + 1,
                     'max' => $maxRetries,
+                ]));
+                $this->reconnect();
+            } catch (ServiceException $e) {
+                if (! $this->recreateExpiredSession
+                    || $sessionRecreated
+                    || $this->lastEndpointUrl === null
+                    || ! in_array($e->getStatusCode(), [StatusCode::BadSessionIdInvalid, 0x80260000, 0x80270000], true)) {
+                    throw $e;
+                }
+
+                $sessionRecreated = true;
+                $this->logger->warning('Session no longer valid ({status}), recreating it', $this->logContext([
+                    'status' => StatusCode::getName($e->getStatusCode()),
                 ]));
                 $this->reconnect();
             }

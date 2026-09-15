@@ -11,12 +11,12 @@ use PhpOpcua\Client\Types\StatusCode;
 
 describe('Auto-retry default behavior', function () {
 
-    it('default auto-retry is 1 after connect', function () {
+    it('default auto-retry is 0 after connect', function () {
         $client = null;
         try {
             $client = (new ClientBuilder())
                 ->connect(TestHelper::ENDPOINT_NO_SECURITY);
-            expect($client->getAutoRetry())->toBe(1);
+            expect($client->getAutoRetry())->toBe(0);
         } finally {
             TestHelper::safeDisconnect($client);
         }
@@ -29,14 +29,14 @@ describe('Auto-retry default behavior', function () {
         expect($client->getAutoRetry())->toBe(0);
     })->group('integration');
 
-    it('default auto-retry is 1 after failed connect (lastEndpointUrl is set)', function () {
+    it('default auto-retry is 0 after failed connect (lastEndpointUrl is set)', function () {
         $builder = new ClientBuilder();
         $builder->setTimeout(0.1);
         try {
             @$builder->connect('opc.tcp://192.0.2.1:4840/UA/TestServer');
         } catch (ConnectionException) {
         }
-        // After a failed connect, the builder should still have autoRetry=1 default
+        // After a failed connect, the builder should still have autoRetry=0 default
         // but since connect failed, we don't have a client to check
         // This test verifies the builder's default behavior
         expect(true)->toBeTrue(); // placeholder - builder doesn't expose getAutoRetry

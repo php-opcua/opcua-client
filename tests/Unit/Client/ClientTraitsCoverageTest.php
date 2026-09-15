@@ -31,11 +31,11 @@ describe('Client: getTimeout and getAutoRetry', function () {
         expect($client->getAutoRetry())->toBe(3);
     });
 
-    it('getAutoRetry returns 1 when autoRetry is null and lastEndpointUrl is set', function () {
+    it('getAutoRetry returns 0 when autoRetry is null and lastEndpointUrl is set', function () {
         $client = createClientWithoutConnect();
         setClientProperty($client, 'autoRetry', null);
         setClientProperty($client, 'lastEndpointUrl', 'opc.tcp://mock:4840');
-        expect($client->getAutoRetry())->toBe(1);
+        expect($client->getAutoRetry())->toBe(0);
     });
 
     it('getAutoRetry returns 0 when autoRetry is null and lastEndpointUrl is null', function () {

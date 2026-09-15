@@ -159,6 +159,10 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
 
     private ?float $revisedSessionTimeout = null;
 
+    private bool $recreateExpiredSession = true;
+
+    private bool $renewSecurityToken = true;
+
     private ?int $autoRetry;
 
     private ?int $batchSize;
@@ -222,6 +226,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
      * @param ?ClientTransportInterface $transport Custom wire transport. Defaults to {@see TcpTransport} when null.
      * @param bool $verifyApplicationUri Verify that the server certificate's SAN ApplicationUri matches the endpoint's ApplicationDescription (secure connections only).
      * @param float $sessionTimeout Session timeout requested from the server, in milliseconds.
+     * @param bool $recreateExpiredSession Recreate the session and repeat the call once when the server reports it as no longer valid.
+     * @param bool $renewSecurityToken Renew the secure channel security token at 75% of its lifetime.
      *
      * @throws Exception\ConfigurationException If the endpoint URL is invalid.
      * @throws ConnectionException If the TCP connection or handshake fails.
@@ -259,6 +265,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
         ?ClientTransportInterface $transport = null,
         bool $verifyApplicationUri = true,
         float $sessionTimeout = 120000.0,
+        bool $recreateExpiredSession = true,
+        bool $renewSecurityToken = true,
     ) {
         $this->securityPolicy = $securityPolicy;
         $this->securityMode = $securityMode;
@@ -290,6 +298,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
         $this->transport = $transport ?? new TcpTransport();
         $this->verifyApplicationUri = $verifyApplicationUri;
         $this->sessionTimeout = $sessionTimeout;
+        $this->recreateExpiredSession = $recreateExpiredSession;
+        $this->renewSecurityToken = $renewSecurityToken;
 
         $this->performConnect($endpointUrl);
     }
@@ -670,11 +680,27 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
      */
     public function getAutoRetry(): int
     {
-        if ($this->autoRetry !== null) {
-            return $this->autoRetry;
-        }
+        return $this->autoRetry ?? 0;
+    }
 
-        return $this->lastEndpointUrl !== null ? 1 : 0;
+    /**
+     * Whether an expired session is recreated automatically.
+     *
+     * @return bool
+     */
+    public function isRecreateExpiredSession(): bool
+    {
+        return $this->recreateExpiredSession;
+    }
+
+    /**
+     * Whether the secure channel security token is renewed automatically.
+     *
+     * @return bool
+     */
+    public function isRenewSecurityToken(): bool
+    {
+        return $this->renewSecurityToken;
     }
 
     /**
