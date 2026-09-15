@@ -81,6 +81,13 @@ and [Security · Cache path hardening](../security/cache-path-hardening.md).
 <!-- @enddivider -->
 
 <!-- @method name="setTimeout(float \$timeout): self" returns="self" visibility="public" -->
+<!-- @method name="setSessionTimeout(float \$milliseconds): self" returns="self" visibility="public" -->
+
+Session timeout requested from the server, in milliseconds (default
+`120000`). The server may revise it; `$client->getSessionTimeout()`
+returns the granted value. See [Timeouts and
+retry](../connection/timeouts-and-retry.md#session-timeout).
+
 <!-- @method name="setAutoRetry(int \$maxRetries): self" returns="self" visibility="public" -->
 <!-- @method name="setBatchSize(int \$batchSize): self" returns="self" visibility="public" -->
 

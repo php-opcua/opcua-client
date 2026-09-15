@@ -56,6 +56,7 @@ foreach ($results as $r) {
 | `monitoredItemId`          | Server handle — needed for `modify` / `delete` |
 | `revisedSamplingInterval`  | Actual interval (may differ from requested)   |
 | `revisedQueueSize`         | Actual queue size                             |
+| `selectClauseResults`      | Event items: status of each select clause, in order (empty when the server sends none) |
 
 ### Fluent builder
 
@@ -174,6 +175,16 @@ client auto-deduces and dispatches one of the alarm-specific events:
 Wire a PSR-14 listener for the events you care about — there is no
 need to interpret the raw payload yourself for these cases. See
 [Observability · Event reference](../observability/event-reference.md).
+
+### Rejected select clauses
+
+When the server rejects a select clause of an event item, it reports one
+status per clause in `selectClauseResults`, in the order of
+`$selectFields`. Against open62541, `['EventId', 'DoesNotExist',
+'Severity']` rejects the item with `BadNodeIdUnknown` and reports `[Good,
+BadNodeIdUnknown, Good]`. UA-.NETStandard accepts unknown clauses with a
+`Good` item and no per-clause results; the field then arrives empty in
+every notification.
 
 ## Modifying
 

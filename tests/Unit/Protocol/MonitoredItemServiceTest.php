@@ -144,6 +144,47 @@ describe('MonitoredItemService decoding', function () {
         expect($result[1]->revisedSamplingInterval)->toBe(1000.0);
     });
 
+    it('decodes the select clause results of an EventFilterResult', function () {
+        $service = new MonitoredItemService(new SessionService(1, 1));
+
+        $filterResult = new BinaryEncoder();
+        $filterResult->writeInt32(3);
+        $filterResult->writeUInt32(0);
+        $filterResult->writeUInt32(0x80340000);
+        $filterResult->writeUInt32(0);
+        $filterResult->writeInt32(0);
+        $filterResult->writeInt32(0);
+        $filterResult->writeInt32(0);
+
+        $encoder = new BinaryEncoder();
+        writeMonitoredMessagePrefix($encoder);
+        $encoder->writeNodeId(NodeId::numeric(0, 754));
+        writeMonitoredResponseHeader($encoder);
+        $encoder->writeInt32(2);
+        $encoder->writeUInt32(0x80340000);
+        $encoder->writeUInt32(0);
+        $encoder->writeDouble(0.0);
+        $encoder->writeUInt32(0);
+        $encoder->writeNodeId(NodeId::numeric(0, 736));
+        $encoder->writeByte(0x01);
+        $encoder->writeInt32(strlen($filterResult->getBuffer()));
+        $encoder->writeRawBytes($filterResult->getBuffer());
+        $encoder->writeUInt32(0);
+        $encoder->writeUInt32(7);
+        $encoder->writeDouble(250.0);
+        $encoder->writeUInt32(1);
+        $encoder->writeNodeId(NodeId::numeric(0, 0));
+        $encoder->writeByte(0x00);
+        $encoder->writeInt32(0);
+
+        $result = $service->decodeCreateMonitoredItemsResponse(new BinaryDecoder($encoder->getBuffer()));
+
+        expect($result[0]->statusCode)->toBe(0x80340000);
+        expect($result[0]->selectClauseResults)->toBe([0, 0x80340000, 0]);
+        expect($result[1]->monitoredItemId)->toBe(7);
+        expect($result[1]->selectClauseResults)->toBe([]);
+    });
+
     it('decodes a DeleteMonitoredItemsResponse', function () {
         $session = new SessionService(1, 1);
         $service = new MonitoredItemService($session);

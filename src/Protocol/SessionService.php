@@ -135,11 +135,12 @@ class SessionService
     /**
      * @param int $requestId
      * @param string $endpointUrl
+     * @param float $requestedSessionTimeout Session timeout in milliseconds.
      */
-    public function encodeCreateSessionRequest(int $requestId, string $endpointUrl): string
+    public function encodeCreateSessionRequest(int $requestId, string $endpointUrl, float $requestedSessionTimeout = 120000.0): string
     {
         if ($this->secureChannel !== null && $this->secureChannel->isSecurityActive()) {
-            return $this->encodeCreateSessionRequestSecure($requestId, $endpointUrl);
+            return $this->encodeCreateSessionRequestSecure($requestId, $endpointUrl, $requestedSessionTimeout);
         }
 
         $body = new BinaryEncoder();
@@ -150,14 +151,14 @@ class SessionService
 
         $this->writeRequestHeader($body, $requestId);
 
-        $this->writeCreateSessionBody($body, $endpointUrl);
+        $this->writeCreateSessionBody($body, $endpointUrl, $requestedSessionTimeout);
 
         return $this->wrapInMessage($body->getBuffer(), 'MSG');
     }
 
     /**
      * @param BinaryDecoder $decoder
-     * @return array{sessionId: NodeId, authenticationToken: NodeId, serverNonce: ?string, serverCertificate: ?string}
+     * @return array{sessionId: NodeId, authenticationToken: NodeId, revisedSessionTimeout: float, serverNonce: ?string, serverCertificate: ?string}
      */
     public function decodeCreateSessionResponse(BinaryDecoder $decoder): array
     {
@@ -172,7 +173,7 @@ class SessionService
 
         $sessionId = $decoder->readNodeId();
         $authenticationToken = $decoder->readNodeId();
-        $decoder->readDouble();
+        $revisedSessionTimeout = $decoder->readDouble();
         $serverNonce = $decoder->readByteString();
         $serverCertificate = $decoder->readByteString();
 
@@ -200,6 +201,7 @@ class SessionService
         return [
             'sessionId' => $sessionId,
             'authenticationToken' => $authenticationToken,
+            'revisedSessionTimeout' => $revisedSessionTimeout,
             'serverNonce' => $serverNonce,
             'serverCertificate' => $serverCertificate,
             'eccServerEphemeralKey' => $eccServerEphemeralKey,
@@ -628,8 +630,9 @@ class SessionService
     /**
      * @param int $requestId
      * @param string $endpointUrl
+     * @param float $requestedSessionTimeout
      */
-    private function encodeCreateSessionRequestSecure(int $requestId, string $endpointUrl): string
+    private function encodeCreateSessionRequestSecure(int $requestId, string $endpointUrl, float $requestedSessionTimeout): string
     {
         $innerBody = new BinaryEncoder();
 
@@ -674,7 +677,7 @@ class SessionService
 
         $innerBody->writeByteString($clientCertDer);
 
-        $innerBody->writeDouble(120000.0);
+        $innerBody->writeDouble($requestedSessionTimeout);
         $innerBody->writeUInt32(0);
 
         return $secureChannel->buildMessage($innerBody->getBuffer());
@@ -1044,8 +1047,9 @@ class SessionService
     /**
      * @param BinaryEncoder $body
      * @param string $endpointUrl
+     * @param float $requestedSessionTimeout
      */
-    private function writeCreateSessionBody(BinaryEncoder $body, string $endpointUrl): void
+    private function writeCreateSessionBody(BinaryEncoder $body, string $endpointUrl, float $requestedSessionTimeout): void
     {
         $body->writeString('urn:opcua-client:client');
         $body->writeString(null);
@@ -1066,7 +1070,7 @@ class SessionService
 
         $body->writeByteString(null);
 
-        $body->writeDouble(120000.0);
+        $body->writeDouble($requestedSessionTimeout);
         $body->writeUInt32(0);
     }
 

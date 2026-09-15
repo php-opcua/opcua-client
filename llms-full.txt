@@ -148,6 +148,7 @@ $client->disconnect();
 ```php
 $builder = ClientBuilder::create();
 $builder->setTimeout(10.0); // 10 seconds (default: 5)
+$builder->setSessionTimeout(600000.0); // session timeout in ms requested from the server (default: 120000); $client->getSessionTimeout() returns the value the server granted
 $client = $builder->connect('opc.tcp://localhost:4840');
 ```
 
@@ -710,6 +711,7 @@ Module\TranslateBrowsePath\BrowsePathTarget: targetId (NodeId), remainingPathInd
 Module\ReadWrite\CallResult: statusCode (int), inputArgumentResults (int[]), outputArguments (Variant[])
 Module\Subscription\SubscriptionResult: subscriptionId (int), revisedPublishingInterval (float), revisedLifetimeCount (int), revisedMaxKeepAliveCount (int)
 Module\Subscription\MonitoredItemResult: statusCode (int), monitoredItemId (int), revisedSamplingInterval (float), revisedQueueSize (int)
+Module\Subscription\MonitoredItemResult: statusCode, monitoredItemId, revisedSamplingInterval, revisedQueueSize, selectClauseResults (int[], event items: one status per select clause; empty when the server sends none)
 Module\Subscription\PublishResult: subscriptionId (int), sequenceNumber (int), moreNotifications (bool), notifications (array), publishTime (?DateTimeImmutable), acknowledgementResults (int[], one status per acknowledgement sent), availableSequenceNumbers (int[])
 Module\Subscription\TransferResult: statusCode (int), availableSequenceNumbers (int[])
 Types\ExtensionObject: typeId (NodeId), encoding (int), body (?string), value (mixed); methods: isDecoded(), isRaw(). DataValue::getValue() auto-extracts decoded value when codec is registered.

@@ -191,6 +191,21 @@ interface ClientBuilderInterface
     public function getTimeout(): float;
 
     /**
+     * Set the session timeout requested from the server.
+     *
+     * @param float $milliseconds Timeout in milliseconds; the server may revise it.
+     * @return self
+     */
+    public function setSessionTimeout(float $milliseconds): self;
+
+    /**
+     * Get the session timeout requested from the server.
+     *
+     * @return float Timeout in milliseconds.
+     */
+    public function getSessionTimeout(): float;
+
+    /**
      * Set the maximum number of automatic reconnection retries on connection loss.
      *
      * @param int $maxRetries Maximum retry count (0 to disable).

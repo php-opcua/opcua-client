@@ -54,6 +54,30 @@ $client = ClientBuilder::create()
   round-trip plus the OPN/CreateSession/ActivateSession sequence; sub-
   two-second timeouts will fail spuriously on cold connections.
 
+## Session timeout
+
+<!-- @method name="ClientBuilder::setSessionTimeout(float \$milliseconds): self" returns="self" visibility="public" -->
+
+How long the server keeps the session alive without any request, in
+milliseconds. Default: `120000`. The server may revise it:
+`$client->getSessionTimeout()` returns the value it granted.
+
+<!-- @code-block language="php" label="session timeout" -->
+```php
+$client = ClientBuilder::create()
+    ->setSessionTimeout(600000.0)
+    ->connect('opc.tcp://plc.local:4840');
+
+$client->getSessionTimeout();   // e.g. 600000.0, or the server's limit
+```
+<!-- @endcode-block -->
+
+Against UA-.NETStandard, a requested `1000` is raised to the server's
+minimum of `10000`, and a session requested at `15000` that stays idle
+for 20 s is closed: the next call fails with `BadSessionIdInvalid`.
+Size it above the longest gap between two requests — or keep the
+session busy, for example with a subscription's publish loop.
+
 ## Auto-retry
 
 <!-- @method name="ClientBuilder::setAutoRetry(int \$maxRetries): self" returns="self" visibility="public" -->

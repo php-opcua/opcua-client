@@ -99,6 +99,8 @@ final class ServiceTypeId
 
     public const DATA_CHANGE_FILTER_ENCODING = 724;
 
+    public const EVENT_FILTER_RESULT_ENCODING = 736;
+
     public const SIMPLE_ATTRIBUTE_OPERAND_ENCODING = 2041;
 
     public const MAX_NODES_PER_READ = 11705;

@@ -9,6 +9,7 @@ use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Protocol\AbstractProtocolService;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Types\AttributeId;
+use PhpOpcua\Client\Types\ExtensionObject;
 use PhpOpcua\Client\Types\NodeId;
 
 class MonitoredItemService extends AbstractProtocolService
@@ -48,12 +49,34 @@ class MonitoredItemService extends AbstractProtocolService
             $monitoredItemId = $decoder->readUInt32();
             $revisedSamplingInterval = $decoder->readDouble();
             $revisedQueueSize = $decoder->readUInt32();
-            $decoder->readExtensionObject();
+            $selectClauseResults = $this->readSelectClauseResults($decoder->readExtensionObject());
 
-            $results[] = new MonitoredItemResult($statusCode, $monitoredItemId, $revisedSamplingInterval, $revisedQueueSize);
+            $results[] = new MonitoredItemResult($statusCode, $monitoredItemId, $revisedSamplingInterval, $revisedQueueSize, $selectClauseResults);
         }
 
         $decoder->skipDiagnosticInfoArray();
+
+        return $results;
+    }
+
+    /**
+     * @param ExtensionObject $filterResult
+     * @return int[]
+     */
+    private function readSelectClauseResults(ExtensionObject $filterResult): array
+    {
+        if ($filterResult->body === null
+            || $filterResult->typeId->namespaceIndex !== 0
+            || $filterResult->typeId->getIdentifier() !== ServiceTypeId::EVENT_FILTER_RESULT_ENCODING) {
+            return [];
+        }
+
+        $decoder = new BinaryDecoder($filterResult->body);
+        $count = $decoder->readInt32();
+        $results = [];
+        for ($i = 0; $i < $count; $i++) {
+            $results[] = $decoder->readUInt32();
+        }
 
         return $results;
     }

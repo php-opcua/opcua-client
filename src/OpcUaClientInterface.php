@@ -131,6 +131,13 @@ interface OpcUaClientInterface
     public function getTimeout(): float;
 
     /**
+     * Get the session timeout revised by the server, or the requested one before a session exists.
+     *
+     * @return float Timeout in milliseconds.
+     */
+    public function getSessionTimeout(): float;
+
+    /**
      * Get the current automatic retry count.
      *
      * @return int

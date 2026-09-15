@@ -155,6 +155,10 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
 
     private float $timeout;
 
+    private float $sessionTimeout = 120000.0;
+
+    private ?float $revisedSessionTimeout = null;
+
     private ?int $autoRetry;
 
     private ?int $batchSize;
@@ -217,6 +221,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
      * @param ?ModuleRegistry $moduleRegistry Module registry.
      * @param ?ClientTransportInterface $transport Custom wire transport. Defaults to {@see TcpTransport} when null.
      * @param bool $verifyApplicationUri Verify that the server certificate's SAN ApplicationUri matches the endpoint's ApplicationDescription (secure connections only).
+     * @param float $sessionTimeout Session timeout requested from the server, in milliseconds.
      *
      * @throws Exception\ConfigurationException If the endpoint URL is invalid.
      * @throws ConnectionException If the TCP connection or handshake fails.
@@ -253,6 +258,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
         ?ModuleRegistry $moduleRegistry = null,
         ?ClientTransportInterface $transport = null,
         bool $verifyApplicationUri = true,
+        float $sessionTimeout = 120000.0,
     ) {
         $this->securityPolicy = $securityPolicy;
         $this->securityMode = $securityMode;
@@ -283,6 +289,7 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
         $this->moduleRegistry = $moduleRegistry ?? new ModuleRegistry();
         $this->transport = $transport ?? new TcpTransport();
         $this->verifyApplicationUri = $verifyApplicationUri;
+        $this->sessionTimeout = $sessionTimeout;
 
         $this->performConnect($endpointUrl);
     }
@@ -644,6 +651,16 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
     public function getTimeout(): float
     {
         return $this->timeout;
+    }
+
+    /**
+     * Get the session timeout revised by the server, or the requested one before a session exists.
+     *
+     * @return float Timeout in milliseconds.
+     */
+    public function getSessionTimeout(): float
+    {
+        return $this->revisedSessionTimeout ?? $this->sessionTimeout;
     }
 
     /**

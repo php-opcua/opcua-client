@@ -4,6 +4,26 @@
 
 ### Added
 
+- **Configurable session timeout.** `ClientBuilder::setSessionTimeout(float
+  $milliseconds)` (default `120000`, the value previously hard-coded in both
+  CreateSession encoders) and `getSessionTimeout()`; `Client::getSessionTimeout()`
+  and `OpcUaClientInterface::getSessionTimeout()` return the timeout the server
+  granted, which the CreateSession decoder previously discarded.
+  `SessionService::encodeCreateSessionRequest()` takes the requested timeout and
+  `decodeCreateSessionResponse()` returns `revisedSessionTimeout`. Against
+  UA-.NETStandard, `1000` is revised to `10000` and a `15000` session idle for
+  20 s fails the next call with `BadSessionIdInvalid`. `ClientBuilderInterface`
+  gains `setSessionTimeout()` / `getSessionTimeout()` and `OpcUaClientInterface`
+  gains `getSessionTimeout()`: custom implementations must add them.
+
+- **`MonitoredItemResult::$selectClauseResults`**, an optional trailing
+  constructor parameter carried through the wire format. The CreateMonitoredItems
+  decoder discarded the `EventFilterResult` (`ns=0;i=736`,
+  `ServiceTypeId::EVENT_FILTER_RESULT_ENCODING`), so an event item rejected for
+  a bad select clause gave no hint of which clause failed. Against open62541,
+  `['EventId', 'DoesNotExist', 'Severity']` now reports `[Good,
+  BadNodeIdUnknown, Good]`; UA-.NETStandard sends no per-clause results.
+
 - **`PublishResult::$publishTime` and `PublishResult::$acknowledgementResults`**,
   added as optional trailing constructor parameters and carried through the
   wire format. The Publish decoder read both and discarded them: an
@@ -153,6 +173,15 @@
 
 ### Tests
 
+- Session timeout (`SessionTimeoutTest`, against UA-.NETStandard): the default
+  is granted at 120 000 ms, 15 000 ms at 15 000 and 1 000 ms raised to
+  10 000; after 20 s idle the 15 s session fails with `BadSessionIdInvalid`
+  while the default one still reads. Unit: builder default and setter, the
+  requested value in the CreateSession request, `MockClient`.
+- Event filter results (`EventFilterResultTest`, against open62541): valid
+  clauses give a Good item without per-clause results; a mixed and a fully
+  invalid selection report the status of every clause. Unit: the
+  `EventFilterResult` is decoded and survives the wire round-trip.
 - Publish (`PublishResultTest`, against UA-.NETStandard): `publishTime` is
   within seconds of now, and three acknowledgements report `Good`,
   `BadSequenceNumberUnknown` and `BadSubscriptionIdInvalid`. Unit: both fields

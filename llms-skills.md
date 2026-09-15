@@ -849,6 +849,7 @@ $client = ClientBuilder::create()
 
 ### Important rules
 - `setTimeout()` is in seconds (float)
+- `setSessionTimeout()` is in milliseconds (default 120000); the server may revise it — read `$client->getSessionTimeout()`. An idle session past it fails with `BadSessionIdInvalid`
 - `setAutoRetry(n)` automatically reconnects and retries on `ConnectionException`
 - `setBatchSize(n)` splits large `readMulti`/`writeMulti` operations transparently
 - The client auto-discovers server limits (`MaxNodesPerRead`, `MaxNodesPerWrite`) and respects them

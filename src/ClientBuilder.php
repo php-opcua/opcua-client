@@ -359,6 +359,7 @@ class ClientBuilder implements ClientBuilderInterface
             moduleRegistry: $this->moduleRegistry,
             transport: $this->transport,
             verifyApplicationUri: $this->verifyApplicationUri,
+            sessionTimeout: $this->sessionTimeout,
         );
     }
 }

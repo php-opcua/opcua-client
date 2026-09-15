@@ -260,6 +260,11 @@ describe('Core + module DTO round-trip', function () {
         expect($r->revisedQueueSize)->toBe(3);
     });
 
+    it('MonitoredItemResult with select clause results', function () {
+        $r = roundTrip($this->registry, new MonitoredItemResult(0x80340000, 0, 0.0, 0, [0, 0x80340000]));
+        expect($r->selectClauseResults)->toBe([0, 0x80340000]);
+    });
+
     it('PublishResult', function () {
         $pr = new PublishResult(1, 100, true, [], [99, 100]);
         $r = roundTrip($this->registry, $pr);

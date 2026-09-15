@@ -78,6 +78,8 @@ class MockClient implements OpcUaClientInterface
 
     private float $timeout = 5.0;
 
+    private float $sessionTimeout = 120000.0;
+
     private int $autoRetry = 0;
 
     private ?int $batchSize = null;
@@ -446,6 +448,14 @@ class MockClient implements OpcUaClientInterface
     public function getTimeout(): float
     {
         return $this->timeout;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getSessionTimeout(): float
+    {
+        return $this->sessionTimeout;
     }
 
     /**
@@ -1126,6 +1136,17 @@ class MockClient implements OpcUaClientInterface
     public function setTimeout(float $timeout): self
     {
         $this->timeout = $timeout;
+
+        return $this;
+    }
+
+    /**
+     * @param float $milliseconds
+     * @return $this
+     */
+    public function setSessionTimeout(float $milliseconds): self
+    {
+        $this->sessionTimeout = $milliseconds;
 
         return $this;
     }

@@ -52,7 +52,7 @@ trait ManagesSessionTrait
     {
         $session = $this->requireSession();
         $requestId = $this->nextRequestId();
-        $request = $session->encodeCreateSessionRequest($requestId, $endpointUrl);
+        $request = $session->encodeCreateSessionRequest($requestId, $endpointUrl, $this->sessionTimeout);
         $this->logger->debug('CreateSession request for {url}', $this->logContext(['url' => $endpointUrl]));
         $this->transport->send($request);
 
@@ -61,6 +61,7 @@ trait ManagesSessionTrait
         $decoder = $this->createDecoder($responseBody);
         $sessionResult = $session->decodeCreateSessionResponse($decoder);
         $this->authenticationToken = $sessionResult['authenticationToken'];
+        $this->revisedSessionTimeout = $sessionResult['revisedSessionTimeout'];
         $this->logger->debug('CreateSession response: authToken={token}', $this->logContext(['token' => (string) $this->authenticationToken]));
         $this->dispatch(fn () => new SessionCreated($this, $endpointUrl, $this->authenticationToken));
 

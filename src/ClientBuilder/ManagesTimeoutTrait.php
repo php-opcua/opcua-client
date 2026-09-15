@@ -11,6 +11,8 @@ trait ManagesTimeoutTrait
 {
     private float $timeout = 5.0;
 
+    private float $sessionTimeout = 120000.0;
+
     /**
      * Set the network timeout for transport operations.
      *
@@ -32,5 +34,28 @@ trait ManagesTimeoutTrait
     public function getTimeout(): float
     {
         return $this->timeout;
+    }
+
+    /**
+     * Set the session timeout requested from the server.
+     *
+     * @param float $milliseconds Timeout in milliseconds; the server may revise it.
+     * @return self
+     */
+    public function setSessionTimeout(float $milliseconds): self
+    {
+        $this->sessionTimeout = $milliseconds;
+
+        return $this;
+    }
+
+    /**
+     * Get the session timeout requested from the server.
+     *
+     * @return float Timeout in milliseconds.
+     */
+    public function getSessionTimeout(): float
+    {
+        return $this->sessionTimeout;
     }
 }
