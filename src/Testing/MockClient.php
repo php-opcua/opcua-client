@@ -84,6 +84,8 @@ class MockClient implements OpcUaClientInterface
 
     private bool $renewSecurityToken = true;
 
+    private bool $reactivateSession = true;
+
     private int $autoRetry = 0;
 
     private ?int $batchSize = null;
@@ -1191,6 +1193,25 @@ class MockClient implements OpcUaClientInterface
     public function isRenewSecurityToken(): bool
     {
         return $this->renewSecurityToken;
+    }
+
+    /**
+     * @param bool $enabled
+     * @return $this
+     */
+    public function setReactivateSession(bool $enabled = true): self
+    {
+        $this->reactivateSession = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isReactivateSession(): bool
+    {
+        return $this->reactivateSession;
     }
 
     /**

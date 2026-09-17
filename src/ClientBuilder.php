@@ -362,6 +362,8 @@ class ClientBuilder implements ClientBuilderInterface
             sessionTimeout: $this->sessionTimeout,
             recreateExpiredSession: $this->recreateExpiredSession,
             renewSecurityToken: $this->renewSecurityToken,
+            reactivateSession: $this->reactivateSession,
+            resumeSession: $this->resumeSessionState,
         );
     }
 }

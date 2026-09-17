@@ -4,6 +4,25 @@
 
 ### Added
 
+- **Sessions survive reconnects and process restarts.** `reconnect()` — and so
+  auto-retry — opens a new secure channel and reactivates the existing session
+  on it with ActivateSession, instead of creating a new session, so
+  subscriptions and monitored items keep running; `SessionReactivated` is
+  dispatched. If the server rejects the session, a new one is created. The
+  session knowledge is kept across failed reconnect attempts while the server
+  is unreachable. `ClientBuilder::setReactivateSession(false)` restores the
+  previous behaviour; an expired session (`setRecreateExpiredSession()`) always
+  gets a new one. `Client::getSessionState()` returns a `SessionState`
+  (endpoint, authentication token, server nonce, session timeout; JSON
+  serializable, restored with `SessionState::fromArray()`), `Client::suspend()`
+  closes the channel and socket without closing the session, and
+  `ClientBuilder::resumeSession()` reactivates a saved session on connect.
+  `SessionService::decodeActivateSessionResponse()` now returns the server
+  nonce, which signs the next activation. Against UA-.NETStandard, an anonymous
+  session resumed by a new client 15 s after a simulated crash delivers every
+  sampled value, with and without SignAndEncrypt; a subscription cannot be
+  transferred to a new anonymous session (`BadUserAccessDenied`), so
+  reactivation is the only way to keep it.
 - **Expired sessions are recreated.** When a call fails with
   `BadSessionIdInvalid`, `BadSessionClosed` or `BadSessionNotActivated`,
   `executeWithRetry()` reconnects with a new session and repeats the call once,
@@ -192,6 +211,15 @@
 
 ### Tests
 
+- Session reactivation (`SessionReactivationTest`, against UA-.NETStandard,
+  None and Basic256Sha256 SignAndEncrypt): a dropped connection reactivates
+  the same session and the subscription's counter values continue without a
+  gap; with reactivation off a new session is created; a client resuming the
+  session of a crashed one after 15 s receives every missed value (republishing
+  the unacknowledged sequence numbers); a suspended session resumes; an unknown
+  saved session falls back to a new one. The reactivation cases fail when the
+  pending session is ignored. Unit: `SessionState` JSON round trip and
+  validation, builder and `MockClient` options.
 - Auto-retry default (`AutoRetryDefaultTest`, against UA-.NETStandard): a
   client without `setAutoRetry()` reports `0` and throws `ConnectionException`
   after its socket is closed; with `setAutoRetry(1)` the next read reconnects.

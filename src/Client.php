@@ -50,6 +50,7 @@ use PhpOpcua\Client\Types\NodeClass;
 use PhpOpcua\Client\Types\NodeId;
 use PhpOpcua\Client\Types\QualifiedName;
 use PhpOpcua\Client\Types\ReferenceDescription;
+use PhpOpcua\Client\Types\SessionState;
 use PhpOpcua\Client\Types\Variant;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -163,6 +164,10 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
 
     private bool $renewSecurityToken = true;
 
+    private bool $reactivateSession = true;
+
+    private ?SessionState $pendingSessionState = null;
+
     private ?int $autoRetry;
 
     private ?int $batchSize;
@@ -228,6 +233,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
      * @param float $sessionTimeout Session timeout requested from the server, in milliseconds.
      * @param bool $recreateExpiredSession Recreate the session and repeat the call once when the server reports it as no longer valid.
      * @param bool $renewSecurityToken Renew the secure channel security token at 75% of its lifetime.
+     * @param bool $reactivateSession Reactivate the current session on the new secure channel when reconnecting.
+     * @param ?SessionState $resumeSession Session to reactivate instead of creating a new one.
      *
      * @throws Exception\ConfigurationException If the endpoint URL is invalid.
      * @throws ConnectionException If the TCP connection or handshake fails.
@@ -267,6 +274,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
         float $sessionTimeout = 120000.0,
         bool $recreateExpiredSession = true,
         bool $renewSecurityToken = true,
+        bool $reactivateSession = true,
+        ?SessionState $resumeSession = null,
     ) {
         $this->securityPolicy = $securityPolicy;
         $this->securityMode = $securityMode;
@@ -300,6 +309,8 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
         $this->sessionTimeout = $sessionTimeout;
         $this->recreateExpiredSession = $recreateExpiredSession;
         $this->renewSecurityToken = $renewSecurityToken;
+        $this->reactivateSession = $reactivateSession;
+        $this->pendingSessionState = $resumeSession;
 
         $this->performConnect($endpointUrl);
     }
@@ -701,6 +712,16 @@ class Client implements OpcUaClientInterface, ClientKernelInterface, Module\Modu
     public function isRenewSecurityToken(): bool
     {
         return $this->renewSecurityToken;
+    }
+
+    /**
+     * Whether a reconnect reactivates the current session instead of creating a new one.
+     *
+     * @return bool
+     */
+    public function isReactivateSession(): bool
+    {
+        return $this->reactivateSession;
     }
 
     /**

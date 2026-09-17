@@ -37,7 +37,7 @@ composer require php-opcua/opcua-client
 - Authentication — anonymous, username/password, X.509 certificate
 - PSR-3 Logging — optional structured logging via any PSR-3 logger; NullLogger by default
 - PSR-16 Cache — browse/browseAll/resolveNodeId/getEndpoints/discoverDataTypes results cached by default (InMemoryCache, 300s TTL). Any PSR-16 driver works (FileCache, Laravel, Redis). Per-call bypass with useCache: false. discoverDataTypes replays cached type definitions without server round-trips. Metadata read cache opt-in via setReadMetadataCache(true): caches non-Value attributes (DisplayName, BrowseName, DataType, NodeClass, etc.). Value never cached. read($nodeId, $attr, refresh: true) to bypass.
-- PSR-14 Events — 57 granular events at lifecycle points (connection, session, subscription, data change, alarms, read/write, browse, cache, retry, trust store, secure channel, history update, file transfer, aggregate). NullEventDispatcher by default (zero overhead). Alarm events auto-deduced from notification fields. All events carry a $client reference.
+- PSR-14 Events — 58 granular events at lifecycle points (connection, session, subscription, data change, alarms, read/write, browse, cache, retry, trust store, secure channel, history update, file transfer, aggregate). NullEventDispatcher by default (zero overhead). Alarm events auto-deduced from notification fields. All events carry a $client reference.
 - Server Trust Store — persistent server certificate validation via FileTrustStore. Three policies (Fingerprint, FingerprintAndExpiry, Full). TOFU auto-accept. setTrustPolicy(null) disables (default). 5 trust-specific events. CLI trust/trust:list/trust:remove commands.
 - Auto-Retry — automatic reconnect on failure
 - Fluent Builder API — readMulti(), writeMulti(), createMonitoredItems(), and translateBrowsePaths() support a chainable builder when called without arguments
@@ -151,6 +151,8 @@ $builder->setTimeout(10.0); // 10 seconds (default: 5)
 $builder->setSessionTimeout(600000.0); // session timeout in ms requested from the server (default: 120000); $client->getSessionTimeout() returns the value the server granted
 $builder->setRecreateExpiredSession(true); // default: on BadSessionIdInvalid/BadSessionClosed/BadSessionNotActivated reconnect with a new session and repeat the call once
 $builder->setRenewSecurityToken(true); // default: renew the secure channel security token at 75% of its lifetime
+$builder->setReactivateSession(true); // default: reconnect() reactivates the existing session on the new channel, keeping subscriptions
+$builder->resumeSession($state); // SessionState from $client->getSessionState() / $client->suspend(): reactivate that session on connect, new session if rejected
 $client = $builder->connect('opc.tcp://localhost:4840');
 ```
 
@@ -235,7 +237,7 @@ $builder->setEventDispatcher($yourDispatcher);
 $builder->setEventDispatcher(app(EventDispatcherInterface::class));
 ```
 
-NullEventDispatcher by default (zero overhead). 57 events covering connection, session, subscription, data change, alarms, read/write, write type detection, browse, cache, retry, trust store, secure channel, history update, file transfer, and aggregate computation. See section 14 for the full list.
+NullEventDispatcher by default (zero overhead). 58 events covering connection, session, subscription, data change, alarms, read/write, write type detection, browse, cache, retry, trust store, secure channel, history update, file transfer, and aggregate computation. See section 14 for the full list.
 
 Log levels: DEBUG (handshake, secure channel, session), INFO (connect/disconnect, batch splits), WARNING (retries, server limits), ERROR (connection failures).
 
@@ -805,7 +807,7 @@ src/
 ├── Types/*.php                   # Shared types (NodeId, DataValue, Variant, etc. — module-specific DTOs live in Module/*)
 ├── Builder/*.php                 # Fluent builders for multi-operations
 ├── Event/NullEventDispatcher.php   # No-op PSR-14 dispatcher
-├── Event/*.php                    # 57 event classes
+├── Event/*.php                    # 58 event classes
 ├── Cache/CacheCodecInterface.php  # Cache codec contract (encode/decode for PSR-16 values)
 ├── Cache/WireCacheCodec.php       # Default codec — JSON gated by Wire\WireTypeRegistry (no unserialize)
 ├── Cache/InMemoryCache.php        # PSR-16 in-memory cache
@@ -969,7 +971,7 @@ $results = $client->readMulti()
 
 ## 14. Events (PSR-14)
 
-The client dispatches 57 granular PSR-14 events. Inject any EventDispatcherInterface via $builder->setEventDispatcher($dispatcher) on the ClientBuilder. NullEventDispatcher is used by default (zero overhead — event objects lazily instantiated via closures).
+The client dispatches 58 granular PSR-14 events. Inject any EventDispatcherInterface via $builder->setEventDispatcher($dispatcher) on the ClientBuilder. NullEventDispatcher is used by default (zero overhead — event objects lazily instantiated via closures).
 
 ### Configuration
 
@@ -983,7 +985,7 @@ $client = $builder->connect('opc.tcp://localhost:4840');
 ### Event Categories
 
 Connection (6): ClientConnecting, ClientConnected, ConnectionFailed, ClientReconnecting, ClientDisconnecting, ClientDisconnected
-Session (3): SessionCreated, SessionActivated, SessionClosed
+Session (4): SessionCreated, SessionActivated, SessionClosed, SessionReactivated
 Secure Channel (3): SecureChannelOpened, SecureChannelClosed, SecureChannelRenewed
 Subscription (9): SubscriptionCreated, SubscriptionDeleted, SubscriptionTransferred, MonitoredItemCreated, MonitoredItemDeleted, DataChangeReceived, EventNotificationReceived, PublishResponseReceived, SubscriptionKeepAlive
 Alarms — generic (1): AlarmEventReceived (subscriptionId, clientHandle, eventFields, severity, sourceName, message, eventType, time)
@@ -1046,7 +1048,7 @@ Alarm-specific events are deduced from event notification fields:
 - PhpOpcua\Client\Exception\WriteTypeMismatchException — thrown when explicit write type mismatches detected type (public readonly: nodeId, expectedType, givenType)
 - PhpOpcua\Client\Event\WriteTypeDetecting — dispatched before write type detection starts (public readonly: client, nodeId)
 - PhpOpcua\Client\Event\WriteTypeDetected — dispatched after write type detection (public readonly: client, nodeId, detectedType, fromCache)
-- PhpOpcua\Client\Event\* — 57 readonly event classes with $client property (ClientConnecting, ClientConnected, ConnectionFailed, SessionCreated, SessionActivated, SubscriptionCreated, DataChangeReceived, EventNotificationReceived, AlarmEventReceived, AlarmActivated, AlarmDeactivated, NodeValueRead, NodeValueWritten, NodeBrowsed, WriteTypeDetecting, WriteTypeDetected, CacheHit, CacheMiss, RetryAttempt, SecureChannelOpened, SecureChannelClosed, HistoryDataUpdated, HistoryDataDeleted, HistoryEventUpdated, HistoryEventDeleted, AggregateComputed, FileTransfer*, etc.)
+- PhpOpcua\Client\Event\* — 58 readonly event classes with $client property (ClientConnecting, ClientConnected, ConnectionFailed, SessionCreated, SessionActivated, SubscriptionCreated, DataChangeReceived, EventNotificationReceived, AlarmEventReceived, AlarmActivated, AlarmDeactivated, NodeValueRead, NodeValueWritten, NodeBrowsed, WriteTypeDetecting, WriteTypeDetected, CacheHit, CacheMiss, RetryAttempt, SecureChannelOpened, SecureChannelClosed, HistoryDataUpdated, HistoryDataDeleted, HistoryEventUpdated, HistoryEventDeleted, AggregateComputed, FileTransfer*, etc.)
 - PhpOpcua\Client\Testing\MockClient — in-memory test double (static create(), onRead/onWrite/onBrowse/onCall/onResolveNodeId, getCalls/getCallsFor/callCount/resetCalls, hasMethod, hasModule)
 - PhpOpcua\Client\Repository\ExtensionObjectRepository — per-client codec registry (instance-level)
 - PhpOpcua\Client\Wire\WireSerializable — interface (jsonSerialize, fromWireArray, wireTypeId) implemented by every core / module DTO

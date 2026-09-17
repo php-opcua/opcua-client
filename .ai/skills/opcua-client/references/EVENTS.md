@@ -29,11 +29,12 @@ $client = ClientBuilder::create()
 - `SecureChannelClosed($client, int $channelId)`
 - `SecureChannelRenewed($client, int $channelId, int $tokenId, int $revisedLifetime)` — security token renewed
 
-### Session (3)
+### Session (4)
 
 - `SessionCreated($client, $endpointUrl, NodeId $authenticationToken)`
 - `SessionActivated($client, $endpointUrl)`
 - `SessionClosed($client)`
+- `SessionReactivated($client, string $endpointUrl)` — existing session reactivated on a new secure channel
 
 ### Subscription (5)
 

@@ -22,6 +22,7 @@ use PhpOpcua\Client\Security\CertificateManager;
 use PhpOpcua\Client\Security\SecurityMode;
 use PhpOpcua\Client\Security\SecurityPolicy;
 use PhpOpcua\Client\Types\ConnectionState;
+use PhpOpcua\Client\Types\SessionState;
 use PhpOpcua\Client\Types\StatusCode;
 
 /**
@@ -40,17 +41,58 @@ trait ManagesConnectionTrait
      */
     public function reconnect(): void
     {
+        $this->reconnectWithSession($this->reactivateSession);
+    }
+
+    /**
+     * @param bool $reactivateSession Reactivate the current session on the new secure channel instead of creating a new one.
+     * @return void
+     *
+     * @throws ConnectionException If the reconnection attempt fails.
+     */
+    private function reconnectWithSession(bool $reactivateSession): void
+    {
         $endpointUrl = $this->lastEndpointUrl;
         if ($endpointUrl === null) {
             throw new ConnectionException('Cannot reconnect: no previous connection');
         }
 
+        $state = $reactivateSession ? ($this->getSessionState() ?? $this->pendingSessionState) : null;
+
         $this->dispatch(fn () => new ClientReconnecting($this, $endpointUrl));
         $this->logger->info('Reconnecting to {endpoint}', $this->logContext(['endpoint' => $endpointUrl]));
         $this->transport->close();
         $this->resetConnectionState();
+        $this->pendingSessionState = $state;
 
         $this->performConnect($endpointUrl);
+    }
+
+    /**
+     * Close the secure channel and the socket without closing the session, so it can be resumed.
+     *
+     * @return ?SessionState The session to pass to {@see \PhpOpcua\Client\ClientBuilder::resumeSession()}, or null when there is none.
+     */
+    public function suspend(): ?SessionState
+    {
+        $state = $this->getSessionState();
+        $this->logger->info('Suspending session', $this->logContext());
+
+        if ($this->secureChannelId !== 0) {
+            try {
+                $this->closeSecureChannel();
+            } catch (OpcUaException) {
+            }
+        }
+
+        $this->transport->close();
+        $this->resetConnectionState();
+        $this->pendingSessionState = null;
+        $this->lastEndpointUrl = null;
+        $this->connectionState = ConnectionState::Disconnected;
+        $this->dispatch(fn () => new ClientDisconnected($this));
+
+        return $state;
     }
 
     /**
@@ -177,7 +219,7 @@ trait ManagesConnectionTrait
                 $this->logger->warning('Session no longer valid ({status}), recreating it', $this->logContext([
                     'status' => StatusCode::getName($e->getStatusCode()),
                 ]));
-                $this->reconnect();
+                $this->reconnectWithSession(false);
             }
         }
     }
@@ -239,8 +281,8 @@ trait ManagesConnectionTrait
             $this->openSecureChannel();
             $this->logger->debug('Secure channel opened (channelId={channelId})', $this->logContext(['channelId' => $this->secureChannelId]));
 
-            $this->createAndActivateSession($endpointUrl);
-            $this->logger->debug('Session created and activated', $this->logContext());
+            $this->establishSession($endpointUrl);
+            $this->logger->debug('Session established', $this->logContext());
         } catch (ConnectionException $e) {
             $this->connectionState = ConnectionState::Broken;
             $this->lastEndpointUrl = $endpointUrl;

@@ -127,11 +127,44 @@ same configuration:
 
 <!-- @method name="$client->reconnect(): void" returns="void" visibility="public" -->
 
-`reconnect()` does **not** restore subscriptions on its own — the
-server has discarded them along with the old session. If your
-application maintains live subscriptions, see [Recipes · Recovering
-from disconnection](../recipes/disconnection-recovery.md) for the
-re-subscription pattern.
+`reconnect()` opens a new secure channel and reactivates the existing
+session on it, so its subscriptions and monitored items keep running
+and `SessionReactivated` is dispatched. Notifications the server sent
+but you did not acknowledge are listed in `availableSequenceNumbers` on
+the next `PublishResult`; fetch them with `republish()`. If the server
+no longer knows the session, a new one is created and the
+subscriptions must be recreated — see [Recipes · Recovering from
+disconnection](../recipes/disconnection-recovery.md).
+`setReactivateSession(false)` on the builder always creates a new
+session.
+
+### Resuming a session in another process
+
+A session outlives the process that created it until its session
+timeout expires. Save it and reactivate it after a restart:
+
+<!-- @code-block language="php" label="resume after restart" -->
+```php
+use PhpOpcua\Client\Types\SessionState;
+
+// before exiting (or periodically, to survive a crash)
+file_put_contents($path, json_encode($client->suspend()));
+
+// after the restart
+$state = SessionState::fromArray(json_decode(file_get_contents($path), true));
+$client = ClientBuilder::create()
+    ->resumeSession($state)
+    ->connect($state->endpointUrl);
+```
+<!-- @endcode-block -->
+
+`suspend()` closes the secure channel and the socket without closing
+the session; `getSessionState()` returns the same state without
+disconnecting. The state holds the session's authentication token and
+server nonce: store it with restrictive permissions. When the server
+rejects it, `connect()` creates a new session. Against UA-.NETStandard,
+an anonymous session resumed 15 s after the process crashed delivers
+every value its subscription sampled in the meantime.
 
 ## Detecting a broken connection
 

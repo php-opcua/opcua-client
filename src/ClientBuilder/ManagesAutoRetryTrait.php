@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PhpOpcua\Client\ClientBuilder;
 
+use PhpOpcua\Client\Types\SessionState;
+
 /**
  * Provides automatic reconnection retry configuration for failed operations.
  */
@@ -14,6 +16,10 @@ trait ManagesAutoRetryTrait
     private bool $recreateExpiredSession = true;
 
     private bool $renewSecurityToken = true;
+
+    private bool $reactivateSession = true;
+
+    private ?SessionState $resumeSessionState = null;
 
     /**
      * Set the maximum number of automatic reconnection retries on connection loss.
@@ -82,5 +88,41 @@ trait ManagesAutoRetryTrait
     public function isRenewSecurityToken(): bool
     {
         return $this->renewSecurityToken;
+    }
+
+    /**
+     * Reactivate the current session on the new secure channel when reconnecting, instead of creating a new one.
+     *
+     * @param bool $enabled
+     * @return self
+     */
+    public function setReactivateSession(bool $enabled = true): self
+    {
+        $this->reactivateSession = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * Whether a reconnect reactivates the current session.
+     *
+     * @return bool
+     */
+    public function isReactivateSession(): bool
+    {
+        return $this->reactivateSession;
+    }
+
+    /**
+     * Reactivate a session saved with {@see \PhpOpcua\Client\Client::getSessionState()} on connect; a new session is created if the server rejects it.
+     *
+     * @param ?SessionState $state
+     * @return self
+     */
+    public function resumeSession(?SessionState $state): self
+    {
+        $this->resumeSessionState = $state;
+
+        return $this;
     }
 }

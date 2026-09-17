@@ -282,8 +282,9 @@ class SessionService
 
     /**
      * @param BinaryDecoder $decoder
+     * @return ?string The server nonce to sign the next ActivateSession with.
      */
-    public function decodeActivateSessionResponse(BinaryDecoder $decoder): void
+    public function decodeActivateSessionResponse(BinaryDecoder $decoder): ?string
     {
         $this->readSecurityHeader($decoder);
         $this->readSequenceHeader($decoder);
@@ -297,12 +298,14 @@ class SessionService
             throw new ServiceException(sprintf('ActivateSession failed with status 0x%08X', $statusCode), $statusCode);
         }
 
-        $decoder->readByteString();
+        $serverNonce = $decoder->readByteString();
         $count = $decoder->readInt32();
         for ($i = 0; $i < $count; $i++) {
             $decoder->readUInt32();
         }
         $decoder->skipDiagnosticInfoArray();
+
+        return $serverNonce;
     }
 
     /**

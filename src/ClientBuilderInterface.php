@@ -251,6 +251,29 @@ interface ClientBuilderInterface
     public function isRenewSecurityToken(): bool;
 
     /**
+     * Reactivate the current session on the new secure channel when reconnecting, instead of creating a new one.
+     *
+     * @param bool $enabled
+     * @return self
+     */
+    public function setReactivateSession(bool $enabled = true): self;
+
+    /**
+     * Whether a reconnect reactivates the current session.
+     *
+     * @return bool
+     */
+    public function isReactivateSession(): bool;
+
+    /**
+     * Reactivate a saved session on connect; a new session is created if the server rejects it.
+     *
+     * @param ?Types\SessionState $state
+     * @return self
+     */
+    public function resumeSession(?Types\SessionState $state): self;
+
+    /**
      * Set the batch size for multi-read and multi-write operations.
      *
      * @param int $batchSize Maximum items per batch (0 to disable batching).

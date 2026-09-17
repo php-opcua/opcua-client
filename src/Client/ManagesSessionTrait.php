@@ -8,14 +8,17 @@ use PhpOpcua\Client\Encoding\BinaryEncoder;
 use PhpOpcua\Client\Event\SessionActivated;
 use PhpOpcua\Client\Event\SessionClosed;
 use PhpOpcua\Client\Event\SessionCreated;
+use PhpOpcua\Client\Event\SessionReactivated;
 use PhpOpcua\Client\Exception\ConnectionException;
 use PhpOpcua\Client\Exception\OpcUaException;
+use PhpOpcua\Client\Exception\ServiceException;
 use PhpOpcua\Client\Protocol\MessageHeader;
 use PhpOpcua\Client\Protocol\ServiceTypeId;
 use PhpOpcua\Client\Protocol\SessionService;
 use PhpOpcua\Client\Security\CertificateManager;
 use PhpOpcua\Client\Security\SecureChannel;
 use PhpOpcua\Client\Types\NodeId;
+use PhpOpcua\Client\Types\SessionState;
 
 /**
  * Provides session creation, activation, and teardown for the connected client.
@@ -28,6 +31,61 @@ trait ManagesSessionTrait
     private function requireSession(): SessionService
     {
         return $this->session ?? throw new ConnectionException('No active session: call connect() first');
+    }
+
+    /**
+     * Get the current session, to reactivate it later with {@see \PhpOpcua\Client\ClientBuilder::resumeSession()}.
+     *
+     * @return ?SessionState Null when no session is active.
+     */
+    public function getSessionState(): ?SessionState
+    {
+        if ($this->authenticationToken === null || $this->lastEndpointUrl === null) {
+            return null;
+        }
+
+        return new SessionState(
+            $this->lastEndpointUrl,
+            $this->authenticationToken,
+            $this->serverNonce,
+            $this->revisedSessionTimeout ?? $this->sessionTimeout,
+        );
+    }
+
+    /**
+     * Reactivate the pending session on the new secure channel, or create a new session when there is none or the server rejects it.
+     *
+     * @param string $endpointUrl The OPC UA endpoint URL.
+     * @return void
+     */
+    private function establishSession(string $endpointUrl): void
+    {
+        $state = $this->pendingSessionState;
+
+        if ($state !== null) {
+            $this->authenticationToken = $state->authenticationToken;
+            $this->serverNonce = $state->serverNonce;
+            $this->revisedSessionTimeout = $state->sessionTimeout;
+
+            try {
+                $this->activateSession($endpointUrl);
+                $this->pendingSessionState = null;
+                $this->logger->info('Session reactivated on the new secure channel', $this->logContext());
+                $this->dispatch(fn () => new SessionReactivated($this, $endpointUrl));
+
+                return;
+            } catch (ServiceException $e) {
+                $this->pendingSessionState = null;
+                $this->logger->warning('Session could not be reactivated ({message}), creating a new one', $this->logContext([
+                    'message' => $e->getMessage(),
+                ]));
+                $this->authenticationToken = null;
+                $this->serverNonce = null;
+                $this->revisedSessionTimeout = null;
+            }
+        }
+
+        $this->createAndActivateSession($endpointUrl);
     }
 
     /**
@@ -111,7 +169,10 @@ trait ManagesSessionTrait
         $response = $this->transport->receive();
         $responseBody = $this->unwrapResponse($response);
         $decoder = $this->createDecoder($responseBody);
-        $session->decodeActivateSessionResponse($decoder);
+        $serverNonce = $session->decodeActivateSessionResponse($decoder);
+        if ($serverNonce !== null) {
+            $this->serverNonce = $serverNonce;
+        }
         $this->logger->debug('ActivateSession response received', $this->logContext());
         $this->dispatch(fn () => new SessionActivated($this, $endpointUrl));
     }
