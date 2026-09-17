@@ -10,6 +10,7 @@
   - [Endpoints and discovery](./connection/endpoints-and-discovery.md)
   - [Opening and closing](./connection/opening-and-closing.md)
   - [Timeouts and retry](./connection/timeouts-and-retry.md)
+  - [Reconnection and recovery](./connection/reconnection-and-recovery.md)
 - Operations
   - [Reading attributes](./operations/reading-attributes.md)
   - [Writing values](./operations/writing-values.md)

@@ -5,6 +5,7 @@ lede:    'A connection drops. You want the work to resume without losing the sub
 see_also:
   - { href: '../connection/opening-and-closing.md',   meta: '6 min' }
   - { href: '../connection/timeouts-and-retry.md',    meta: '5 min' }
+  - { href: '../connection/reconnection-and-recovery.md', meta: '7 min' }
   - { href: '../operations/subscriptions.md',         meta: '7 min' }
 
 prev: { label: 'Upgrading to v4.3',         href: './upgrading-to-v4.3.md' }

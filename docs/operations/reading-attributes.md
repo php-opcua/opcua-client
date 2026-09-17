@@ -7,7 +7,7 @@ see_also:
   - { href: '../types/data-value-and-variant.md', meta: '6 min' }
   - { href: '../observability/caching.md', meta: '5 min' }
 
-prev: { label: 'Timeouts and retry', href: '../connection/timeouts-and-retry.md' }
+prev: { label: 'Reconnection and recovery', href: '../connection/reconnection-and-recovery.md' }
 next: { label: 'Writing values',     href: './writing-values.md' }
 ---
 

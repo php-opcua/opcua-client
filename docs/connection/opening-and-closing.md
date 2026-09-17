@@ -4,6 +4,7 @@ lede:    'The connection lifecycle has three states and three transitions. Get t
 
 see_also:
   - { href: './timeouts-and-retry.md',           meta: '5 min' }
+  - { href: './reconnection-and-recovery.md',    meta: '7 min' }
   - { href: '../recipes/disconnection-recovery.md', meta: '6 min' }
   - { href: '../observability/events.md',        meta: '6 min' }
 

@@ -4,11 +4,12 @@ lede:    'One timeout knob, one retry knob, and a clear line between recoverable
 
 see_also:
   - { href: './opening-and-closing.md',     meta: '6 min' }
+  - { href: './reconnection-and-recovery.md', meta: '7 min' }
   - { href: '../reference/exceptions.md',   meta: '7 min' }
   - { href: '../recipes/disconnection-recovery.md', meta: '6 min' }
 
 prev: { label: 'Opening and closing',     href: './opening-and-closing.md' }
-next: { label: 'Reading attributes',      href: '../operations/reading-attributes.md' }
+next: { label: 'Reconnection and recovery', href: './reconnection-and-recovery.md' }
 ---
 
 # Timeouts and retry
@@ -210,6 +211,8 @@ which adds a daemon-side watchdog.
 
 ## What to read next
 
+- [Connection · Reconnection and recovery](./reconnection-and-recovery.md) —
+  what survives an outage, and how to fetch back what you missed.
 - [Recipes · Recovering from disconnection](../recipes/disconnection-recovery.md)
   — re-subscribing after `reconnect()`.
 - [Reference · Exceptions](../reference/exceptions.md) — the full
