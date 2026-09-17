@@ -1,6 +1,6 @@
 # Changelog
 
-## [v4.6.0] - 2026-09-XX UNRELEASED
+## [v4.6.0] - 2026-09-17 Self-Healing
 
 ### Added
 
